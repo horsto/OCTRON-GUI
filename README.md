@@ -1,2 +1,3 @@
 # OCTRON
-OCTRON segmentation and training
+
+Octron is a segmentation and training UI in napari.
