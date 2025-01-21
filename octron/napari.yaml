@@ -1,0 +1,12 @@
+name: octron
+contributions:
+  commands:
+    - id: octron.octron_widget
+      title: OCTRON widget
+      python_name: octron:octron_widget
+
+
+
+  widgets:
+    - command: octron.octron_widget
+      display_name: OCTRON
