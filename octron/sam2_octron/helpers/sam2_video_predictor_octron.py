@@ -7,7 +7,19 @@ from sam2.sam2_video_predictor import SAM2VideoPredictor
 
 
 
+
+
+
+
+
+
+
+
+
 class SAM2VideoPredictor_octron(SAM2VideoPredictor):
+    '''
+    Subclass of SAM2VideoPredictor that adds some additional functionality for OCTRON.
+    '''
     def __init__(
         self,
         fill_hole_area=0,

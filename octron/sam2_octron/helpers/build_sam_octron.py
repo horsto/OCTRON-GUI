@@ -1,4 +1,5 @@
 
+
 import torch
 from hydra import compose
 from hydra.utils import instantiate
@@ -46,7 +47,7 @@ def build_sam2_video_predictor_octron(
         
     # Hydra configuration 
     hydra_overrides = [
-        "++model._target_=helpers.sam2_video_predictor_octron.SAM2VideoPredictor_octron",
+        "++model._target_=octron.sam2_octron.helpers.sam2_video_predictor_octron.SAM2VideoPredictor_octron",
     ]
 
     if apply_postprocessing:
