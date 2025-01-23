@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import torch
+from torchvision.transforms import Resize
 from sam2.sam2_video_predictor import SAM2VideoPredictor
 
 
@@ -54,18 +55,22 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
         compute_device = self.device  # device of the model
 
 
-
+        # Generic torch resize transformation
+        self._resize_img = Resize(
+                        size=(self.image_size)
+                    )
 
 
         inference_state = {}
-        inference_state["images"] = images
-        inference_state["num_frames"] = len(images)
-       
         # the original video height and width, used for resizing final output scores
         inference_state["video_height"] =  images.shape[2]
         inference_state["video_width"] =   images.shape[3]
+        
+ 
+        inference_state["images"] = images
+        inference_state["num_frames"] = len(images)
+        
         inference_state["device"] = compute_device
-     
         inference_state["storage_device"] = compute_device
         # inputs on each frame
         inference_state["point_inputs_per_obj"] = {}
@@ -89,4 +94,5 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
         inference_state["frames_tracked_per_obj"] = {}
         # Warm up the visual backbone and cache the image feature on frame 0
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
+        print('Initialized SAM2 model')
         return inference_state
