@@ -11,7 +11,7 @@ def build_sam2_video_predictor_octron(
     ckpt_path=None,
     mode="eval",
     hydra_overrides_extra=[],
-    apply_postprocessing=True,
+    apply_postprocessing=False,
     **kwargs,
 ):
     '''
@@ -29,7 +29,7 @@ def build_sam2_video_predictor_octron(
     else:
         device = torch.device("cpu")
         
-    print(f"Uing device: {device}")
+    
 
     if device.type == "cuda":
         # use bfloat16 for the entire notebook
@@ -45,6 +45,11 @@ def build_sam2_video_predictor_octron(
             "See e.g. https://github.com/pytorch/pytorch/issues/84936 for a discussion."
         )
         
+
+    print(f"Uing device: {device}")
+    
+    
+
     # Hydra configuration 
     hydra_overrides = [
         "++model._target_=octron.sam2_octron.helpers.sam2_video_predictor_octron.SAM2VideoPredictor_octron",
@@ -68,6 +73,9 @@ def build_sam2_video_predictor_octron(
     cfg = compose(config_name=config_file, overrides=hydra_overrides)
     OmegaConf.resolve(cfg)
     model = instantiate(cfg.model, _recursive_=True)
+    
+    print(f"Model image size: {model.image_size}")    
+
     _load_checkpoint(model, ckpt_path)
     model = model.to(device)
     if mode == "eval":
