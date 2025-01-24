@@ -1,5 +1,5 @@
 from collections import OrderedDict
-
+import numpy as np
 import torch
 from torchvision.transforms import Resize
 from sam2.sam2_video_predictor import SAM2VideoPredictor
@@ -48,28 +48,54 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
     @torch.inference_mode()
     def init_state(
         self,
-        images,
+        napari_data,
     ):
-        assert len(images.shape) == 4, f"images should have shape (num_frames, 3, H, W), got {images.shape}"
-        """Initialize an inference state."""
-        compute_device = self.device  # device of the model
-
-
+        '''
+        Goal 
+        ----    
+        Feed in Napari video layer as is 
+        - Calculate Mean and Std of the video layer
+        - ...
+        
+        
+        napari_data 
+        
+        
+        '''
+        compute_device = self.device  
+         
+        assert len(napari_data.shape) == 4, f"video data should have shape (num_frames, H, W, 3), got {napari_data.shape}"
+        assert napari_data.shape[3] == 3, f"video data should be RGB and have shape (num_frames, H, W, 3), got {napari_data.shape}"
         # Generic torch resize transformation
         self._resize_img = Resize(
-                        size=(self.image_size)
+                        size=(self.image_size) # This is 1024x1024 for the l model
                     )
-
-
+        
+        """Initialize an inference state."""
         inference_state = {}
+        num_frames, video_height, video_width, _ = napari_data.shape
+        inference_state["num_frames"] = num_frames 
         # the original video height and width, used for resizing final output scores
-        inference_state["video_height"] =  images.shape[2]
-        inference_state["video_width"] =   images.shape[3]
+        inference_state["video_height"] =  video_height
+        inference_state["video_width"]  =  video_width
         
- 
-        inference_state["images"] = images
-        inference_state["num_frames"] = len(images)
         
+        # Estimate mean and std of the video data on a subset of all frames 
+        #self.mean, self.std = self._get_mean_std(napari_data, num_frames, max_num_frames=75)
+        # The original implementation uses a fixed mean and std 
+        img_mean = (0.485, 0.456, 0.406)
+        img_std  = (0.229, 0.224, 0.225)
+        self.img_mean = torch.tensor(img_mean, dtype=torch.float32)[:, None, None]
+        self.img_std = torch.tensor(img_std, dtype=torch.float32)[:, None, None]
+        # Load first frame into inference state
+        first_image = torch.from_numpy(napari_data[0]).permute(2, 0, 1)[torch.newaxis]
+        first_image = self._resize_img(first_image)
+        first_image = first_image.float() / 255.0
+        # # #  # normalize by mean and std
+        first_image -= self.img_mean
+        first_image /= self.img_std
+        
+        inference_state["images"] = first_image   
         inference_state["device"] = compute_device
         inference_state["storage_device"] = compute_device
         # inputs on each frame
@@ -96,3 +122,20 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
         print('Initialized SAM2 model')
         return inference_state
+
+
+    def _get_mean_std(self, 
+                      napari_data, 
+                      num_frames,
+                      max_num_frames=50
+                      ):
+        '''
+        Given a large video data set, 
+        calculate the mean and std of a subset 
+        of all frames 
+        ''' 
+        which_frames = np.linspace(0, num_frames-1, np.min([num_frames, max_num_frames])).astype(int)
+        accumulated_frames = np.stack([napari_data[i] for i in which_frames])
+        mean = np.mean(accumulated_frames,axis=None)
+        std =  np.std(accumulated_frames,axis=None)
+        return mean, std
