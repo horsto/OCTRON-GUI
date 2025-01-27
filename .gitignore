@@ -180,3 +180,7 @@ cython_debug/
 # SAM2 specific 
 # model files (can be downloaded with shell script )
 *.pt 
+
+# Ignore zarr arrays 
+*.zarr*
+*zarr*
