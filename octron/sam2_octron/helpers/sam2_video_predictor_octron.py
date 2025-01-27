@@ -2,6 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import torch
 from tqdm.auto import tqdm
+import napari
 from torchvision.transforms import Resize
 from sam2.sam2_video_predictor import SAM2VideoPredictor
 
@@ -49,7 +50,8 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
     @torch.inference_mode()
     def init_state(
         self,
-        napari_data,
+        napari_viewer,
+        video_layer_idx,
     ):
         '''
         Goal 
@@ -64,7 +66,11 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
         
         '''
         compute_device = self.device  
-         
+        assert isinstance(napari_viewer, napari.Viewer), f"viewer should be a napari viewer, got {type(napari_viewer)}"
+        self.viewer = napari_viewer
+        
+        
+        napari_data = self.viewer.layers[video_layer_idx].data 
         assert len(napari_data.shape) == 4, f"video data should have shape (num_frames, H, W, 3), got {napari_data.shape}"
         assert napari_data.shape[3] == 3, f"video data should be RGB and have shape (num_frames, H, W, 3), got {napari_data.shape}"
         # Generic torch resize transformation
@@ -192,11 +198,13 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
                     current_out = obj_output_dict[storage_key][frame_idx]
                     device = inference_state["device"]
                     pred_masks = current_out["pred_masks"].to(device, non_blocking=True)
-                    if self.clear_non_cond_mem_around_input:
-                        # clear non-conditioning memory of the surrounding frames
-                        self._clear_obj_non_cond_mem_around_input(
-                            inference_state, frame_idx, obj_idx
-                        )
+                    
+                    # TODO: Reimplement this function 
+                    # if self.clear_non_cond_mem_around_input:
+                        # # clear non-conditioning memory of the surrounding frames
+                        # self._clear_obj_non_cond_mem_around_input(
+                        #     inference_state, frame_idx, obj_idx
+                        # )
                 else:
                     storage_key = "non_cond_frame_outputs"
                     current_out, pred_masks = self._run_single_frame_inference(
@@ -211,7 +219,18 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
                         run_mem_encoder=True,
                     )
                     obj_output_dict[storage_key][frame_idx] = current_out
-
+                    
+                    #Clear all non conditioned output frames that are older than 16 frames
+                    #https://github.com/facebookresearch/sam2/issues/196#issuecomment-2286352777
+                    oldest_allowed_idx = frame_idx - 16
+                    all_frame_idxs = obj_output_dict[storage_key].keys()
+                    old_frame_idxs = [idx for idx in all_frame_idxs if idx < oldest_allowed_idx]
+                    for old_idx in old_frame_idxs:
+                        obj_output_dict[storage_key].pop(old_idx)
+                        for objid in inference_state['output_dict_per_obj'].keys():
+                            if old_idx in inference_state['output_dict_per_obj'][objid][storage_key]:
+                                inference_state['output_dict_per_obj'][objid][storage_key].pop(old_idx)
+                            
                 inference_state["frames_tracked_per_obj"][obj_idx][frame_idx] = {
                     "reverse": reverse
                 }
