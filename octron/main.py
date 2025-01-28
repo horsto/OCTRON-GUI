@@ -20,7 +20,7 @@ import os
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
-from octron.sam2_octron.helpers.build_sam_octron import build_sam2_video_predictor_octron  
+from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
 
 
 from qtpy.QtWidgets import QWidget

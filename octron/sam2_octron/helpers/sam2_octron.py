@@ -1,9 +1,11 @@
+
 from collections import OrderedDict
 import numpy as np
 import torch
+from torchvision.transforms import Resize
+
 from tqdm.auto import tqdm
 import napari
-from torchvision.transforms import Resize
 from sam2.sam2_video_predictor import SAM2VideoPredictor
 
 
@@ -21,12 +23,15 @@ from sam2.sam2_video_predictor import SAM2VideoPredictor
 
 
 
-class SAM2VideoPredictor_octron(SAM2VideoPredictor):
+class SAM2_octron(SAM2VideoPredictor):
     '''
     Subclass of SAM2VideoPredictor that adds some additional functionality for OCTRON.
     '''
     def __init__(
         self,
+        **kwargs,
+    ):
+        
         fill_hole_area=0,
         # whether to apply non-overlapping constraints on the output object masks
         non_overlap_masks=False,
@@ -36,14 +41,13 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
         # if `add_all_frames_to_correct_as_cond` is True, we also append to the conditioning frame list any frame that receives a later correction click
         # if `add_all_frames_to_correct_as_cond` is False, we conditioning frame list to only use those initial conditioning frames
         add_all_frames_to_correct_as_cond=False,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
         self.fill_hole_area = fill_hole_area
         self.non_overlap_masks = non_overlap_masks
         self.clear_non_cond_mem_around_input = clear_non_cond_mem_around_input
         self.add_all_frames_to_correct_as_cond = add_all_frames_to_correct_as_cond
         
+        super().__init__(**kwargs)
+       
         
         print('\n\nLoaded SAM2VideoPredictor OCTRON')
         
@@ -129,6 +133,76 @@ class SAM2VideoPredictor_octron(SAM2VideoPredictor):
         
         self.video_data = napari_data    
         return inference_state
+
+
+
+    def _run_single_frame_inference(
+        self,
+        inference_state,
+        output_dict,
+        frame_idx,
+        batch_size,
+        is_init_cond_frame,
+        point_inputs,
+        mask_inputs,
+        reverse,
+        run_mem_encoder,
+        prev_sam_mask_logits=None,
+    ):
+        """Run tracking on a single frame based on current inputs and previous memory."""
+        # Retrieve correct image features
+        (
+            _,
+            _,
+            current_vision_feats,
+            current_vision_pos_embeds,
+            feat_sizes,
+        ) = self._get_image_feature(inference_state, frame_idx, batch_size)
+
+        # point and mask should not appear as input simultaneously on the same frame
+        assert point_inputs is None or mask_inputs is None
+        current_out = self.track_step(
+            frame_idx=frame_idx,
+            is_init_cond_frame=is_init_cond_frame,
+            current_vision_feats=current_vision_feats,
+            current_vision_pos_embeds=current_vision_pos_embeds,
+            feat_sizes=feat_sizes,
+            point_inputs=point_inputs,
+            mask_inputs=mask_inputs,
+            output_dict=output_dict,
+            num_frames=inference_state["num_frames"],
+            track_in_reverse=reverse,
+            run_mem_encoder=run_mem_encoder,
+            prev_sam_mask_logits=prev_sam_mask_logits,
+        )
+
+        # optionally offload the output to CPU memory to save GPU space
+        storage_device = inference_state["storage_device"]
+        maskmem_features = current_out["maskmem_features"]
+        if maskmem_features is not None:
+            maskmem_features = maskmem_features.to(torch.bfloat16)
+            maskmem_features = maskmem_features.to(storage_device, non_blocking=True)
+        pred_masks_gpu = current_out["pred_masks"]
+        # # potentially fill holes in the predicted masks
+        # if self.fill_hole_area > 0:
+        #     pred_masks_gpu = fill_holes_in_mask_scores(
+        #         pred_masks_gpu, self.fill_hole_area
+        #     )
+        pred_masks = pred_masks_gpu.to(storage_device, non_blocking=True)
+        # "maskmem_pos_enc" is the same across frames, so we only need to store one copy of it
+        maskmem_pos_enc = self._get_maskmem_pos_enc(inference_state, current_out)
+        # object pointer is a small tensor, so we always keep it on GPU memory for fast access
+        obj_ptr = current_out["obj_ptr"]
+        object_score_logits = current_out["object_score_logits"]
+        # make a compact version of this frame's output to reduce the state size
+        compact_current_out = {
+            "maskmem_features": maskmem_features,
+            "maskmem_pos_enc": maskmem_pos_enc,
+            "pred_masks": pred_masks,
+            "obj_ptr": obj_ptr,
+            "object_score_logits": object_score_logits,
+        }
+        return compact_current_out, pred_masks_gpu
 
 
     @torch.inference_mode()

@@ -6,7 +6,7 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from sam2.build_sam import _load_checkpoint
 
-def build_sam2_video_predictor_octron(
+def build_sam2_octron(
     config_file,
     ckpt_path=None,
     mode="eval",
@@ -52,7 +52,7 @@ def build_sam2_video_predictor_octron(
 
     # Hydra configuration 
     hydra_overrides = [
-        "++model._target_=octron.sam2_octron.helpers.sam2_video_predictor_octron.SAM2VideoPredictor_octron",
+        "++model._target_=octron.sam2_octron.helpers.sam2_octron.SAM2_octron",
     ]
 
     if apply_postprocessing:
