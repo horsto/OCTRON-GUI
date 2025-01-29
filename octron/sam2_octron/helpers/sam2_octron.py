@@ -14,7 +14,7 @@ from sam2.utils.misc import concat_points
 
 class OctoZarr:
     '''
-    Flexible subclass of zarr array that allows for custom data retrieval
+    Flexible subclass of zarr array that allows for image data retrieval
     
     The idea here was to just replace the possibly very large 
     image dictionary directly with a zarr array. 
@@ -22,12 +22,16 @@ class OctoZarr:
     just lazy load them when needed, and save them
     into zarr, so the second time they are accessed, the access is faster. 
     
-    This is a lot (!) of back and forth
+    This should be optimized...  This is a lot (!) of back and forth (torch->numpy and back)
     
     
     '''
-    def __init__(self, zarr_array, napari_data):
+    def __init__(self, 
+                 zarr_array, 
+                 napari_data,
+                 ):
         self.zarr_array = zarr_array
+        self.saved_indices = []
         
         # Collect some basic info 
         num_frames, num_chs, image_height, image_width = zarr_array.shape
@@ -35,76 +39,103 @@ class OctoZarr:
         self.num_frames = num_frames
         self.num_chs = num_chs  
         self.image_size = image_height = image_width
-        self.center = (self.image_size//2, self.image_size//2)  
         # The original implementation uses a fixed mean and std 
         img_mean = (0.485, 0.456, 0.406)
         img_std  = (0.229, 0.224, 0.225)
         self.img_mean = torch.tensor(img_mean, dtype=torch.float32)[:, None, None]
         self.img_std = torch.tensor(img_std, dtype=torch.float32)[:, None, None]
         
-        # Generic torch resize transformation
-        self._resize_img = Resize(
-                        size=(self.image_size) # This is 1024x1024 for the l model
-                    )
+        # Initialize resizing function
+        self._resize_img = Resize(size=(self.image_size))
+
+        # Store the napari data layer   
         self.napari_data = napari_data
         
-    def np_to_torch(self, np_img):
-        '''
-        Takes raw numpy image, transposes to torch,
-        resizes it according to what image size is 
-        in zarr store, and normalizes it by mean and std.
-        
-        '''
-        t_img = torch.from_numpy(np_img).permute(2, 0, 1)
-        t_img = self._resize_img(t_img)
-        t_img = t_img.float() / 255.0
-        # normalize by mean and std
-        t_img -= self.img_mean
-        t_img /= self.img_std
-        return t_img
-    
+    @property
+    def indices_in_store(self):
+        return self.saved_indices        
 
-    def __is_empty(self, frame_idx):
+    def _save_to_zarr(self, batch, indices):
+        ''' 
+        Save a batch of images to  zarr array at index position indices
+        '''
+        assert len(indices), 'No indices provided'
+        assert len(batch) == len(indices), 'Batch and indices should have the same length'
+        self.zarr_array[indices,:,:,:] = batch.numpy()    
+        self.saved_indices.extend(indices)    
+    
+    def _fetch_one(self,idx):
+        img_np = self.napari_data[idx]
+        img_np = self._resize_img(torch.from_numpy(img_np).permute(2,0,1)).float()
+        img_np /= 255.  
+        img_np -= self.img_mean
+        img_np /= self.img_std     
+        return img_np   
+    
+    def _fetch_many(self, indices):
+        imgs_not_in_store = self.napari_data[indices]
+        imgs_not_in_store = self._resize_img(torch.from_numpy(imgs_not_in_store).permute(0,3,1,2)).float()
+        imgs_not_in_store /= 255.  
+        imgs_not_in_store -= self.img_mean
+        imgs_not_in_store /= self.img_std
+        return imgs_not_in_store
+    
+    def fetch(self, indices):   
         
         '''
-        In the zarr array, at current image index, 
-        check whether the image is empty or not.
+        Check if the images are already in the zarr store.
+        
+        The logic is the following: 
+        - Enable "quick" loading of single indices without saving them into zarr array. This would 
+          just slow things down. 
+        - Enable slightly slower loading from and saving to zarr for batches of images
+        
+        Generally for multiple images (batches):
+        For those images that are not in the store, prefetch them from the napari data layer, then
+        - Resize the images
+        - Normalize the images
+        - Save the images to the zarr array
+        Combine those with images loaded from zarr store 
+        - Return the combined images as torch tensor
         
         '''
-        return np.isnan(self.zarr_array[frame_idx][0,0,0])
-                                
-         
-    def _prefetch(self, start_idx, end_idx):    
-        '''
-        Prefetch a range of images from the napari data layer
-        
-        '''                   
-        for frame_idx in tqdm(range(start_idx, end_idx), desc='Prefetching'):
-            if self.__is_empty(frame_idx):
-                np_img = self.napari_data[frame_idx]
-                t_img = self.np_to_torch(np_img)
-                self.zarr_array[frame_idx] = t_img.numpy()
-                    
+        if len(indices) == 0:
+            return self._fetch_one(idx=indices[0])
+        else:
+            # Initialize empty torch arrach of length indices
+            imgs_torch = torch.empty(len(indices), self.num_chs, self.image_size, self.image_size)
+            # Create indices
+            not_in_store = np.array([idx for idx in indices if idx not in self.saved_indices]).astype(int)
+            in_store = np.array([idx for idx in indices if idx in self.saved_indices]).astype(int)
+            zeroed_not_in_store = not_in_store - np.min(indices) # for writing into `imgs_torch`
+            zeroed_in_store = in_store - np.min(indices)  # for writing into `imgs_torch`
+            
+            if len(not_in_store):
+                imgs_not_in_store = self._fetch_many(indices=not_in_store)
+                imgs_torch[zeroed_not_in_store] = imgs_not_in_store
+                self._save_to_zarr(imgs_not_in_store, not_in_store)
+            if len(in_store):
+                imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
+                imgs_torch[zeroed_in_store] = imgs_in_store    
+
+        return imgs_torch.squeeze()
+    
     def __getitem__(self, frame_idx):
         '''
         Normal "get" function 
-        - Checks if current image in store is empty
-        -- if empty, load the image into the store
-        -- if not empty, retrieve the image from the store and make torch tensor
-        
+
         '''
-        # Check first if the current image is empty
-        is_empty = self.__is_empty(frame_idx)
-        if is_empty:
-            # Load corresponding image from napari data layer 
-            np_img = self.napari_data[frame_idx]
-            t_img = self.np_to_torch(np_img)
-            # Store the image in the zarr array
-            self.zarr_array[frame_idx] = t_img.numpy()
-            return t_img
-        else: 
-            # Retrieve the image from the zarr array
-            return torch.from_numpy(self.zarr_array[frame_idx])
+        if isinstance(frame_idx, slice):
+            indices = np.arange(frame_idx.start, frame_idx.stop, frame_idx.step)
+        elif isinstance(frame_idx, list):
+            indices = np.array(frame_idx)
+        elif isinstance(frame_idx, int):
+            indices = [frame_idx]   
+        else:
+            raise ValueError(f'frame_idx should be int, list or slice, got {type(frame_idx)}')
+
+        images = self.fetch(indices)
+        return images
         
     def __repr__(self):
             return repr(self.zarr_array)
@@ -167,20 +198,24 @@ class SAM2_octron(SAM2VideoPredictor):
         assert len(napari_data.shape) == 4, f"video data should have shape (num_frames, H, W, 3), got {napari_data.shape}"
         assert napari_data.shape[3] == 3, f"video data should be RGB and have shape (num_frames, H, W, 3), got {napari_data.shape}"
 
+
+        """Initialize an inference state."""
+        inference_state = {}
+        self.inference_state = inference_state 
+        
         # Zarr store for the image data
         # zarr_chunk_size = zarr_store.chunks[0]
         # Replace the zarr array with the custom subclass
         self.images = OctoZarr(zarr_store, napari_data) 
+       # Store the image data zarr in the inference state
+        inference_state["images"] = self.images
         
-        """Initialize an inference state."""
-        inference_state = {}
         num_frames, video_height, video_width, _ = napari_data.shape
         inference_state["num_frames"] = num_frames 
         # the original video height and width, used for resizing final output scores
         inference_state["video_height"] =  video_height
         inference_state["video_width"]  =  video_width 
         
-        inference_state["images"] = self.images
         inference_state["device"] = compute_device
         inference_state["storage_device"] = compute_device
         # inputs on each frame
@@ -207,9 +242,7 @@ class SAM2_octron(SAM2VideoPredictor):
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
         print('Initialized SAM2 model')
         
-        self.video_data = napari_data   
-        self.inference_state = inference_state 
-                            
+        self.video_data = napari_data                               
                             
 
     def _run_single_frame_inference(
@@ -299,10 +332,6 @@ class SAM2_octron(SAM2VideoPredictor):
         reverse=False,
         ):
         
-        
-        # Prefetch frames
-        self.inference_state['images']._prefetch(start_frame_idx,start_frame_idx+max_frame_num_to_track)
-        
         self.propagate_in_video_preflight(self.inference_state)
 
         obj_ids = self.inference_state["obj_ids"]
@@ -332,67 +361,96 @@ class SAM2_octron(SAM2VideoPredictor):
             )
             processing_order = range(start_frame_idx, end_frame_idx + 1)
 
-        for frame_idx in tqdm(processing_order, desc="Predicting"):
-            pred_masks_per_obj = [None] * batch_size
-            for obj_idx in range(batch_size):
-                obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
-                # We skip those frames already in consolidated outputs (these are frames
-                # that received input clicks or mask). Note that we cannot directly run
-                # batched forward on them via `_run_single_frame_inference` because the
-                # number of clicks on each object might be different.
-                if frame_idx in obj_output_dict["cond_frame_outputs"]:
-                    storage_key = "cond_frame_outputs"
-                    current_out = obj_output_dict[storage_key][frame_idx]
-                    device = self.inference_state["device"]
-                    pred_masks = current_out["pred_masks"].to(device, non_blocking=True)
-                    
-                    # TODO: Reimplement this function 
-                    # if self.clear_non_cond_mem_around_input:
-                        # # clear non-conditioning memory of the surrounding frames
-                        # self._clear_obj_non_cond_mem_around_input(
-                        #     self.inference_state, frame_idx, obj_idx
-                        # )
-                else:
-                    storage_key = "non_cond_frame_outputs"
-                    current_out, pred_masks = self._run_single_frame_inference(
-                        output_dict=obj_output_dict,
-                        frame_idx=frame_idx,
-                        batch_size=1,  # run on the slice of a single object
-                        is_init_cond_frame=False,
-                        point_inputs=None,
-                        mask_inputs=None,
-                        reverse=reverse,
-                        run_mem_encoder=True,
-                    )
-                    obj_output_dict[storage_key][frame_idx] = current_out
-                    
-                    #Clear all non conditioned output frames that are older than 16 frames
-                    #https://github.com/facebookresearch/sam2/issues/196#issuecomment-2286352777
-                    oldest_allowed_idx = frame_idx - 16
-                    all_frame_idxs = obj_output_dict[storage_key].keys()
-                    old_frame_idxs = [idx for idx in all_frame_idxs if idx < oldest_allowed_idx]
-                    for old_idx in old_frame_idxs:
-                        obj_output_dict[storage_key].pop(old_idx)
-                        for objid in self.inference_state['output_dict_per_obj'].keys():
-                            if old_idx in self.inference_state['output_dict_per_obj'][objid][storage_key]:
-                                self.inference_state['output_dict_per_obj'][objid][storage_key].pop(old_idx)
-                            
-                self.inference_state["frames_tracked_per_obj"][obj_idx][frame_idx] = {
-                    "reverse": reverse
-                }
-                pred_masks_per_obj[obj_idx] = pred_masks
+        # Temporarily replace the 'images' in inference state with a prefeteched 
+        # list of images from zarr array
+        processing_order = list(processing_order) 
+        self.inference_state["images"] = self.images[processing_order]
+        processing_order = (np.array(processing_order) - np.min(processing_order)).astype(int)
+        
+        
+        # There is a mistake here/.........
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        try:
+            for frame_idx in tqdm(processing_order, desc="Predicting"):
+                pred_masks_per_obj = [None] * batch_size
+                for obj_idx in range(batch_size):
+                    obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
+                    # We skip those frames already in consolidated outputs (these are frames
+                    # that received input clicks or mask). Note that we cannot directly run
+                    # batched forward on them via `_run_single_frame_inference` because the
+                    # number of clicks on each object might be different.
+                    if frame_idx in obj_output_dict["cond_frame_outputs"]:
+                        storage_key = "cond_frame_outputs"
+                        current_out = obj_output_dict[storage_key][frame_idx]
+                        device = self.inference_state["device"]
+                        pred_masks = current_out["pred_masks"].to(device, non_blocking=True)
+                        
+                        # TODO: Reimplement this function 
+                        # if self.clear_non_cond_mem_around_input:
+                            # # clear non-conditioning memory of the surrounding frames
+                            # self._clear_obj_non_cond_mem_around_input(
+                            #     self.inference_state, frame_idx, obj_idx
+                            # )
+                    else:
+                        storage_key = "non_cond_frame_outputs"
+                        current_out, pred_masks = self._run_single_frame_inference(
+                            output_dict=obj_output_dict,
+                            frame_idx=frame_idx,
+                            batch_size=1,  # run on the slice of a single object
+                            is_init_cond_frame=False,
+                            point_inputs=None,
+                            mask_inputs=None,
+                            reverse=reverse,
+                            run_mem_encoder=True,
+                        )
+                        
+                        obj_output_dict[storage_key][frame_idx] = current_out
+                        
+                        #Clear all non conditioned output frames that are older than 16 frames
+                        #https://github.com/facebookresearch/sam2/issues/196#issuecomment-2286352777
+                        oldest_allowed_idx = frame_idx - 16
+                        all_frame_idxs = obj_output_dict[storage_key].keys()
+                        old_frame_idxs = [idx for idx in all_frame_idxs if idx < oldest_allowed_idx]
+                        for old_idx in old_frame_idxs:
+                            obj_output_dict[storage_key].pop(old_idx)
+                            for objid in self.inference_state['output_dict_per_obj'].keys():
+                                if old_idx in self.inference_state['output_dict_per_obj'][objid][storage_key]:
+                                    self.inference_state['output_dict_per_obj'][objid][storage_key].pop(old_idx)
+                                
+                    self.inference_state["frames_tracked_per_obj"][obj_idx][frame_idx] = {
+                        "reverse": reverse
+                    }
+                    pred_masks_per_obj[obj_idx] = pred_masks
 
-            # Resize the output mask to the original video resolution (we directly use
-            # the mask scores on GPU for output to avoid any CPU conversion in between)
-            if len(pred_masks_per_obj) > 1:
-                all_pred_masks = torch.cat(pred_masks_per_obj, dim=0)
-            else:
-                all_pred_masks = pred_masks_per_obj[0]
-            _, video_res_masks = self._get_orig_video_res_output(
-                self.inference_state, all_pred_masks
-            )
-            yield frame_idx, obj_ids, video_res_masks
-            
+                # Resize the output mask to the original video resolution (we directly use
+                # the mask scores on GPU for output to avoid any CPU conversion in between)
+                if len(pred_masks_per_obj) > 1:
+                    all_pred_masks = torch.cat(pred_masks_per_obj, dim=0)
+                else:
+                    all_pred_masks = pred_masks_per_obj[0]
+                _, video_res_masks = self._get_orig_video_res_output(
+                    self.inference_state, all_pred_masks
+                )
+                yield frame_idx, obj_ids, video_res_masks
+        except Exception as e:
+            print(e)
+            pass
+        
+        # Make sure you replace the inference state object images again with the original zarr array
+        self.inference_state["images"] = self.images
             
     @torch.inference_mode()
     def reset_state(self):
