@@ -29,6 +29,7 @@ class OctoZarr:
     def __init__(self, 
                  zarr_array, 
                  napari_data,
+                 running_buffer_size=150,
                  ):
         self.zarr_array = zarr_array
         self.saved_indices = []
@@ -50,6 +51,9 @@ class OctoZarr:
 
         # Store the napari data layer   
         self.napari_data = napari_data
+        self.cached_indices = np.full((running_buffer_size), np.nan)
+        self.cached_images  = torch.empty(running_buffer_size, self.num_chs, self.image_size, self.image_size)
+        self.cur_cache_idx = 0 # Keep track of where you are in the cache currently
         
     @property
     def indices_in_store(self):
@@ -62,23 +66,38 @@ class OctoZarr:
         assert len(indices), 'No indices provided'
         assert len(batch) == len(indices), 'Batch and indices should have the same length'
         self.zarr_array[indices,:,:,:] = batch.numpy()    
-        self.saved_indices.extend(indices)    
+        self.saved_indices.extend(indices)   
+         
+    @torch.inference_mode()
+    def _fetch_one(self, idx):
+        img = self.napari_data[idx]
+        img = self._resize_img(torch.from_numpy(img).permute(2,0,1)).float()
+        img /= 255.  
+        img -= self.img_mean
+        img /= self.img_std     
+        # Cache 
+        self.cached_indices[self.cur_cache_idx] = idx
+        self.cached_images[self.cur_cache_idx] = img
+        self.cur_cache_idx += 1
+        if self.cur_cache_idx == len(self.cached_indices):
+            self.cur_cache_idx = 0  
+        return img   
     
-    def _fetch_one(self,idx):
-        img_np = self.napari_data[idx]
-        img_np = self._resize_img(torch.from_numpy(img_np).permute(2,0,1)).float()
-        img_np /= 255.  
-        img_np -= self.img_mean
-        img_np /= self.img_std     
-        return img_np   
-    
+    @torch.inference_mode()
     def _fetch_many(self, indices):
-        imgs_not_in_store = self.napari_data[indices]
-        imgs_not_in_store = self._resize_img(torch.from_numpy(imgs_not_in_store).permute(0,3,1,2)).float()
-        imgs_not_in_store /= 255.  
-        imgs_not_in_store -= self.img_mean
-        imgs_not_in_store /= self.img_std
-        return imgs_not_in_store
+        imgs = self.napari_data[indices]
+        imgs = self._resize_img(torch.from_numpy(imgs).permute(0,3,1,2)).float()
+        imgs /= 255.  
+        imgs -= self.img_mean
+        imgs /= self.img_std
+        # Cache
+        for idx, img in zip(indices, imgs):
+            self.cached_indices[self.cur_cache_idx] = idx
+            self.cached_images[self.cur_cache_idx] = img
+            self.cur_cache_idx += 1
+            if self.cur_cache_idx == len(self.cached_indices):
+                self.cur_cache_idx = 0  
+        return imgs
     
     def fetch(self, indices):   
         
@@ -99,22 +118,48 @@ class OctoZarr:
         - Return the combined images as torch tensor
         
         '''
-        if len(indices) == 0:
-            return self._fetch_one(idx=indices[0])
-        else:
-            # Initialize empty torch arrach of length indices
-            imgs_torch = torch.empty(len(indices), self.num_chs, self.image_size, self.image_size)
+        min_idx = np.min(indices)
+        
+        # Initialize empty torch arrach of length indices
+        imgs_torch = torch.empty(len(indices), self.num_chs, self.image_size, self.image_size)
+        
+        # First check whether the indices are in the cache
+        # If they are, return them immediately
+        cached_idx = np.where(np.isin(self.cached_indices, indices))[0]
+        if len(cached_idx):
+            #print(f'Cached at indices {self.cached_indices[cached_idx]}')
+            imgs_cached = self.cached_images[cached_idx]
+            imgs_torch[np.where(np.isin(indices, self.cached_indices))[0]] = imgs_cached
+        # Subtract the cached indices from the indices
+        indices = np.setdiff1d(indices, self.cached_indices)
+        # Cover cases for which there are indices left (images that are not in the rolling cache)
+        if len(indices) == 1:
+            # Single image
+            idx = indices[0]
+            if idx in self.saved_indices:
+                #print('Found saved single image')
+                img = torch.from_numpy(self.zarr_array[idx])
+            else:
+                img = self._fetch_one(idx=idx)
+                # For now do not safe single images to zarr 
+                # The intuition is that this would just slow things down
+                # ... rather focus on saving batches of images
+                # self._save_to_zarr(imgs_torch, idx)  
+            imgs_torch[idx-min_idx] = img
+        elif len(indices) > 1:
             # Create indices
             not_in_store = np.array([idx for idx in indices if idx not in self.saved_indices]).astype(int)
             in_store = np.array([idx for idx in indices if idx in self.saved_indices]).astype(int)
-            zeroed_not_in_store = not_in_store - np.min(indices) # for writing into `imgs_torch`
-            zeroed_in_store = in_store - np.min(indices)  # for writing into `imgs_torch`
+            zeroed_not_in_store = not_in_store - min_idx # for writing into `imgs_torch`
+            zeroed_in_store = in_store - min_idx # for writing into `imgs_torch`
             
             if len(not_in_store):
-                imgs_not_in_store = self._fetch_many(indices=not_in_store)
-                imgs_torch[zeroed_not_in_store] = imgs_not_in_store
-                self._save_to_zarr(imgs_not_in_store, not_in_store)
+                imgs = self._fetch_many(indices=not_in_store)
+                imgs_torch[zeroed_not_in_store] = imgs
+                # Save this batch to zarr 
+                self._save_to_zarr(imgs, not_in_store)
             if len(in_store):
+                #print('Found saved multiple images')
                 imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
                 imgs_torch[zeroed_in_store] = imgs_in_store    
 
@@ -207,7 +252,7 @@ class SAM2_octron(SAM2VideoPredictor):
         # zarr_chunk_size = zarr_store.chunks[0]
         # Replace the zarr array with the custom subclass
         self.images = OctoZarr(zarr_store, napari_data) 
-       # Store the image data zarr in the inference state
+        # Store the image data zarr in the inference state
         inference_state["images"] = self.images
         
         num_frames, video_height, video_width, _ = napari_data.shape
@@ -244,7 +289,7 @@ class SAM2_octron(SAM2VideoPredictor):
         
         self.video_data = napari_data                               
                             
-
+    
     def _run_single_frame_inference(
         self,
         output_dict,
@@ -332,6 +377,9 @@ class SAM2_octron(SAM2VideoPredictor):
         reverse=False,
         ):
         
+        # Fetch and cache images before starting the tracking
+        _ = self.images[slice(start_frame_idx,start_frame_idx+max_frame_num_to_track)]
+        
         self.propagate_in_video_preflight(self.inference_state)
 
         obj_ids = self.inference_state["obj_ids"]
@@ -360,29 +408,7 @@ class SAM2_octron(SAM2VideoPredictor):
                 start_frame_idx + max_frame_num_to_track, num_frames - 1
             )
             processing_order = range(start_frame_idx, end_frame_idx + 1)
-
-        # Temporarily replace the 'images' in inference state with a prefeteched 
-        # list of images from zarr array
-        processing_order = list(processing_order) 
-        self.inference_state["images"] = self.images[processing_order]
-        processing_order = (np.array(processing_order) - np.min(processing_order)).astype(int)
-        
-        
-        # There is a mistake here/.........
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+                    
         try:
             for frame_idx in tqdm(processing_order, desc="Predicting"):
                 pred_masks_per_obj = [None] * batch_size
@@ -448,9 +474,7 @@ class SAM2_octron(SAM2VideoPredictor):
         except Exception as e:
             print(e)
             pass
-        
-        # Make sure you replace the inference state object images again with the original zarr array
-        self.inference_state["images"] = self.images
+
             
     @torch.inference_mode()
     def reset_state(self):
