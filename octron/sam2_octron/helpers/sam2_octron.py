@@ -164,6 +164,7 @@ class OctoZarr:
                 # Save this batch to zarr 
                 self._save_to_zarr(imgs, not_in_store)
             if len(in_store):
+                #print(f'Found in store (multiple): {in_store}')
                 imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
                 imgs_torch[zeroed_in_store] = imgs_in_store    
 
