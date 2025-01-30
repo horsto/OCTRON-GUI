@@ -29,7 +29,7 @@ class OctoZarr:
     def __init__(self, 
                  zarr_array, 
                  napari_data,
-                 running_buffer_size=250,
+                 running_buffer_size=50,
                  ):
         self.zarr_array = zarr_array
         self.saved_indices = []
@@ -145,7 +145,6 @@ class OctoZarr:
             # Single image
             idx = indices[0]
             if idx in self.saved_indices:
-                print('Found zarr saved single image')
                 img = torch.from_numpy(self.zarr_array[idx])
             else:
                 img = self._fetch_one(idx=idx)
@@ -165,7 +164,6 @@ class OctoZarr:
                 # Save this batch to zarr 
                 self._save_to_zarr(imgs, not_in_store)
             if len(in_store):
-                print('Found zarr saved images')
                 imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
                 imgs_torch[zeroed_in_store] = imgs_in_store    
 
