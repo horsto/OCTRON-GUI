@@ -29,7 +29,7 @@ class OctoZarr:
     def __init__(self, 
                  zarr_array, 
                  napari_data,
-                 running_buffer_size=150,
+                 running_buffer_size=250,
                  ):
         self.zarr_array = zarr_array
         self.saved_indices = []
@@ -65,7 +65,14 @@ class OctoZarr:
         '''
         assert len(indices), 'No indices provided'
         assert len(batch) == len(indices), 'Batch and indices should have the same length'
-        self.zarr_array[indices,:,:,:] = batch.numpy()    
+        
+        if len(batch) == 1:
+            batch = batch[0]
+        if len(indices) == 1:
+            indices_ = indices[0]
+        else:
+            indices_ = indices
+        self.zarr_array[indices_,:,:,:] = batch.numpy()    
         self.saved_indices.extend(indices)   
          
     @torch.inference_mode()
@@ -138,11 +145,11 @@ class OctoZarr:
             # Single image
             idx = indices[0]
             if idx in self.saved_indices:
-                #print('Found saved single image')
+                print('Found zarr saved single image')
                 img = torch.from_numpy(self.zarr_array[idx])
             else:
                 img = self._fetch_one(idx=idx)
-                # Do not save to zarr for single images
+                self._save_to_zarr([img], [idx])
             imgs_torch[idx-min_idx] = img
             
         elif len(indices) > 1:
@@ -158,7 +165,7 @@ class OctoZarr:
                 # Save this batch to zarr 
                 self._save_to_zarr(imgs, not_in_store)
             if len(in_store):
-                #print('Found saved multiple images')
+                print('Found zarr saved images')
                 imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
                 imgs_torch[zeroed_in_store] = imgs_in_store    
 
@@ -282,6 +289,9 @@ class SAM2_octron(SAM2VideoPredictor):
         # (we directly use their consolidated outputs during tracking)
         # metadata for each tracking frame (e.g. which direction it's tracked)
         inference_state["frames_tracked_per_obj"] = {}
+        # Keep track of centroids 
+        inference_state["centroids"] = {} # -> obj_id ->  frame_idx : centroid coordinates
+        inference_state["areas"] = {} # -> obj_id ->  frame_idx : area of region
         # Warm up the visual backbone and cache the image feature on frame 0
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
         print('Initialized SAM2 model')
