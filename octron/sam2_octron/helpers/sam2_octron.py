@@ -130,9 +130,10 @@ class OctoZarr:
             #print(f'Cached at indices {self.cached_indices[cached_idx]}')
             imgs_cached = self.cached_images[cached_idx]
             imgs_torch[np.where(np.isin(indices, self.cached_indices))[0]] = imgs_cached
+            
+        # Cover cases for which there are indices left (images that are not in the rolling cache)
         # Subtract the cached indices from the indices
         indices = np.setdiff1d(indices, self.cached_indices)
-        # Cover cases for which there are indices left (images that are not in the rolling cache)
         if len(indices) == 1:
             # Single image
             idx = indices[0]
@@ -141,11 +142,9 @@ class OctoZarr:
                 img = torch.from_numpy(self.zarr_array[idx])
             else:
                 img = self._fetch_one(idx=idx)
-                # For now do not safe single images to zarr 
-                # The intuition is that this would just slow things down
-                # ... rather focus on saving batches of images
-                # self._save_to_zarr(imgs_torch, idx)  
+                # Do not save to zarr for single images
             imgs_torch[idx-min_idx] = img
+            
         elif len(indices) > 1:
             # Create indices
             not_in_store = np.array([idx for idx in indices if idx not in self.saved_indices]).astype(int)
@@ -378,7 +377,7 @@ class SAM2_octron(SAM2VideoPredictor):
         ):
         
         # Fetch and cache images before starting the tracking
-        _ = self.images[slice(start_frame_idx,start_frame_idx+max_frame_num_to_track)]
+        #_ = self.images[slice(start_frame_idx,start_frame_idx+max_frame_num_to_track)]
         
         self.propagate_in_video_preflight(self.inference_state)
 
