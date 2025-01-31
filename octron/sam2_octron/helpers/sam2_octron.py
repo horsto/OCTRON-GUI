@@ -753,13 +753,12 @@ class SAM2_octron(SAM2VideoPredictor):
         mask,
     ):
         """Add new mask to a frame."""
-        obj_idx = self._obj_id_to_idx(self.self.inference_state, obj_id)
+        obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
         point_inputs_per_frame = self.inference_state["point_inputs_per_obj"][obj_idx]
         mask_inputs_per_frame = self.inference_state["mask_inputs_per_obj"][obj_idx]
 
         if not isinstance(mask, torch.Tensor):
             mask = torch.tensor(mask, dtype=torch.bool)
-        assert mask.dim() == 2
         mask_H, mask_W = mask.shape
         mask_inputs_orig = mask[None, None]  # add batch and channel dimension
         mask_inputs_orig = mask_inputs_orig.float().to(self.inference_state["device"])
