@@ -7,9 +7,13 @@ from torchvision.transforms import Resize
 from tqdm import tqdm
 import napari
 from sam2.sam2_video_predictor import SAM2VideoPredictor
-from sam2.utils.misc import concat_points
+from sam2.utils.misc import concat_points    
 
-
+# I am using kornia for morphological operations
+# Check https://kornia.readthedocs.io/en/latest/morphology.html#kornia.morphology.closing
+from kornia.morphology import closing as kornia_closing
+from torch import tensor as torch_tensor
+from skimage.morphology import disk
 
 
 class OctoZarr:
@@ -54,7 +58,7 @@ class OctoZarr:
         self.cached_indices = np.full((running_buffer_size), np.nan)
         self.cached_images  = torch.empty(running_buffer_size, self.num_chs, self.image_size, self.image_size)
         self.cur_cache_idx = 0 # Keep track of where you are in the cache currently
-        
+
     @property
     def indices_in_store(self):
         return self.saved_indices        
@@ -201,7 +205,6 @@ class SAM2_octron(SAM2VideoPredictor):
         **kwargs,
     ):
         
-        fill_hole_area=0,
         # whether to apply non-overlapping constraints on the output object masks
         non_overlap_masks=False,
         # whether to clear non-conditioning memory of the surrounding frames (which may contain outdated information) after adding correction clicks;
@@ -210,7 +213,7 @@ class SAM2_octron(SAM2VideoPredictor):
         # if `add_all_frames_to_correct_as_cond` is True, we also append to the conditioning frame list any frame that receives a later correction click
         # if `add_all_frames_to_correct_as_cond` is False, we conditioning frame list to only use those initial conditioning frames
         add_all_frames_to_correct_as_cond=False,
-        self.fill_hole_area = fill_hole_area
+        #self.fill_hole_area = fill_hole_area
         self.non_overlap_masks = non_overlap_masks
         self.clear_non_cond_mem_around_input = clear_non_cond_mem_around_input
         self.add_all_frames_to_correct_as_cond = add_all_frames_to_correct_as_cond
@@ -218,7 +221,7 @@ class SAM2_octron(SAM2VideoPredictor):
         super().__init__(**kwargs)
        
         
-        print('\n\nLoaded SAM2VideoPredictor OCTRON')
+        print('\nLoaded SAM2VideoPredictor OCTRON')
         
     @torch.inference_mode()
     def init_state(
@@ -295,8 +298,17 @@ class SAM2_octron(SAM2VideoPredictor):
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
         print('Initialized SAM2 model')
         
-        self.video_data = napari_data                               
-                            
+        self.video_data = napari_data            
+        
+                
+        # TODO Make configurable
+        #self.fill_hole_area = 200
+        # For morphological operations 
+        self.disk_size = 5
+        self.perform_morphological_operations = True
+        if self.perform_morphological_operations:
+            self.closing_kernel = torch_tensor(disk(self.disk_size).tolist()).to(compute_device)
+                    
     
     def _run_single_frame_inference(
         self,
@@ -354,7 +366,13 @@ class SAM2_octron(SAM2VideoPredictor):
             maskmem_features = maskmem_features.to(torch.bfloat16)
             maskmem_features = maskmem_features.to(storage_device, non_blocking=True)
         pred_masks_gpu = current_out["pred_masks"]
-        # # potentially fill holes in the predicted masks
+        
+        # Introduce morphological opening here
+        if self.perform_morphological_operations:
+            pred_masks_gpu = kornia_closing(pred_masks_gpu, kernel=self.closing_kernel)
+
+        # TODO: This might be useful. 
+        # Leaving out for now.
         # if self.fill_hole_area > 0:
         #     pred_masks_gpu = fill_holes_in_mask_scores(
         #         pred_masks_gpu, self.fill_hole_area
