@@ -1,4 +1,8 @@
 # Code to correct the octron.py file
+# that is created when running
+# uic -g python octron.ui > octron.py
+
+# Rational: The octron.py contains some errors that need to be corrected.
 # Some of the changes that need to be made are:
 # - Replace PySide2 imports with qtpy imports
 # - Replace "octron_widgetui" with "self" when used as a parameter
