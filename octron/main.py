@@ -46,9 +46,9 @@ class octron_widget(QWidget):
         if not self.objectName():
             self.setObjectName(u"self")
         self.setEnabled(True)
-        self.resize(400, 500)
-        self.setMinimumSize(QSize(400, 500))
-        self.setMaximumSize(QSize(400, 1000))
+        self.resize(410, 500)
+        self.setMinimumSize(QSize(410, 500))
+        self.setMaximumSize(QSize(410, 1000))
         self.setCursor(QCursor(Qt.ArrowCursor))
         self.setWindowOpacity(1.000000000000000)
         self.verticalLayoutWidget = QWidget(self)
@@ -62,7 +62,7 @@ class octron_widget(QWidget):
         self.octron_logo = QLabel(self.verticalLayoutWidget)
         self.octron_logo.setObjectName(u"octron_logo")
         self.octron_logo.setEnabled(True)
-        self.octron_logo.setMinimumSize(QSize(400, 100))
+        self.octron_logo.setMinimumSize(QSize(410, 100))
         self.octron_logo.setBaseSize(QSize(0, 0))
         self.octron_logo.setPixmap(QPixmap(u"qt_gui/octron_logo.svg"))
         self.octron_logo.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
@@ -77,7 +77,7 @@ class octron_widget(QWidget):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.toolBox.sizePolicy().hasHeightForWidth())
         self.toolBox.setSizePolicy(sizePolicy)
-        self.toolBox.setMaximumSize(QSize(400, 750))
+        self.toolBox.setMaximumSize(QSize(410, 750))
         self.toolBox.setCursor(QCursor(Qt.ArrowCursor))
         self.toolBox.setFrameShape(QFrame.Shape.NoFrame)
         self.toolBox.setFrameShadow(QFrame.Shadow.Plain)
@@ -85,7 +85,7 @@ class octron_widget(QWidget):
         self.toolBox.setMidLineWidth(1)
         self.project_tab = QWidget()
         self.project_tab.setObjectName(u"project_tab")
-        self.project_tab.setGeometry(QRect(0, 0, 400, 224))
+        self.project_tab.setGeometry(QRect(0, 0, 410, 224))
         sizePolicy1 = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
@@ -96,7 +96,7 @@ class octron_widget(QWidget):
         self.toolBox.addItem(self.project_tab, icon, u"Project")
         self.annotate_tab = QWidget()
         self.annotate_tab.setObjectName(u"annotate_tab")
-        self.annotate_tab.setGeometry(QRect(0, 0, 400, 224))
+        self.annotate_tab.setGeometry(QRect(0, 0, 410, 224))
         sizePolicy1.setHeightForWidth(self.annotate_tab.sizePolicy().hasHeightForWidth())
         self.annotate_tab.setSizePolicy(sizePolicy1)
         icon1 = QIcon()
@@ -104,7 +104,7 @@ class octron_widget(QWidget):
         self.toolBox.addItem(self.annotate_tab, icon1, u"Generate training data (annotate)")
         self.train_tab = QWidget()
         self.train_tab.setObjectName(u"train_tab")
-        self.train_tab.setGeometry(QRect(0, 0, 400, 224))
+        self.train_tab.setGeometry(QRect(0, 0, 410, 224))
         sizePolicy1.setHeightForWidth(self.train_tab.sizePolicy().hasHeightForWidth())
         self.train_tab.setSizePolicy(sizePolicy1)
         icon2 = QIcon()
@@ -112,7 +112,7 @@ class octron_widget(QWidget):
         self.toolBox.addItem(self.train_tab, icon2, u"Train model")
         self.predict_tab = QWidget()
         self.predict_tab.setObjectName(u"predict_tab")
-        self.predict_tab.setGeometry(QRect(0, 0, 400, 224))
+        self.predict_tab.setGeometry(QRect(0, 0, 410, 224))
         sizePolicy1.setHeightForWidth(self.predict_tab.sizePolicy().hasHeightForWidth())
         self.predict_tab.setSizePolicy(sizePolicy1)
         icon3 = QIcon()
@@ -153,9 +153,6 @@ class octron_widget(QWidget):
     # retranslateUi
 
 
-
-
-     
      
      
      
