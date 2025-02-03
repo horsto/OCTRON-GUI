@@ -107,8 +107,7 @@ class octron_widget(QWidget):
         self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
                                                         ckpt_path=checkpoint_path.as_posix(),
                                                         )
-                                
-        print(f"Model {model_id} ({model_name}) loaded.")
+        show_info(f"Model {model_name} loaded on {self.device}")
         # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(False)
         self.load_model_btn.setEnabled(False)
