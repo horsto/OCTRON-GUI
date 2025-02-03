@@ -75,13 +75,15 @@ class octron_widget(QWidget):
         #     show_info('Test - pressed key m')
 
     def callback_functions(self):
-        # Connect signals with slots
+        '''
+        Connect all callback functions
+        '''
         self.load_model_btn.clicked.connect(self.load_model)
         # self.sam2model_list.currentIndexChanged.connect(self.on_model_selected)
         
     def load_model(self):
         '''
-        Load the selected model
+        Load the selected SAM2 model
         '''
         model_name = self.sam2model_list.currentText()
         # Reverse lookup model_id
@@ -107,7 +109,12 @@ class octron_widget(QWidget):
                                                         )
                                 
         print(f"Model {model_id} ({model_name}) loaded.")
-                
+        # Deactivate the dropdown menu upon successful model loading
+        self.sam2model_list.setEnabled(False)
+        self.load_model_btn.setEnabled(False)
+        self.load_model_btn.setStyleSheet('QPushButton {background-color: #999; color: #495c10;}')
+        self.load_model_btn.setText(f'{model_name} ✓')
+
         
     def setupUi(self):
         if not self.objectName():
