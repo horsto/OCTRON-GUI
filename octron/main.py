@@ -39,9 +39,37 @@ class octron_widget(QWidget):
         
         self._viewer = viewer
         
+        
+        # Some parameters
+        self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
+                   
+        
+        
+        
+        
+        
+        
+        
+        
+        # Setup UI components
         self.setupUi()
         
+        
+        
+        
+        
+        
         # self.predictor, self.device = self._initialize_sam2()
+        # @viewer.bind_key('m')
+        # def print_message(viewer):
+        #     show_info('Test - pressed key m')
+                        
+                
+        
+        
+        
+        
+        
     def setupUi(self):
         if not self.objectName():
             self.setObjectName(u"self")
