@@ -111,7 +111,7 @@
        <number>1</number>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="project_tab">
        <property name="geometry">
@@ -208,7 +208,7 @@
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
-             <widget class="QComboBox" name="comboBox">
+             <widget class="QComboBox" name="sam2model_list">
               <property name="minimumSize">
                <size>
                 <width>167</width>
@@ -223,36 +223,16 @@
               </property>
               <item>
                <property name="text">
-                <string>SAM2 model</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Tiny</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Small</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Base +</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Large</string>
+                <string>Choose model ...</string>
                </property>
               </item>
              </widget>
             </item>
             <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
-             <widget class="QPushButton" name="pushButton">
+             <widget class="QPushButton" name="load_model_btn">
               <property name="maximumSize">
                <size>
-                <width>16777215</width>
+                <width>250</width>
                 <height>60</height>
                </size>
               </property>
@@ -427,7 +407,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="opening_kernel_radius_box">
+             <widget class="QSpinBox" name="opening_kernel_radius_input">
               <property name="minimumSize">
                <size>
                 <width>60</width>
@@ -446,7 +426,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="kernel_label_px">
+             <widget class="QLabel" name="kernelpx_label">
               <property name="minimumSize">
                <size>
                 <width>18</width>
@@ -501,7 +481,7 @@
               </property>
               <property name="maximumSize">
                <size>
-                <width>16777215</width>
+                <width>250</width>
                 <height>25</height>
                </size>
               </property>
@@ -523,6 +503,12 @@
              <widget class="QPushButton" name="predict_next_batch_btn">
               <property name="enabled">
                <bool>false</bool>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>250</width>
+                <height>60</height>
+               </size>
               </property>
               <property name="text">
                <string>Predict next 20 frames</string>

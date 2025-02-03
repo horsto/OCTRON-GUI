@@ -92,23 +92,19 @@ class Ui_octron_widgetui(object):
         self.horizontalGroupBox.setMaximumSize(QSize(400, 60))
         self.horizontalLayout_8 = QHBoxLayout(self.horizontalGroupBox)
         self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.comboBox = QComboBox(self.horizontalGroupBox)
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.setObjectName(u"comboBox")
-        self.comboBox.setMinimumSize(QSize(167, 0))
-        self.comboBox.setMaximumSize(QSize(167, 25))
+        self.sam2model_list = QComboBox(self.horizontalGroupBox)
+        self.sam2model_list.addItem("")
+        self.sam2model_list.setObjectName(u"sam2model_list")
+        self.sam2model_list.setMinimumSize(QSize(167, 0))
+        self.sam2model_list.setMaximumSize(QSize(167, 25))
 
-        self.horizontalLayout_8.addWidget(self.comboBox, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_8.addWidget(self.sam2model_list, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.pushButton = QPushButton(self.horizontalGroupBox)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setMaximumSize(QSize(16777215, 60))
+        self.load_model_btn = QPushButton(self.horizontalGroupBox)
+        self.load_model_btn.setObjectName(u"load_model_btn")
+        self.load_model_btn.setMaximumSize(QSize(250, 60))
 
-        self.horizontalLayout_8.addWidget(self.pushButton, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_8.addWidget(self.load_model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.annotate_vertical_layout.addWidget(self.horizontalGroupBox)
@@ -173,20 +169,20 @@ class Ui_octron_widgetui(object):
 
         self.horizontalLayout_4.addWidget(self.kernel_label)
 
-        self.opening_kernel_radius_box = QSpinBox(self.annotate_param_groupbox)
-        self.opening_kernel_radius_box.setObjectName(u"opening_kernel_radius_box")
-        self.opening_kernel_radius_box.setMinimumSize(QSize(60, 25))
-        self.opening_kernel_radius_box.setMaximumSize(QSize(60, 25))
-        self.opening_kernel_radius_box.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+        self.opening_kernel_radius_input = QSpinBox(self.annotate_param_groupbox)
+        self.opening_kernel_radius_input.setObjectName(u"opening_kernel_radius_input")
+        self.opening_kernel_radius_input.setMinimumSize(QSize(60, 25))
+        self.opening_kernel_radius_input.setMaximumSize(QSize(60, 25))
+        self.opening_kernel_radius_input.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.horizontalLayout_4.addWidget(self.opening_kernel_radius_box)
+        self.horizontalLayout_4.addWidget(self.opening_kernel_radius_input)
 
-        self.kernel_label_px = QLabel(self.annotate_param_groupbox)
-        self.kernel_label_px.setObjectName(u"kernel_label_px")
-        self.kernel_label_px.setMinimumSize(QSize(18, 25))
-        self.kernel_label_px.setMaximumSize(QSize(18, 25))
+        self.kernelpx_label = QLabel(self.annotate_param_groupbox)
+        self.kernelpx_label.setObjectName(u"kernelpx_label")
+        self.kernelpx_label.setMinimumSize(QSize(18, 25))
+        self.kernelpx_label.setMaximumSize(QSize(18, 25))
 
-        self.horizontalLayout_4.addWidget(self.kernel_label_px)
+        self.horizontalLayout_4.addWidget(self.kernelpx_label)
 
 
         self.annotate_vertical_layout.addWidget(self.annotate_param_groupbox, 0, Qt.AlignmentFlag.AlignBottom)
@@ -202,7 +198,7 @@ class Ui_octron_widgetui(object):
         self.batch_predict_progressbar = QProgressBar(self.annotate_layer_predict_groupbox)
         self.batch_predict_progressbar.setObjectName(u"batch_predict_progressbar")
         self.batch_predict_progressbar.setMinimumSize(QSize(0, 25))
-        self.batch_predict_progressbar.setMaximumSize(QSize(16777215, 25))
+        self.batch_predict_progressbar.setMaximumSize(QSize(250, 25))
         self.batch_predict_progressbar.setMaximum(20)
         self.batch_predict_progressbar.setValue(0)
 
@@ -211,6 +207,7 @@ class Ui_octron_widgetui(object):
         self.predict_next_batch_btn = QPushButton(self.annotate_layer_predict_groupbox)
         self.predict_next_batch_btn.setObjectName(u"predict_next_batch_btn")
         self.predict_next_batch_btn.setEnabled(False)
+        self.predict_next_batch_btn.setMaximumSize(QSize(250, 60))
 
         self.horizontalLayout_7.addWidget(self.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -244,7 +241,7 @@ class Ui_octron_widgetui(object):
 
         self.retranslateUi(octron_widgetui)
 
-        self.toolBox.setCurrentIndex(1)
+        self.toolBox.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(octron_widgetui)
@@ -258,13 +255,9 @@ class Ui_octron_widgetui(object):
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Create new octron projects or load existing ones", None))
 #endif // QT_CONFIG(tooltip)
         self.horizontalGroupBox.setTitle(QCoreApplication.translate("octron_widgetui", u"Model selection", None))
-        self.comboBox.setItemText(0, QCoreApplication.translate("octron_widgetui", u"SAM2 model", None))
-        self.comboBox.setItemText(1, QCoreApplication.translate("octron_widgetui", u"Tiny", None))
-        self.comboBox.setItemText(2, QCoreApplication.translate("octron_widgetui", u"Small", None))
-        self.comboBox.setItemText(3, QCoreApplication.translate("octron_widgetui", u"Base +", None))
-        self.comboBox.setItemText(4, QCoreApplication.translate("octron_widgetui", u"Large", None))
+        self.sam2model_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Choose model ...", None))
 
-        self.pushButton.setText(QCoreApplication.translate("octron_widgetui", u"Load model", None))
+        self.load_model_btn.setText(QCoreApplication.translate("octron_widgetui", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Layer controls", None))
         self.layer_type_combobox.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Layer Type", None))
         self.layer_type_combobox.setItemText(1, QCoreApplication.translate("octron_widgetui", u"Shape Layer", None))
@@ -276,7 +269,7 @@ class Ui_octron_widgetui(object):
         self.create_annotation_layer_btn.setText(QCoreApplication.translate("octron_widgetui", u"Create", None))
         self.annotate_param_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Parameters", None))
         self.kernel_label.setText(QCoreApplication.translate("octron_widgetui", u"Opening kernel radius", None))
-        self.kernel_label_px.setText(QCoreApplication.translate("octron_widgetui", u"px", None))
+        self.kernelpx_label.setText(QCoreApplication.translate("octron_widgetui", u"px", None))
         self.annotate_layer_predict_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Batch prediction", None))
 #if QT_CONFIG(tooltip)
         self.batch_predict_progressbar.setToolTip(QCoreApplication.translate("octron_widgetui", u"<html><head/><body><p>Batch predict progress bar</p></body></html>", None))
