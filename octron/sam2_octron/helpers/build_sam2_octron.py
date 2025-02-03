@@ -15,9 +15,30 @@ def build_sam2_octron(
     **kwargs,
 ):
     '''
+    Build the SAM2 model from config and checkpoint files.
+    
+    This is basically the original build_sam function.
     I am getting rid of the vos_optimized flag because I don't need it.
     
-
+    Parameters
+    ----------
+    config_file : str
+        Path to the SAM2 model config file (.yaml)
+    ckpt_path : str
+        Path to the SAM2 model checkpoint file (.pth)
+    mode : str
+        Mode to run the model in. Default is "eval"
+    hydra_overrides_extra : list
+        List of additional hydra overrides to apply. Default is []
+    apply_postprocessing : bool
+        Apply postprocessing to the model. Default is False. TODO: UNTESTED!
+        That would be:
+            dynamic_multimask_via_stability = True 
+            dynamic_multimask_stability_delta = 0.05
+            dynamic_multimask_stability_thresh = 0.98
+            binarize_mask_from_pts_for_mem_enc = True
+            fill_hole_area = 8
+    **kwargs : dict
     '''
     
     # Find out which device to use
@@ -28,8 +49,6 @@ def build_sam2_octron(
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
-        
-    
 
     if device.type == "cuda":
         # use bfloat16 for the entire notebook
@@ -44,11 +63,6 @@ def build_sam2_octron(
             "give numerically different outputs and sometimes degraded performance on MPS. "
             "See e.g. https://github.com/pytorch/pytorch/issues/84936 for a discussion."
         )
-        
-
-    print(f"Uing device: {device}")
-    
-    
 
     # Hydra configuration 
     hydra_overrides = [
@@ -73,8 +87,6 @@ def build_sam2_octron(
     cfg = compose(config_name=config_file, overrides=hydra_overrides)
     OmegaConf.resolve(cfg)
     model = instantiate(cfg.model, _recursive_=True)
-    
-    print(f"Model image size: {model.image_size}")    
 
     _load_checkpoint(model, ckpt_path)
     model = model.to(device)

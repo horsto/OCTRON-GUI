@@ -25,7 +25,7 @@ import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
-
+from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 
 from qtpy.QtWidgets import QWidget
 
@@ -38,35 +38,76 @@ class octron_widget(QWidget):
         
         
         self._viewer = viewer
-        
+         # Get the current path
+        self.current_path = Path(os.path.abspath(__file__)).parent
+        print(f"Current path: {self.current_path}")
         
         # Some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
-                   
+        
+        # Model yaml for SAM2
+        models_yaml_path = self.current_path / 'sam2_octron/models.yaml'
+        self.models_dict = check_model_availability(SAM2p1_BASE_URL='',
+                                                    models_yaml_path=models_yaml_path,
+                                                    force_download=False,
+                                                    )
+        self.predictor, self.device = None, None
         
         
-        
-        
-        
-        
-        
-        
-        # Setup UI components
+        ##################################################################################################
+        # Initialize all UI components
         self.setupUi()
         
+        # Populate dropwdown menus
+        for model_id, model in self.models_dict.items():
+            print(f"Adding model {model_id}")
+            self.sam2model_list.addItem(model['name'])
+            
+        # Connect callbacks 
+        self.callback_functions()
         
         
         
         
-        
-        # self.predictor, self.device = self._initialize_sam2()
+        # Example key binding with Napari built-in viewer functions
         # @viewer.bind_key('m')
         # def print_message(viewer):
         #     show_info('Test - pressed key m')
-                        
+
+    def callback_functions(self):
+        # Connect signals with slots
+        self.load_model_btn.clicked.connect(self.load_model)
+        # self.sam2model_list.currentIndexChanged.connect(self.on_model_selected)
+        
+    def load_model(self):
+        '''
+        Load the selected model
+        '''
+        model_name = self.sam2model_list.currentText()
+        # Reverse lookup model_id
+        for model_id, model in self.models_dict.items():
+            if model['name'] == model_name:
+                break
+        
+        print(f"Loading model {model_id}")
+        model = self.models_dict[model_id]
+        
+        # sam2_folder = Path('sam2_octron')
+        # checkpoint = 'sam2.1_hiera_large.pt' # under folder /checkpoints
+        # model_cfg = 'sam2.1/sam2.1_hiera_l.yaml' # under folder /configs
+        # # ----------------------------------------------------------------------------
+        # sam2_checkpoint = cur_path / sam2_folder / Path(f'checkpoints/{checkpoint}')
+        # model_cfg = Path(f'configs/{model_cfg}')
                 
         
-        
+        config_path = Path(model['config_path'])
+        checkpoint_path = self.current_path / Path(f"sam2_octron/{model['checkpoint_path']}")
+        self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
+                                                        ckpt_path=checkpoint_path.as_posix(),
+                                                        )
+                                
+        print(f"Model {model_id} ({model_name}) loaded.")
+                
         
     def setupUi(self):
         if not self.objectName():
@@ -146,23 +187,19 @@ class octron_widget(QWidget):
         self.horizontalGroupBox.setMaximumSize(QSize(400, 60))
         self.horizontalLayout_8 = QHBoxLayout(self.horizontalGroupBox)
         self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.comboBox = QComboBox(self.horizontalGroupBox)
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.setObjectName(u"comboBox")
-        self.comboBox.setMinimumSize(QSize(167, 0))
-        self.comboBox.setMaximumSize(QSize(167, 25))
+        self.sam2model_list = QComboBox(self.horizontalGroupBox)
+        self.sam2model_list.addItem("")
+        self.sam2model_list.setObjectName(u"sam2model_list")
+        self.sam2model_list.setMinimumSize(QSize(167, 0))
+        self.sam2model_list.setMaximumSize(QSize(167, 25))
 
-        self.horizontalLayout_8.addWidget(self.comboBox, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_8.addWidget(self.sam2model_list, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.pushButton = QPushButton(self.horizontalGroupBox)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setMaximumSize(QSize(16777215, 60))
+        self.load_model_btn = QPushButton(self.horizontalGroupBox)
+        self.load_model_btn.setObjectName(u"load_model_btn")
+        self.load_model_btn.setMaximumSize(QSize(250, 60))
 
-        self.horizontalLayout_8.addWidget(self.pushButton, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_8.addWidget(self.load_model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.annotate_vertical_layout.addWidget(self.horizontalGroupBox)
@@ -227,20 +264,20 @@ class octron_widget(QWidget):
 
         self.horizontalLayout_4.addWidget(self.kernel_label)
 
-        self.opening_kernel_radius_box = QSpinBox(self.annotate_param_groupbox)
-        self.opening_kernel_radius_box.setObjectName(u"opening_kernel_radius_box")
-        self.opening_kernel_radius_box.setMinimumSize(QSize(60, 25))
-        self.opening_kernel_radius_box.setMaximumSize(QSize(60, 25))
-        self.opening_kernel_radius_box.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+        self.opening_kernel_radius_input = QSpinBox(self.annotate_param_groupbox)
+        self.opening_kernel_radius_input.setObjectName(u"opening_kernel_radius_input")
+        self.opening_kernel_radius_input.setMinimumSize(QSize(60, 25))
+        self.opening_kernel_radius_input.setMaximumSize(QSize(60, 25))
+        self.opening_kernel_radius_input.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.horizontalLayout_4.addWidget(self.opening_kernel_radius_box)
+        self.horizontalLayout_4.addWidget(self.opening_kernel_radius_input)
 
-        self.kernel_label_px = QLabel(self.annotate_param_groupbox)
-        self.kernel_label_px.setObjectName(u"kernel_label_px")
-        self.kernel_label_px.setMinimumSize(QSize(18, 25))
-        self.kernel_label_px.setMaximumSize(QSize(18, 25))
+        self.kernelpx_label = QLabel(self.annotate_param_groupbox)
+        self.kernelpx_label.setObjectName(u"kernelpx_label")
+        self.kernelpx_label.setMinimumSize(QSize(18, 25))
+        self.kernelpx_label.setMaximumSize(QSize(18, 25))
 
-        self.horizontalLayout_4.addWidget(self.kernel_label_px)
+        self.horizontalLayout_4.addWidget(self.kernelpx_label)
 
 
         self.annotate_vertical_layout.addWidget(self.annotate_param_groupbox, 0, Qt.AlignmentFlag.AlignBottom)
@@ -256,7 +293,7 @@ class octron_widget(QWidget):
         self.batch_predict_progressbar = QProgressBar(self.annotate_layer_predict_groupbox)
         self.batch_predict_progressbar.setObjectName(u"batch_predict_progressbar")
         self.batch_predict_progressbar.setMinimumSize(QSize(0, 25))
-        self.batch_predict_progressbar.setMaximumSize(QSize(16777215, 25))
+        self.batch_predict_progressbar.setMaximumSize(QSize(250, 25))
         self.batch_predict_progressbar.setMaximum(20)
         self.batch_predict_progressbar.setValue(0)
 
@@ -265,6 +302,7 @@ class octron_widget(QWidget):
         self.predict_next_batch_btn = QPushButton(self.annotate_layer_predict_groupbox)
         self.predict_next_batch_btn.setObjectName(u"predict_next_batch_btn")
         self.predict_next_batch_btn.setEnabled(False)
+        self.predict_next_batch_btn.setMaximumSize(QSize(250, 60))
 
         self.horizontalLayout_7.addWidget(self.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -298,7 +336,7 @@ class octron_widget(QWidget):
 
         self.retranslateUi()
 
-        self.toolBox.setCurrentIndex(1)
+        self.toolBox.setCurrentIndex(0)
 
 
     # setupUi
@@ -311,13 +349,9 @@ class octron_widget(QWidget):
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("self", u"Create new octron projects or load existing ones", None))
 #endif // QT_CONFIG(tooltip)
         self.horizontalGroupBox.setTitle(QCoreApplication.translate("self", u"Model selection", None))
-        self.comboBox.setItemText(0, QCoreApplication.translate("self", u"SAM2 model", None))
-        self.comboBox.setItemText(1, QCoreApplication.translate("self", u"Tiny", None))
-        self.comboBox.setItemText(2, QCoreApplication.translate("self", u"Small", None))
-        self.comboBox.setItemText(3, QCoreApplication.translate("self", u"Base +", None))
-        self.comboBox.setItemText(4, QCoreApplication.translate("self", u"Large", None))
+        self.sam2model_list.setItemText(0, QCoreApplication.translate("self", u"Choose model ...", None))
 
-        self.pushButton.setText(QCoreApplication.translate("self", u"Load model", None))
+        self.load_model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("self", u"Layer controls", None))
         self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Layer Type", None))
         self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shape Layer", None))
@@ -329,7 +363,7 @@ class octron_widget(QWidget):
         self.create_annotation_layer_btn.setText(QCoreApplication.translate("self", u"Create", None))
         self.annotate_param_groupbox.setTitle(QCoreApplication.translate("self", u"Parameters", None))
         self.kernel_label.setText(QCoreApplication.translate("self", u"Opening kernel radius", None))
-        self.kernel_label_px.setText(QCoreApplication.translate("self", u"px", None))
+        self.kernelpx_label.setText(QCoreApplication.translate("self", u"px", None))
         self.annotate_layer_predict_groupbox.setTitle(QCoreApplication.translate("self", u"Batch prediction", None))
 #if QT_CONFIG(tooltip)
         self.batch_predict_progressbar.setToolTip(QCoreApplication.translate("self", u"<html><head/><body><p>Batch predict progress bar</p></body></html>", None))
@@ -351,36 +385,17 @@ class octron_widget(QWidget):
     # retranslateUi
 
 
+
+
      
-    # def _initialize_sam2(self):
-    #     '''
-    #     Initialize the SAM2 model
-    #     '''
-    #     sam2_folder = Path('sam2_octron')
-        
-        
-    #     # TODO: Make checkpoint path and config file path configurable  
-    #     checkpoint = 'sam2.1_hiera_large.pt' # under folder /checkpoints
-    #     model_cfg = 'sam2.1/sam2.1_hiera_l.yaml' # under folder /configs
-    #     # ------------------------------------------------------------------------------------
-    #     sam2_checkpoint = cur_path / sam2_folder / Path(f'checkpoints/{checkpoint}')
-    #     model_cfg = Path(f'configs/{model_cfg}')
-        
-    #     assert sam2_checkpoint.exists(), f'Checkpoint file does not exist: {sam2_checkpoint}'
-    #     assert (cur_path/sam2_folder/model_cfg).exists(), f'Config file does not exist: {cur_path/sam2_folder/model_cfg}'
-    #     predictor, device  = build_sam2_video_predictor_octron(config_file=model_cfg.as_posix(), 
-    #                                                            ckpt_path=sam2_checkpoint.as_posix(), 
-    #                                                            )
-                
-    #     return predictor, device    
+   
     
-    # def _on_click(self):
-    #     show_info('Hello and welcome to OCTRON!\nOctopuses are amazing creatures 🐙')
+#     def _on_click(self):
+#         show_info('Hello and welcome to OCTRON!\nOctopuses are amazing creatures 🐙')
         
-    # def _forw_1frame(self):
-    #     current_indices = self._viewer.dims.current_step
-    #     self._viewer.dims.set_point(0,current_indices[0]+100)
-        
+#     def _forw_1frame(self):
+#         current_indices = self._viewer.dims.current_step
+#         self._viewer.dims.set_point(0,current_indices[0]+100)
         
         
         
