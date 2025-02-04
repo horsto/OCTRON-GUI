@@ -1,6 +1,6 @@
 # OCTRON
 
-Octron is a segmentation and training UI in napari.
+Octron is a video segmentation and training UI in napari. It allows for the creation of training data and the subsequent training of deep neural networks for the dense quantification of behavioral task videos across a wide range of species. 
 
 ## Installation 
 
@@ -50,6 +50,7 @@ More instructions to follow ... stay tuned!
 
 ![Octron main GUI](pics/octron_main_gui.png)
 
+---
 
 ## Attributions
-- Logos were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
+- Interface button and icon images were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
