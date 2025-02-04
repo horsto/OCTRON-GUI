@@ -58,7 +58,7 @@ class octron_widget(QWidget):
         # Initialize all UI components
         self.setupUi()
         
-        # Populate dropwdown menus
+        # Populate SAM2 dropdown list with available models
         for model_id, model in self.models_dict.items():
             print(f"Adding model {model_id}")
             self.sam2model_list.addItem(model['name'])
@@ -69,21 +69,20 @@ class octron_widget(QWidget):
         
         
         
-        # Example key binding with Napari built-in viewer functions
-        # @viewer.bind_key('m')
-        # def print_message(viewer):
-        #     show_info('Test - pressed key m')
+
 
     def callback_functions(self):
         '''
-        Connect all callback functions
+        Connect all callback functions to buttons and lists 
         '''
         self.load_model_btn.clicked.connect(self.load_model)
         # self.sam2model_list.currentIndexChanged.connect(self.on_model_selected)
         
     def load_model(self):
         '''
-        Load the selected SAM2 model
+        Load the selected SAM2 model and enable the batch prediction button, 
+        setting the progress bar to the chunk size and the button text to predict next chunk size
+        
         '''
         model_name = self.sam2model_list.currentText()
         # Reverse lookup model_id
@@ -114,6 +113,21 @@ class octron_widget(QWidget):
         self.load_model_btn.setStyleSheet('QPushButton {background-color: #999; color: #495c10;}')
         self.load_model_btn.setText(f'{model_name} ✓')
 
+        # Enable the predict next batch button
+        # Take care of chunk size for batch prediction
+        self.batch_predict_progressbar.setMaximum(self.chunk_size)
+        self.batch_predict_progressbar.setValue(0)
+        self.predict_next_batch_btn.setText(f'▷ Predict next {self.chunk_size} frames')
+        self.predict_next_batch_btn.setEnabled(True)
+        # TODO: Implement the predict next batch function
+        #self.predict_next_batch_btn.clicked.connect(FUNCTION)
+
+        # Example key binding with Napari built-in viewer functions
+        # @viewer.bind_key('m')
+        # def print_message(viewer):
+        #     show_info('Test - pressed key m')
+
+    ######### GUI SETUP CODE FROM QT DESIGNER ##########################################################
         
     def setupUi(self):
         if not self.objectName():
@@ -342,7 +356,7 @@ class octron_widget(QWidget):
 
         self.retranslateUi()
 
-        self.toolBox.setCurrentIndex(0)
+        self.toolBox.setCurrentIndex(1)
 
 
     # setupUi
@@ -375,7 +389,7 @@ class octron_widget(QWidget):
         self.batch_predict_progressbar.setToolTip(QCoreApplication.translate("self", u"<html><head/><body><p>Batch predict progress bar</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.batch_predict_progressbar.setFormat(QCoreApplication.translate("self", u"%p%", None))
-        self.predict_next_batch_btn.setText(QCoreApplication.translate("self", u"Predict next 20 frames", None))
+        self.predict_next_batch_btn.setText("")
         self.toolBox.setItemText(self.toolBox.indexOf(self.annotate_tab), QCoreApplication.translate("self", u"Generate training data (annotate)", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.annotate_tab), QCoreApplication.translate("self", u"Create annotation data for training, i.e. add segmentation or keypoint data on videos.", None))
@@ -390,18 +404,3 @@ class octron_widget(QWidget):
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
 
-
-
-
-     
-   
-    
-#     def _on_click(self):
-#         show_info('Hello and welcome to OCTRON!\nOctopuses are amazing creatures 🐙')
-        
-#     def _forw_1frame(self):
-#         current_indices = self._viewer.dims.current_step
-#         self._viewer.dims.set_point(0,current_indices[0]+100)
-        
-        
-        

@@ -241,7 +241,7 @@ class Ui_octron_widgetui(object):
 
         self.retranslateUi()
 
-        self.toolBox.setCurrentIndex(0)
+        self.toolBox.setCurrentIndex(1)
 
 
     # setupUi
@@ -274,7 +274,7 @@ class Ui_octron_widgetui(object):
         self.batch_predict_progressbar.setToolTip(QCoreApplication.translate("self", u"<html><head/><body><p>Batch predict progress bar</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.batch_predict_progressbar.setFormat(QCoreApplication.translate("self", u"%p%", None))
-        self.predict_next_batch_btn.setText(QCoreApplication.translate("self", u"Predict next 20 frames", None))
+        self.predict_next_batch_btn.setText("")
         self.toolBox.setItemText(self.toolBox.indexOf(self.annotate_tab), QCoreApplication.translate("self", u"Generate training data (annotate)", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.annotate_tab), QCoreApplication.translate("self", u"Create annotation data for training, i.e. add segmentation or keypoint data on videos.", None))
