@@ -35,5 +35,21 @@ Follow these steps:
     python test_gpu.py
     ```
 
+## Usage
+1. Activate the new environment:
+    ```sh
+    conda activate octron
+    ```
+2. Open Napari
+    ```sh
+    napari
+    ```
+3. Within Napari, OCTRON should appear under the Plugins Menu. Click it and *have fun*!
+
+More instructions to follow ... stay tuned! 
+
+![Octron main GUI](pics/octron_main_gui.png)
+
+
 ## Attributions
 - Logos were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
