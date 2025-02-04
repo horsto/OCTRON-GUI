@@ -17,7 +17,7 @@ Follow these steps:
 
 3. Create a new Conda environment called "octron" with Python version 3.11:
     ```sh
-    conda create -n octron python=3.11
+    conda create --name octron python=3.11 -y
     ```
 
 4. Activate the new environment:
