@@ -1,7 +1,12 @@
 
+import os 
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1" # Leaving this here out of pure desperation
+
+
+
 from collections import OrderedDict
 import torch
-
+import numpy as np
 from tqdm import tqdm
 from sam2.sam2_video_predictor import SAM2VideoPredictor
 from sam2.utils.misc import concat_points    
@@ -13,7 +18,7 @@ from torch import tensor as torch_tensor
 from skimage.morphology import disk
 
 # Custom Zarr archive class
-from .zarr_archives import OctoZarr
+from .sam2_zarr import OctoZarr
 
 
 class SAM2_octron(SAM2VideoPredictor):
@@ -652,3 +657,46 @@ class SAM2_octron(SAM2VideoPredictor):
             self.inference_state, consolidated_out["pred_masks_video_res"]
         )
         return frame_idx, obj_ids, video_res_masks
+
+
+#####################################################################################################
+def run_new_pred(predictor,
+                 frame_idx,
+                 obj_id, 
+                 label,
+                 point=None,
+                 mask=None
+                 ):
+    assert label in [0,1], f'label must be 0 or 1, got {label}'
+    assert point is not None or mask is not None
+    if mask is not None:
+        assert len(mask.shape) == 2
+        
+        print('Running mask prediction')
+        frame_idx, obj_ids, video_res_masks = predictor.add_new_mask(
+                                                    frame_idx=frame_idx,
+                                                    obj_id=obj_id,
+                                                    mask=np.array(mask, dtype=bool)
+                                                    )
+        mask = (video_res_masks[obj_id] > 0).cpu().numpy().astype(np.uint8)
+                
+        
+    if point is not None:
+        assert len(point) == 2
+        # Run point prediction
+        print('Running point prediction')
+        _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
+                                                    frame_idx=frame_idx,
+                                                    obj_id=obj_id,
+                                                    points=np.array([point],dtype=np.float32),
+                                                    labels=np.array([label], np.int32)
+                                                    )
+        
+        # Add the mask image as a new labels layer
+        mask = (out_mask_logits[obj_id] > 0).cpu().numpy().astype(np.uint8)
+        
+    current_label = obj_id+1
+    if len(np.unique(mask))>1:
+        mask[mask==np.unique(mask)[1]] = current_label 
+    mask = mask.squeeze()
+    return mask 
