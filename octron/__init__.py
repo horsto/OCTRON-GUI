@@ -1,2 +1,1 @@
-from .main import octron_widget    
-
+from .main import octron_widget

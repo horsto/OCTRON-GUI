@@ -5,6 +5,8 @@ OCTRON
 
 '''
 import os 
+os.environ["QT_STYLE_OVERRIDE"] = "fusion" # Not sure this does anything!
+
 from pathlib import Path
 cur_path = Path(os.path.abspath(__file__)).parent
 
@@ -12,12 +14,10 @@ cur_path = Path(os.path.abspath(__file__)).parent
 from qtpy.QtCore import *  # type: ignore
 from qtpy.QtGui import *  # type: ignore
 from qtpy.QtWidgets import *  # type: ignore
-os.environ["QT_STYLE_OVERRIDE"] = "fusion"
 
 import napari
 import napari.window
 from napari.utils.notifications import show_info, show_warning
-
 
 # SAM2 specific 
 import os

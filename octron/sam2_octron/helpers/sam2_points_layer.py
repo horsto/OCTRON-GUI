@@ -85,19 +85,19 @@ def on_points_added(event,
             prefetcher_worker.run()
 
 
-points_layer.mouse_drag_callbacks.append(on_mouse_press)
-points_layer.events.data.connect(on_points_added)
+# points_layer.mouse_drag_callbacks.append(on_mouse_press)
+# points_layer.events.data.connect(on_points_added)
 
-# Hide the transform, delete, and select buttons
-qctrl = viewer.window.qt_viewer.controls.widgets[points_layer]
-buttons_to_hide = ['transform_button', 
-                'delete_button', 
-                'select_button', 
-]
-for btn in buttons_to_hide:
-    getattr(qctrl, btn).setVisible(False)
+# # Hide the transform, delete, and select buttons
+# qctrl = viewer.window.qt_viewer.controls.widgets[points_layer]
+# buttons_to_hide = ['transform_button', 
+#                 'delete_button', 
+#                 'select_button', 
+# ]
+# for btn in buttons_to_hide:
+#     getattr(qctrl, btn).setVisible(False)
                 
 
-# Select the current, add tool for the points layer
-viewer.layers.selection.active = points_layer
-viewer.layers.selection.active.mode = 'add'
+# # Select the current, add tool for the points layer
+# viewer.layers.selection.active = points_layer
+# viewer.layers.selection.active.mode = 'add'

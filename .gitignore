@@ -183,7 +183,6 @@ cython_debug/
 
 # Ignore zarr arrays 
 *.zarr*
-*zarr*
 
 # Ignore zarr ZIP files
 *.zip
