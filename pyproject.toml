@@ -14,7 +14,7 @@ authors = [
 ]
 license = { text = "GPL-3.0" }
 readme = "README.md"
-keywords = ["octron", "video segmentation", "napari", "machine learning", "sam2", "yolo11"]
+keywords = ["octron", "video segmentation", "napari", "object tracking", "behavior quantification", "machine learning", "sam2", "yolo11"]
 classifiers = [
     "Framework :: napari",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
@@ -46,6 +46,16 @@ Homepage = "https://github.com/horsto/octron"
 dev = [
     "pytest",
     "black"
+]
+# Windows CUDA extra: Only install these packages on Windows.
+win_cuda = [
+    "nvidia-pyindex; sys_platform=='win32'",
+    "nvidia-cuda-runtime-cu12; sys_platform=='win32'",
+    "nvidia-cuda-cupti-cu12; sys_platform=='win32'",
+    "nvidia-cuda-nvcc-cu12; sys_platform=='win32'",
+    "nvidia-cuda-nvrtc-cu12; sys_platform=='win32'",
+    "nvidia-cublas-cu12; sys_platform=='win32'",
+    "nvidia-nvjpeg-cu12; sys_platform=='win32'"
 ]
 
 [project.entry-points."napari.manifest"]
