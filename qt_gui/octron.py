@@ -53,11 +53,11 @@ class Ui_octron_widgetui(object):
         self.toolBox.setCursor(QCursor(Qt.ArrowCursor))
         self.toolBox.setFrameShape(QFrame.Shape.NoFrame)
         self.toolBox.setFrameShadow(QFrame.Shadow.Plain)
-        self.toolBox.setLineWidth(1)
-        self.toolBox.setMidLineWidth(1)
+        self.toolBox.setLineWidth(0)
+        self.toolBox.setMidLineWidth(0)
         self.project_tab = QWidget()
         self.project_tab.setObjectName(u"project_tab")
-        self.project_tab.setGeometry(QRect(0, 0, 410, 314))
+        self.project_tab.setGeometry(QRect(0, 0, 410, 337))
         sizePolicy1 = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
@@ -68,13 +68,13 @@ class Ui_octron_widgetui(object):
         self.toolBox.addItem(self.project_tab, icon, u"Project")
         self.annotate_tab = QWidget()
         self.annotate_tab.setObjectName(u"annotate_tab")
-        self.annotate_tab.setGeometry(QRect(0, 0, 410, 314))
+        self.annotate_tab.setGeometry(QRect(0, 0, 405, 337))
         sizePolicy1.setHeightForWidth(self.annotate_tab.sizePolicy().hasHeightForWidth())
         self.annotate_tab.setSizePolicy(sizePolicy1)
-        self.annotate_tab.setMaximumSize(QSize(410, 16777215))
+        self.annotate_tab.setMaximumSize(QSize(405, 600))
         self.verticalLayoutWidget_2 = QWidget(self.annotate_tab)
         self.verticalLayoutWidget_2.setObjectName(u"verticalLayoutWidget_2")
-        self.verticalLayoutWidget_2.setGeometry(QRect(0, 0, 406, 311))
+        self.verticalLayoutWidget_2.setGeometry(QRect(0, 0, 402, 331))
         self.annotate_vertical_layout = QVBoxLayout(self.verticalLayoutWidget_2)
 #ifndef Q_OS_MAC
         self.annotate_vertical_layout.setSpacing(-1)
@@ -95,14 +95,15 @@ class Ui_octron_widgetui(object):
         self.sam2model_list = QComboBox(self.horizontalGroupBox)
         self.sam2model_list.addItem("")
         self.sam2model_list.setObjectName(u"sam2model_list")
-        self.sam2model_list.setMinimumSize(QSize(167, 0))
+        self.sam2model_list.setMinimumSize(QSize(167, 25))
         self.sam2model_list.setMaximumSize(QSize(167, 25))
 
         self.horizontalLayout_8.addWidget(self.sam2model_list, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.load_model_btn = QPushButton(self.horizontalGroupBox)
         self.load_model_btn.setObjectName(u"load_model_btn")
-        self.load_model_btn.setMaximumSize(QSize(250, 60))
+        self.load_model_btn.setMinimumSize(QSize(0, 25))
+        self.load_model_btn.setMaximumSize(QSize(250, 25))
 
         self.horizontalLayout_8.addWidget(self.load_model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -124,7 +125,7 @@ class Ui_octron_widgetui(object):
         self.layer_type_combobox.addItem("")
         self.layer_type_combobox.addItem("")
         self.layer_type_combobox.setObjectName(u"layer_type_combobox")
-        self.layer_type_combobox.setMinimumSize(QSize(167, 0))
+        self.layer_type_combobox.setMinimumSize(QSize(167, 25))
         self.layer_type_combobox.setMaximumSize(QSize(167, 25))
         self.layer_type_combobox.setMaxCount(15)
         self.layer_type_combobox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -135,17 +136,18 @@ class Ui_octron_widgetui(object):
 
         self.label_name_lineedit = QLineEdit(self.annotate_layer_create_groupbox)
         self.label_name_lineedit.setObjectName(u"label_name_lineedit")
-        self.label_name_lineedit.setMinimumSize(QSize(140, 26))
-        self.label_name_lineedit.setMaximumSize(QSize(140, 26))
+        self.label_name_lineedit.setMinimumSize(QSize(135, 25))
+        self.label_name_lineedit.setMaximumSize(QSize(200, 25))
         self.label_name_lineedit.setInputMask(u"")
         self.label_name_lineedit.setText(u"")
         self.label_name_lineedit.setMaxLength(100)
 
-        self.horizontalLayout_2.addWidget(self.label_name_lineedit, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_2.addWidget(self.label_name_lineedit, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
-        self.create_annotation_layer_btn.setMaximumSize(QSize(60, 60))
+        self.create_annotation_layer_btn.setMinimumSize(QSize(0, 25))
+        self.create_annotation_layer_btn.setMaximumSize(QSize(60, 25))
 
         self.horizontalLayout_2.addWidget(self.create_annotation_layer_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -165,27 +167,37 @@ class Ui_octron_widgetui(object):
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.kernel_label = QLabel(self.annotate_param_groupbox)
         self.kernel_label.setObjectName(u"kernel_label")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.kernel_label.sizePolicy().hasHeightForWidth())
+        self.kernel_label.setSizePolicy(sizePolicy4)
         self.kernel_label.setMaximumSize(QSize(400, 25))
 
-        self.horizontalLayout_4.addWidget(self.kernel_label)
+        self.horizontalLayout_4.addWidget(self.kernel_label, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.opening_kernel_radius_input = QSpinBox(self.annotate_param_groupbox)
         self.opening_kernel_radius_input.setObjectName(u"opening_kernel_radius_input")
+        sizePolicy5 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.opening_kernel_radius_input.sizePolicy().hasHeightForWidth())
+        self.opening_kernel_radius_input.setSizePolicy(sizePolicy5)
         self.opening_kernel_radius_input.setMinimumSize(QSize(60, 25))
         self.opening_kernel_radius_input.setMaximumSize(QSize(60, 25))
         self.opening_kernel_radius_input.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.horizontalLayout_4.addWidget(self.opening_kernel_radius_input)
+        self.horizontalLayout_4.addWidget(self.opening_kernel_radius_input, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
         self.kernelpx_label = QLabel(self.annotate_param_groupbox)
         self.kernelpx_label.setObjectName(u"kernelpx_label")
         self.kernelpx_label.setMinimumSize(QSize(18, 25))
         self.kernelpx_label.setMaximumSize(QSize(18, 25))
 
-        self.horizontalLayout_4.addWidget(self.kernelpx_label)
+        self.horizontalLayout_4.addWidget(self.kernelpx_label, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
-        self.annotate_vertical_layout.addWidget(self.annotate_param_groupbox, 0, Qt.AlignmentFlag.AlignBottom)
+        self.annotate_vertical_layout.addWidget(self.annotate_param_groupbox)
 
         self.annotate_layer_predict_groupbox = QGroupBox(self.verticalLayoutWidget_2)
         self.annotate_layer_predict_groupbox.setObjectName(u"annotate_layer_predict_groupbox")
@@ -197,29 +209,35 @@ class Ui_octron_widgetui(object):
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.batch_predict_progressbar = QProgressBar(self.annotate_layer_predict_groupbox)
         self.batch_predict_progressbar.setObjectName(u"batch_predict_progressbar")
-        self.batch_predict_progressbar.setMinimumSize(QSize(0, 25))
+        sizePolicy6 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.batch_predict_progressbar.sizePolicy().hasHeightForWidth())
+        self.batch_predict_progressbar.setSizePolicy(sizePolicy6)
+        self.batch_predict_progressbar.setMinimumSize(QSize(200, 25))
         self.batch_predict_progressbar.setMaximumSize(QSize(250, 25))
         self.batch_predict_progressbar.setMaximum(20)
         self.batch_predict_progressbar.setValue(0)
 
-        self.horizontalLayout_7.addWidget(self.batch_predict_progressbar, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_7.addWidget(self.batch_predict_progressbar, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.predict_next_batch_btn = QPushButton(self.annotate_layer_predict_groupbox)
         self.predict_next_batch_btn.setObjectName(u"predict_next_batch_btn")
         self.predict_next_batch_btn.setEnabled(False)
-        self.predict_next_batch_btn.setMaximumSize(QSize(250, 60))
+        self.predict_next_batch_btn.setMinimumSize(QSize(0, 25))
+        self.predict_next_batch_btn.setMaximumSize(QSize(250, 25))
 
-        self.horizontalLayout_7.addWidget(self.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_7.addWidget(self.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
-        self.annotate_vertical_layout.addWidget(self.annotate_layer_predict_groupbox, 0, Qt.AlignmentFlag.AlignBottom)
+        self.annotate_vertical_layout.addWidget(self.annotate_layer_predict_groupbox)
 
         icon1 = QIcon()
         icon1.addFile(u"icons/noun-copywriting-7158879.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolBox.addItem(self.annotate_tab, icon1, u"Generate training data (annotate)")
         self.train_tab = QWidget()
         self.train_tab.setObjectName(u"train_tab")
-        self.train_tab.setGeometry(QRect(0, 0, 410, 314))
+        self.train_tab.setGeometry(QRect(0, 0, 410, 337))
         sizePolicy1.setHeightForWidth(self.train_tab.sizePolicy().hasHeightForWidth())
         self.train_tab.setSizePolicy(sizePolicy1)
         icon2 = QIcon()
@@ -227,7 +245,7 @@ class Ui_octron_widgetui(object):
         self.toolBox.addItem(self.train_tab, icon2, u"Train model")
         self.predict_tab = QWidget()
         self.predict_tab.setObjectName(u"predict_tab")
-        self.predict_tab.setGeometry(QRect(0, 0, 410, 314))
+        self.predict_tab.setGeometry(QRect(0, 0, 410, 337))
         sizePolicy1.setHeightForWidth(self.predict_tab.sizePolicy().hasHeightForWidth())
         self.predict_tab.setSizePolicy(sizePolicy1)
         icon3 = QIcon()
@@ -241,7 +259,7 @@ class Ui_octron_widgetui(object):
 
         self.retranslateUi(octron_widgetui)
 
-        self.toolBox.setCurrentIndex(1)
+        self.toolBox.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(octron_widgetui)
