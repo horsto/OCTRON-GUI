@@ -12,7 +12,7 @@ cur_path = Path(os.path.abspath(__file__)).parent
 from qtpy.QtCore import *  # type: ignore
 from qtpy.QtGui import *  # type: ignore
 from qtpy.QtWidgets import *  # type: ignore
-
+os.environ["QT_STYLE_OVERRIDE"] = "fusion"
 
 import napari
 import napari.window
