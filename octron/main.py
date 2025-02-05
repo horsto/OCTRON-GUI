@@ -5,8 +5,6 @@ OCTRON
 
 '''
 import os 
-os.environ["QT_STYLE_OVERRIDE"] = "fusion" # Not sure this does anything!
-
 from pathlib import Path
 cur_path = Path(os.path.abspath(__file__)).parent
 
@@ -28,6 +26,12 @@ from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 
 from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QStyleFactory
+# If there's already a QApplication instance (as may be the case when running as a napari plugin),
+# then set its style explicitly:
+app = QApplication.instance()
+if app is not None:
+    app.setStyle(QStyleFactory.create("Fusion"))
 
 class octron_widget(QWidget):
     '''
