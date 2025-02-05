@@ -137,7 +137,7 @@ class Ui_octron_widgetui(object):
         self.label_name_lineedit = QLineEdit(self.annotate_layer_create_groupbox)
         self.label_name_lineedit.setObjectName(u"label_name_lineedit")
         self.label_name_lineedit.setMinimumSize(QSize(135, 25))
-        self.label_name_lineedit.setMaximumSize(QSize(200, 25))
+        self.label_name_lineedit.setMaximumSize(QSize(135, 25))
         self.label_name_lineedit.setInputMask(u"")
         self.label_name_lineedit.setText(u"")
         self.label_name_lineedit.setMaxLength(100)
@@ -146,7 +146,7 @@ class Ui_octron_widgetui(object):
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
-        self.create_annotation_layer_btn.setMinimumSize(QSize(0, 25))
+        self.create_annotation_layer_btn.setMinimumSize(QSize(60, 25))
         self.create_annotation_layer_btn.setMaximumSize(QSize(60, 25))
 
         self.horizontalLayout_2.addWidget(self.create_annotation_layer_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
@@ -215,7 +215,7 @@ class Ui_octron_widgetui(object):
         sizePolicy6.setHeightForWidth(self.batch_predict_progressbar.sizePolicy().hasHeightForWidth())
         self.batch_predict_progressbar.setSizePolicy(sizePolicy6)
         self.batch_predict_progressbar.setMinimumSize(QSize(200, 25))
-        self.batch_predict_progressbar.setMaximumSize(QSize(250, 25))
+        self.batch_predict_progressbar.setMaximumSize(QSize(255, 25))
         self.batch_predict_progressbar.setMaximum(20)
         self.batch_predict_progressbar.setValue(0)
 
@@ -260,6 +260,7 @@ class Ui_octron_widgetui(object):
         self.retranslateUi(octron_widgetui)
 
         self.toolBox.setCurrentIndex(0)
+        self.toolBox.layout().setSpacing(10)
 
 
         QMetaObject.connectSlotsByName(octron_widgetui)
