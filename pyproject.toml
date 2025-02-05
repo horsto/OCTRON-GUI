@@ -47,15 +47,9 @@ dev = [
     "pytest",
     "black"
 ]
-# Windows CUDA extra: Only install these packages on Windows.
+# Windows CUDA extra:
 win_cuda = [
-    "nvidia-pyindex; sys_platform=='win32'",
-    "nvidia-cuda-runtime-cu12; sys_platform=='win32'",
-    "nvidia-cuda-cupti-cu12; sys_platform=='win32'",
-    "nvidia-cuda-nvcc-cu12; sys_platform=='win32'",
-    "nvidia-cuda-nvrtc-cu12; sys_platform=='win32'",
-    "nvidia-cublas-cu12; sys_platform=='win32'",
-    "nvidia-nvjpeg-cu12; sys_platform=='win32'"
+    "nvidia-cuda-runtime-cu12==12.6.37; sys_platform=='win32'",
 ]
 
 [project.entry-points."napari.manifest"]
