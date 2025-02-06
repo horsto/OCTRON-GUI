@@ -2,13 +2,13 @@
 OCTRON
 
 '''
-import os 
+import os, sys
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
-
 from pathlib import Path
 cur_path = Path(os.path.abspath(__file__)).parent
+sys.path.append(cur_path.parent.as_posix())
 
 from qtpy.QtCore import *  # TODO: Import only what you need
 from qtpy.QtGui import *  
@@ -18,10 +18,8 @@ from qtpy.QtWidgets import QStyleFactory
 
 import napari
 from napari.utils.notifications import show_info, show_warning, show_error
-from napari.qt.threading import thread_worker
 
 # SAM2 specific 
-import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
@@ -41,30 +39,22 @@ if app is not None:
     app.setStyle(QStyleFactory.create("Fusion")) 
 
 
-
 class octron_widget(QWidget):
     '''
     
     '''
     def __init__(self, viewer: 'napari.viewer.Viewer', parent=None):
         super().__init__(parent)
-        
+        self.cur_path = Path(os.path.abspath(__file__)).parent
         
         self._viewer = viewer
-        self.remove_all_layers() # Aggressively delete all existing layers in the viewer ... muahaha
+        self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ... muahaha
         self.video_layer = None
-        #self.layers_to_remove = []
-        
-        
-         # Get the current path
-        self.current_path = Path(os.path.abspath(__file__)).parent
-        print(f"Current path: {self.current_path}")
-        
         # Some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
-        models_yaml_path = self.current_path / 'sam2_octron/models.yaml'
+        models_yaml_path = self.cur_path / 'sam2_octron/models.yaml'
         self.models_dict = check_model_availability(SAM2p1_BASE_URL='',
                                                     models_yaml_path=models_yaml_path,
                                                     force_download=False,
@@ -96,11 +86,10 @@ class octron_widget(QWidget):
         Connect all callback functions to buttons and lists 
         '''
         # Global layer insertion callback
-        self._viewer.layers.events.inserted.connect(self.on_new_layer)
+        self._viewer.layers.events.inserted.connect(self.on_changed_layer)
         self.load_model_btn.clicked.connect(self.load_model)
         
         # self.sam2model_list.currentIndexChanged.connect(self.on_model_selected)
-        
     
     
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
@@ -124,7 +113,7 @@ class octron_widget(QWidget):
         print(f"Loading model {model_id}")
         model = self.models_dict[model_id]
         config_path = Path(model['config_path'])
-        checkpoint_path = self.current_path / Path(f"sam2_octron/{model['checkpoint_path']}")
+        checkpoint_path = self.cur_path / Path(f"sam2_octron/{model['checkpoint_path']}")
         self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
                                                         ckpt_path=checkpoint_path.as_posix(),
                                                         )
@@ -155,59 +144,61 @@ class octron_widget(QWidget):
         what has previously been loaded (maybe by accident)
         has gone through proper inspection.
         '''
-        self._viewer.layers.select_all()
-        self._viewer.layers.remove_selected()
-        print("💀 Auto-deleted all old layers")
+        if len(self._viewer.layers):
+            self._viewer.layers.select_all()
+            self._viewer.layers.remove_selected()
+            print("💀 Auto-deleted all old layers")
+            
+    
+    def on_changed_layer(self, event):
+        """
+        Callback triggered when a layers are changed in the viewer.
+        Currently triggered only on INSERTION events (layers are added).
         
-
-    def on_new_layer(self, event):
-        '''
-        General purpose function triggered when new 
-        layers have been added to the current viewer.
         
-        '''
+        Takes care of defining video layers.
+        Searches for video layers with a basename of "Image" and "VIDEO" in
+        the name. If more than one is found, it removes the most recently added one.
+        If one video layer is found and it contains metadata for num_frames, height,
+        and width, it attaches a dummy mask to its metadata.
+        """
+        
         layer_name = event.value
         print(f"New layer added >>> {layer_name}")
-        
-        # Find video layer and warn if more than one is found
-        self.find_video_layer()
 
-
-    def find_video_layer(self):
-        '''
-        Find the video layer in the napari viewer.
-        If more than one layer with video data is found, raise an error.
-        
-        For when one video layer is found,
-        attach an empty dummy to it (num_frames x height x width),
-        which can be used for all subsequent mask layers.
-        
-        '''
+        # Search through viewer layers for video layers with the expected criteria
         video_layers = []
-        for l in self._viewer.layers: 
-            if (l._basename() == 'Image') and ('VIDEO' in l.name):
-                video_layers.append(l)
-        if not video_layers:
-            return
+        for l in self._viewer.layers:
+            try:
+                if l._basename() == 'Image' and 'VIDEO' in l.name:
+                    video_layers.append(l)
+            except Exception as e:
+                print(f"💀 Error when checking layer: {e}")
         if len(video_layers) > 1:
-            show_error("💀 More than one video layer")
-            #self.layers_to_remove.append(video_layers[-1]) # Remove the last one 
-            self.video_layer = video_layers[0] # Take the first one
-        else:
-            print(f"Found video layer >>> {video_layers[0].name}")
+            # TODO: 
+            # For some reason this runs into an error when trying to remove the layer
+            print("💀 More than one video layer found; removing the extra one.")
+            # Remove the most recently added video layer (or adjust as desired)
+            #self._viewer.layers.remove(video_layers[-1])
+        elif len(video_layers) == 1:
             video_layer = video_layers[0]
-            # Create a retrievable mask dummy
-            mask_layer_dummy = np.zeros((video_layer.metadata['num_frames'], 
-                                        video_layer.metadata['height'], 
-                                        video_layer.metadata['width'], 
-                                        ), dtype=np.uint8
-                                        )
-            video_layer.metadata['dummy'] = mask_layer_dummy    
-            self.video_layer = video_layer
-        return
-    
-    
-        
+            print(f"Found video layer >>> {video_layer.name}")
+            # Check if required metadata exists before creating the dummy mask
+            required_keys = ['num_frames', 'height', 'width']
+            if all(k in video_layer.metadata for k in required_keys):
+                mask_layer_dummy = np.zeros((
+                    video_layer.metadata['num_frames'],
+                    video_layer.metadata['height'],
+                    video_layer.metadata['width']
+                ), dtype=np.uint8)
+                video_layer.metadata['dummy'] = mask_layer_dummy
+                self.video_layer = video_layer
+            else:
+                print("Video layer metadata incomplete; dummy mask not created.")
+        else:
+            print("No video layer found.")
+            
+            
     # Example key binding with Napari built-in viewer functions 
     # @viewer.bind_key('m')
     # def print_message(viewer):
@@ -611,3 +602,23 @@ class octron_widget(QWidget):
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    viewer = napari.Viewer()
+    viewer.window.add_dock_widget(octron_widget(viewer))
+    napari.run()

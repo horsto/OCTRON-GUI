@@ -70,5 +70,5 @@ def read_octron_video(path):
     layer_dict = {'name'    : layer_name,
                   'metadata': video_dict,
                  }
-    out = [(FastVideoReader(path, read_format='rgb24'), layer_dict , 'image')]
+    out = [(FastVideoReader(path, read_format='rgb24'), layer_dict, 'image')]
     return out
