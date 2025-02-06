@@ -665,7 +665,9 @@ def run_new_pred(predictor,
                  obj_id, 
                  labels,
                  points=None,
-                 masks=None
+                 masks=None,
+                 box=None,
+                 **kwargs,
                  ):
     '''
     Run a new prediction on the SAM2 model.
@@ -690,6 +692,14 @@ def run_new_pred(predictor,
         The points to run the prediction on.
     masks : np.array
         The masks to run the prediction on.
+    box : list
+        Box coordiunates: [top_left[1],top_left[0],bottom_right[1],bottom_right[0]]
+    **kwargs : dict
+        Additional keyword arguments.
+        clear_old_points : bool
+            Whether to clear old points. Default is True.
+        normalize_coords : bool
+            Whether to normalize the coordinates. Default is True.
     
     Returns
     -------
@@ -697,6 +707,8 @@ def run_new_pred(predictor,
         The mask image that can be re-added to the viewer.
     
     '''
+    clear_old_points = kwargs.get('clear_old_points', True)
+    normalize_coords = kwargs.get('normalize_coords', True)
 
     if isinstance(labels, int):
         assert labels in [0,1], f'Label must be 0 or 1, got "{labels}"'
@@ -705,18 +717,22 @@ def run_new_pred(predictor,
             assert l_ in [0,1], f'Labels must be 0 or 1, got {set(labels)}'
     else:
         raise ValueError(f'Labels must be an integer or a list, got {type(labels)}')
-    assert points is not None or masks is not None, f'Either points or masks must be provided'
+    assert points is not None or masks is not None or box is not None, \
+        f'Either point, box or mask input must be provided'
+        
     if points is not None:
         assert len(points) == len(labels), f'Number of points and labels must match,\
             got {len(points)} points and {len(labels)} labels'
-    
+    if box is not None:
+        assert len(box) == 4, f'Box input must have 4 numbers [y1,x1,y2,x2], got {len(box)}'
+        
     ########### MASK INPUT ####################################################################
     if masks is not None:
         assert len(masks.shape) == 2, f'Input masks must be 2D, got {masks.shape}'
         frame_idx, obj_ids, video_res_masks = predictor.add_new_mask(
                                                     frame_idx=frame_idx,
                                                     obj_id=obj_id,
-                                                    mask=np.array(masks, dtype=bool)
+                                                    mask=np.array(masks,dtype=bool),
                                                     )
         mask = (video_res_masks[obj_id] > 0).cpu().numpy().astype(np.uint8)
                 
@@ -726,7 +742,19 @@ def run_new_pred(predictor,
                                                     frame_idx=frame_idx,
                                                     obj_id=obj_id,
                                                     points=np.array(points,dtype=np.float32),
-                                                    labels=np.array(labels, np.int32)
+                                                    labels=np.array(labels, np.int32),
+                                                    clear_old_points=clear_old_points,
+                                                    normalize_coords=normalize_coords
+                                                    )
+        
+    ########### BOX INPUT #####################################################################
+    if box is not None:
+        frame_idx, obj_ids, video_res_masks = predictor.add_new_points_or_box(
+                                                    frame_idx=frame_idx,
+                                                    obj_id=obj_id,
+                                                    box=box,
+                                                    clear_old_points=clear_old_points,
+                                                    normalize_coords=normalize_coords
                                                     )
         
         # Add the mask image as a new labels layer
