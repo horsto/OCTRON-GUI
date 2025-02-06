@@ -1,8 +1,8 @@
+# Main SAM2 predictor class for OCTRON
+# This class is a subclass of the SAM2VideoPredictor class from the SAM2 library
 
 import os 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1" # Leaving this here out of pure desperation
-
-
 
 from collections import OrderedDict
 import torch
@@ -672,7 +672,7 @@ def run_new_pred(predictor,
     if mask is not None:
         assert len(mask.shape) == 2
         
-        print('Running mask prediction')
+        # print('Running mask prediction')
         frame_idx, obj_ids, video_res_masks = predictor.add_new_mask(
                                                     frame_idx=frame_idx,
                                                     obj_id=obj_id,
@@ -684,7 +684,7 @@ def run_new_pred(predictor,
     if point is not None:
         assert len(point) == 2
         # Run point prediction
-        print('Running point prediction')
+        # print('Running point prediction')
         _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
                                                     frame_idx=frame_idx,
                                                     obj_id=obj_id,

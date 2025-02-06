@@ -1,10 +1,9 @@
 '''
 OCTRON
 
-
-
 '''
 import os 
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 from pathlib import Path
 cur_path = Path(os.path.abspath(__file__)).parent
 
