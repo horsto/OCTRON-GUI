@@ -1,6 +1,6 @@
 # OCTRON
 
-Octron is a video segmentation and training UI in napari. It allows for the creation of training data and the subsequent training of deep neural networks for the dense quantification of behavioral task videos across a wide range of species. 
+
 
 ## Installation 
 
