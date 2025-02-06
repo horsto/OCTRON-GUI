@@ -3,34 +3,44 @@ OCTRON
 
 '''
 import os 
+# if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
+
 from pathlib import Path
 cur_path = Path(os.path.abspath(__file__)).parent
 
-
-from qtpy.QtCore import *  # type: ignore
-from qtpy.QtGui import *  # type: ignore
-from qtpy.QtWidgets import *  # type: ignore
+from qtpy.QtCore import *  # TODO: Import only what you need
+from qtpy.QtGui import *  
+from qtpy.QtWidgets import * 
+from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QStyleFactory
 
 import napari
 import napari.window
-from napari.utils.notifications import show_info, show_warning
+from napari.utils.notifications import show_info
 
 # SAM2 specific 
 import os
-# if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 
-from qtpy.QtWidgets import QWidget
-from qtpy.QtWidgets import QStyleFactory
+# Layers
+from octron.sam2_octron.helpers.sam2_mask_layer import add_sam2_mask_layer
+
+
+
 # If there's already a QApplication instance (as may be the case when running as a napari plugin),
 # then set its style explicitly:
 app = QApplication.instance()
 if app is not None:
-    app.setStyle(QStyleFactory.create("Fusion"))
+    # This is a hack to get the style to look similar on darwin and windows systems
+    # for the ToolBox widget
+    app.setStyle(QStyleFactory.create("Fusion")) 
+
+
 
 class octron_widget(QWidget):
     '''
@@ -66,6 +76,14 @@ class octron_widget(QWidget):
             print(f"Adding model {model_id}")
             self.sam2model_list.addItem(model['name'])
             
+            
+        # # Test layer creation
+        # add_sam2_mask_layer(viewer=self._viewer,
+        #                 image_layer=self._viewer.layers[0],
+        #                 name='Test',
+        #                 base_color='red',
+        #                 )
+        
         # Connect callbacks 
         self.callback_functions()
         

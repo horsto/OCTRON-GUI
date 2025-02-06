@@ -1,41 +1,41 @@
 ### Generic mask layer for napari and SAM2
-import numpy as np
-from napari.utils import DirectLabelColormap
 
-def add_sam2_mask_layer(num_frames,
-                        video_height,
-                        video_width,
-                        viewer,
-                        label_id,
-                        obj_id,
-                        colors,
+def add_sam2_mask_layer(viewer,
+                        image_layer,
+                        name,
+                        base_color,
                         ):
-    # Instantiate the mask and annotation layers 
-    # Keep them empty at start 
-    mask_layer_dummy = np.zeros((num_frames, video_height, video_width), dtype=np.uint8)
-    mask_layer_dummy.shape
-
-
-    # Select colormap for labels layer based on category (label) and current object ID 
-    current_color_labelmap = DirectLabelColormap(color_dict=colors[label_id], 
-                                                use_selection=True, 
-                                                selection=obj_id+1,
-                                                )
+    '''
+    Iniiates the mask layer and fixes it's color to "base_color'.
+    
+    Parameters
+    ----------
+    viewer : napari.Viewer
+        Napari viewer object.
+    image_layer : napari.layers.Image
+        Image layer = video layer object
+    name : str
+        Name of the mask layer.
+    base_color : str or list
+        Color of the mask layer.
+    '''
     labels_layer = viewer.add_labels(
-        mask_layer_dummy, 
-        name='Mask',  # Name of the layer
-        opacity=0.4,  # Optional: opacity of the labels
-        blending='additive',  # Optional: blending mode
-        colormap=current_color_labelmap, 
+        image_layer['mask_dummy'], 
+        name=name,  
+        opacity=0.4,  
+        blending='additive',  
+        colormap=base_color, 
     )
 
+    # Hide buttons that you don't want the user to access
+    # TODO: This will be deprecated in future versions of napari.
     qctrl = viewer.window.qt_viewer.controls.widgets[labels_layer]
-    buttons_to_hide = ['erase_button',
-                    'fill_button',
-                    'paint_button',
-                    'pick_button',
-                    'polygon_button',
-                    'transform_button',
-                    ]
-    for btn in buttons_to_hide:
-        getattr(qctrl, btn).setEnabled(False)
+    buttons_to_hide =  ['erase_button',
+                        'fill_button',
+                        'paint_button',
+                        'pick_button',
+                        'polygon_button',
+                        'transform_button',
+                        ]
+    for btn in buttons_to_hide: 
+        getattr(qctrl, btn).hide() 

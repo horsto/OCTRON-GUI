@@ -1,12 +1,17 @@
 name: octron
+display_name : OCTRON
 contributions:
   commands:
     - id: octron.octron_widget
-      title: OCTRON widget
+      title: OCTRON
       python_name: octron:octron_widget
-
-
-
+    - id: octron.get_reader
+      title: OCTRON Reader
+      python_name: octron:octron_reader
+  readers:
+    - command: octron.get_reader
+      accepts_directories: true
+      filename_patterns: ['*']
   widgets:
     - command: octron.octron_widget
       display_name: OCTRON
