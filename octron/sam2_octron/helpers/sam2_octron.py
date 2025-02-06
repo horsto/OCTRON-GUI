@@ -698,9 +698,13 @@ def run_new_pred(predictor,
     
     '''
 
-    
-    for l_ in set(labels):
-        assert l_ in [0,1], f'Labels must be 0 or 1, got {set(labels)}'
+    if isinstance(labels, int):
+        assert labels in [0,1], f'Label must be 0 or 1, got "{labels}"'
+    elif isinstance(labels, list):
+        for l_ in set(labels):
+            assert l_ in [0,1], f'Labels must be 0 or 1, got {set(labels)}'
+    else:
+        raise ValueError(f'Labels must be an integer or a list, got {type(labels)}')
     assert points is not None or masks is not None, f'Either points or masks must be provided'
     if points is not None:
         assert len(points) == len(labels), f'Number of points and labels must match,\
