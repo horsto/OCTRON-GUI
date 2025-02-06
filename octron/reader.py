@@ -1,5 +1,5 @@
 from pathlib import Path
-from napari.utils.notifications import show_info
+import napari
 import warnings
 from octron.sam2_octron.helpers.video_loader import probe_video, get_vfile_hash
 from napari_pyav._reader import FastVideoReader
@@ -34,14 +34,12 @@ def octron_reader(path):
     """
     paths = [Path(path)] if isinstance(path, str) else path
     if len(paths) > 1:
-        show_info("Only one file or folder at a time is supported.")
         return None
     
     # Folder or video file ? 
     
     path = paths[0]
     if path.is_dir() and path.exists():
-        show_info(f"Folder {path.as_posix()}")
         return read_octron_folder
         
     if path.is_file() and path.exists():
@@ -56,14 +54,21 @@ def read_octron_folder(path):
     path = Path(path)
     return
 
+
 def read_octron_video(path):
     path = Path(path)
     video_dict = probe_video(path)
+    
+    # Create hash and save it in the metadata
     video_file_hash = get_vfile_hash(path)
     video_dict['hash'] = video_file_hash
-    layer_dict = {'name'    : f'VIDEO [name: {path.stem}]',
-                  'metadata': video_dict,
-                  }
     
+    # Layer name 
+    layer_name = f'VIDEO [name: {path.stem}]'
+    video_dict['_name'] = layer_name # Save the name twice so it can be restored if lost / edited.
+    
+    layer_dict = {'name'    : layer_name,
+                  'metadata': video_dict,
+                 }
     out = [(FastVideoReader(path, read_format='rgb24'), layer_dict , 'image')]
     return out

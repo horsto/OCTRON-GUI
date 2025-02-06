@@ -11,7 +11,7 @@ contributions:
   readers:
     - command: octron.get_reader
       accepts_directories: true
-      filename_patterns: ['*']
+      filename_patterns: ['*'] # Catch all of the files - filter out in reader
   widgets:
     - command: octron.octron_widget
       display_name: OCTRON

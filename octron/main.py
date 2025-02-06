@@ -17,8 +17,8 @@ from qtpy.QtWidgets import QWidget
 from qtpy.QtWidgets import QStyleFactory
 
 import napari
-import napari.window
-from napari.utils.notifications import show_info
+from napari.utils.notifications import show_info, show_warning, show_error
+from napari.qt.threading import thread_worker
 
 # SAM2 specific 
 import os
@@ -51,6 +51,11 @@ class octron_widget(QWidget):
         
         
         self._viewer = viewer
+        self.remove_all_layers() # Aggressively delete all existing layers in the viewer ... muahaha
+        self.video_layer = None
+        #self.layers_to_remove = []
+        
+        
          # Get the current path
         self.current_path = Path(os.path.abspath(__file__)).parent
         print(f"Current path: {self.current_path}")
@@ -71,18 +76,12 @@ class octron_widget(QWidget):
         # Initialize all UI components
         self.setupUi()
         
+        
         # Populate SAM2 dropdown list with available models
         for model_id, model in self.models_dict.items():
             print(f"Adding model {model_id}")
             self.sam2model_list.addItem(model['name'])
             
-            
-        # # Test layer creation
-        # add_sam2_mask_layer(viewer=self._viewer,
-        #                 image_layer=self._viewer.layers[0],
-        #                 name='Test',
-        #                 base_color='red',
-        #                 )
         
         # Connect callbacks 
         self.callback_functions()
@@ -96,9 +95,15 @@ class octron_widget(QWidget):
         '''
         Connect all callback functions to buttons and lists 
         '''
+        # Global layer insertion callback
+        self._viewer.layers.events.inserted.connect(self.on_new_layer)
         self.load_model_btn.clicked.connect(self.load_model)
+        
         # self.sam2model_list.currentIndexChanged.connect(self.on_model_selected)
         
+    
+    
+    ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     def load_model(self):
         '''
         Load the selected SAM2 model and enable the batch prediction button, 
@@ -118,15 +123,6 @@ class octron_widget(QWidget):
         
         print(f"Loading model {model_id}")
         model = self.models_dict[model_id]
-        
-        # sam2_folder = Path('sam2_octron')
-        # checkpoint = 'sam2.1_hiera_large.pt' # under folder /checkpoints
-        # model_cfg = 'sam2.1/sam2.1_hiera_l.yaml' # under folder /configs
-        # # ----------------------------------------------------------------------------
-        # sam2_checkpoint = cur_path / sam2_folder / Path(f'checkpoints/{checkpoint}')
-        # model_cfg = Path(f'configs/{model_cfg}')
-                
-        
         config_path = Path(model['config_path'])
         checkpoint_path = self.current_path / Path(f"sam2_octron/{model['checkpoint_path']}")
         self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
@@ -147,13 +143,76 @@ class octron_widget(QWidget):
         self.predict_next_batch_btn.setEnabled(True)
         # TODO: Implement the predict next batch function
         #self.predict_next_batch_btn.clicked.connect(FUNCTION)
+        
 
-        # Example key binding with Napari built-in viewer functions
-        # @viewer.bind_key('m')
-        # def print_message(viewer):
-        #     show_info('Test - pressed key m')
 
-    ######### GUI SETUP CODE FROM QT DESIGNER ##########################################################
+    ###### NAPARI SPECIFIC CALLBACKS ##################################################################
+
+    def remove_all_layers(self):
+        '''
+        Remove all layers from the napari viewer.
+        This is important because we cannot guarantee that 
+        what has previously been loaded (maybe by accident)
+        has gone through proper inspection.
+        '''
+        self._viewer.layers.select_all()
+        self._viewer.layers.remove_selected()
+        print("💀 Auto-deleted all old layers")
+        
+
+    def on_new_layer(self, event):
+        '''
+        General purpose function triggered when new 
+        layers have been added to the current viewer.
+        
+        '''
+        layer_name = event.value
+        print(f"New layer added >>> {layer_name}")
+        
+        # Find video layer and warn if more than one is found
+        self.find_video_layer()
+
+
+    def find_video_layer(self):
+        '''
+        Find the video layer in the napari viewer.
+        If more than one layer with video data is found, raise an error.
+        
+        For when one video layer is found,
+        attach an empty dummy to it (num_frames x height x width),
+        which can be used for all subsequent mask layers.
+        
+        '''
+        video_layers = []
+        for l in self._viewer.layers: 
+            if (l._basename() == 'Image') and ('VIDEO' in l.name):
+                video_layers.append(l)
+        if not video_layers:
+            return
+        if len(video_layers) > 1:
+            show_error("💀 More than one video layer")
+            #self.layers_to_remove.append(video_layers[-1]) # Remove the last one 
+            self.video_layer = video_layers[0] # Take the first one
+        else:
+            print(f"Found video layer >>> {video_layers[0].name}")
+            video_layer = video_layers[0]
+            # Create a retrievable mask dummy
+            mask_layer_dummy = np.zeros((video_layer.metadata['num_frames'], 
+                                        video_layer.metadata['height'], 
+                                        video_layer.metadata['width'], 
+                                        ), dtype=np.uint8
+                                        )
+            video_layer.metadata['dummy'] = mask_layer_dummy    
+            self.video_layer = video_layer
+        return
+    
+    
+        
+    # Example key binding with Napari built-in viewer functions 
+    # @viewer.bind_key('m')
+    # def print_message(viewer):
+    #    show_info('Test - pressed key m')
+    ###### GUI SETUP CODE FROM QT DESIGNER ############################################################
         
     def setupUi(self):
         if not self.objectName():
