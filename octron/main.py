@@ -177,7 +177,7 @@ class octron_widget(QWidget):
         if len(video_layers) > 1:
             # TODO: 
             # For some reason this runs into an error when trying to remove the layer
-            print("💀 More than one video layer found; removing the extra one.")
+            print("💀 More than one video layer found; Remove the extra one.")
             # Remove the most recently added video layer (or adjust as desired)
             #self._viewer.layers.remove(video_layers[-1])
         elif len(video_layers) == 1:
