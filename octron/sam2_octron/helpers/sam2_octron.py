@@ -663,38 +663,72 @@ class SAM2_octron(SAM2VideoPredictor):
 def run_new_pred(predictor,
                  frame_idx,
                  obj_id, 
-                 label,
-                 point=None,
-                 mask=None
+                 labels,
+                 points=None,
+                 masks=None
                  ):
-    assert label in [0,1], f'label must be 0 or 1, got {label}'
-    assert point is not None or mask is not None
-    if mask is not None:
-        assert len(mask.shape) == 2
-        
-        # print('Running mask prediction')
+    '''
+    Run a new prediction on the SAM2 model.
+    This is a wrapper around the SAM2_octron functions that allow 
+    for adding new points or masks.
+    The function returns the mask image that can be re-added to the 
+    viewer. 
+    
+    
+    Parameters
+    ----------
+    predictor : SAM2_octron
+        The SAM2_octron predictor object.
+    frame_idx : int
+        The current frame index - this is the frame to run the prediction on.
+    obj_id : int
+        The current object id for prediction.
+    labels : list
+        A list of labels for the points. 
+        These can be 0 (negative click) or 1 (positive click).
+    points : list
+        The points to run the prediction on.
+    masks : np.array
+        The masks to run the prediction on.
+    
+    Returns
+    -------
+    mask : np.array
+        The mask image that can be re-added to the viewer.
+    
+    '''
+
+    
+    for l_ in set(labels):
+        assert l_ in [0,1], f'Labels must be 0 or 1, got {set(labels)}'
+    assert points is not None or masks is not None, f'Either points or masks must be provided'
+    if points is not None:
+        assert len(points) == len(labels), f'Number of points and labels must match,\
+            got {len(points)} points and {len(labels)} labels'
+    
+    ########### MASK INPUT ####################################################################
+    if masks is not None:
+        assert len(masks.shape) == 2, f'Input masks must be 2D, got {masks.shape}'
         frame_idx, obj_ids, video_res_masks = predictor.add_new_mask(
                                                     frame_idx=frame_idx,
                                                     obj_id=obj_id,
-                                                    mask=np.array(mask, dtype=bool)
+                                                    mask=np.array(masks, dtype=bool)
                                                     )
         mask = (video_res_masks[obj_id] > 0).cpu().numpy().astype(np.uint8)
                 
-        
-    if point is not None:
-        assert len(point) == 2
-        # Run point prediction
-        # print('Running point prediction')
-        _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
+    ########### POINT INPUT ###################################################################
+    if points is not None:
+        frame_idx, obj_ids, video_res_masks = predictor.add_new_points_or_box(
                                                     frame_idx=frame_idx,
                                                     obj_id=obj_id,
-                                                    points=np.array([point],dtype=np.float32),
-                                                    labels=np.array([label], np.int32)
+                                                    points=np.array(points,dtype=np.float32),
+                                                    labels=np.array(labels, np.int32)
                                                     )
         
         # Add the mask image as a new labels layer
-        mask = (out_mask_logits[obj_id] > 0).cpu().numpy().astype(np.uint8)
+        mask = (video_res_masks[obj_id] > 0).cpu().numpy().astype(np.uint8)
         
+    # TODO ... this code here is ugly (works for now though):
     current_label = obj_id+1
     if len(np.unique(mask))>1:
         mask[mask==np.unique(mask)[1]] = current_label 
