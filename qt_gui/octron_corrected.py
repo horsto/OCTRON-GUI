@@ -333,7 +333,7 @@ class Ui_octron_widgetui(object):
 
         self.retranslateUi()
 
-        self.toolBox.setCurrentIndex(1)
+        self.toolBox.setCurrentIndex(0)
         self.toolBox.layout().setSpacing(10)
 
 
@@ -373,7 +373,7 @@ class Ui_octron_widgetui(object):
 #if QT_CONFIG(tooltip)
         self.hard_reset_layer_btn.setToolTip(QCoreApplication.translate("self", u"Hard reset of the SAM2 predictor. Use this if prediction really did not go well for your data.", None))
 #endif // QT_CONFIG(tooltip)
-        self.hard_reset_layer_btn.setText(QCoreApplication.translate("self", u"\u26a0\ufe0fReset", None))
+        self.hard_reset_layer_btn.setText(QCoreApplication.translate("self", u"\u3004 Reset", None))
 #if QT_CONFIG(tooltip)
         self.create_projection_layer_btn.setToolTip(QCoreApplication.translate("self", u"Create an average projection out of all segmented images for the current label", None))
 #endif // QT_CONFIG(tooltip)

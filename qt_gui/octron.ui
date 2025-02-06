@@ -120,7 +120,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <property name="tabSpacing">
        <number>10</number>
@@ -495,7 +495,7 @@ and octo and suffix 2 for the second octo </string>
                <string>Hard reset of the SAM2 predictor. Use this if prediction really did not go well for your data.</string>
               </property>
               <property name="text">
-               <string>⚠️Reset</string>
+               <string>〄 Reset</string>
               </property>
               <property name="autoRepeatInterval">
                <number>2000</number>
