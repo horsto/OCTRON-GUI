@@ -42,6 +42,7 @@ from napari.utils.notifications import (
     show_warning,
     show_error,
 )
+from napari.qt.threading import thread_worker
 
 
 # SAM2 specific 
@@ -101,6 +102,9 @@ class octron_widget(QWidget):
         self.obj_id_label = {} # k: Object ID to v: label 
         self.obj_id_layer = {} # k: Object ID to v: layer 
         self.mask_2_annotation_layer = {} # k: Mask layer to v: annotation layer 
+        self.prefetcher_worker = None
+        self.predicted_frame_indices = {}
+        
         # ... and some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
         
@@ -140,7 +144,6 @@ class octron_widget(QWidget):
         # Connect layer specific callbacks
         self.octron_sam2_callbacks = sam2_octron_callbacks(self)
 
-        
 
     def gui_callback_functions(self):
         '''
@@ -152,6 +155,7 @@ class octron_widget(QWidget):
         # Buttons 
         self.load_model_btn.clicked.connect(self.load_model)
         self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
+        self.predict_next_batch_btn.clicked.connect(self.predict_next_batch)
         
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
@@ -199,7 +203,7 @@ class octron_widget(QWidget):
         # TODO: Implement the predict next batch function
         #self.predict_next_batch_btn.clicked.connect(FUNCTION)
         # Check if you can create a zarr store for video
-        self.create_video_zarr()
+        self.create_video_zarr_prefetcher()
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
@@ -261,15 +265,32 @@ class octron_widget(QWidget):
                 self.video_layer = video_layer
                 self._viewer.dims.set_point(0,0)
                 # Check if you can create a zarr store for video
-                self.create_video_zarr()
+                self.create_video_zarr_prefetcher()
             else:
                 show_error("Video layer metadata incomplete; dummy mask not created.")
         else:
             show_warning("No video layer found.")
     
-    
-    def create_video_zarr(self):
+
+    def predict_next_batch(self):
         '''
+        Thread worker for predicting the next batch of images
+        
+        '''
+        print('Thread predicting ... WIP')
+        # assert self.predictor, "No model loaded."
+        # assert self.predictor.is_initialized, "Model not initialized."
+        # self.batch_predictor = self.octron_sam2_callbacks.thread_predict()
+        # self.batch_predictor.start()
+            
+
+    def create_video_zarr_prefetcher(self):
+        '''
+        This function deals with storage (temporary and long term).
+        Long term: Zarr store
+        Short term: Prefetcher worker
+        
+        ...
         Create a zarr store for the video layer.
         This will only work if a video layer is found and a model is loaded, 
         since both video and model information are required to create the zarr store.
@@ -295,9 +316,24 @@ class octron_widget(QWidget):
                                             image_height=self.predictor.image_size,
                                             chunk_size=self.chunk_size,
                                             )
-        print(f'Created video zarr archive under "{sample_data_zarr}"')
-
+        print(f'💾 Created video zarr archive under "{sample_data_zarr}"')
+        # Set up thread worker to deal with prefetching batches of images
+        self.prefetcher_worker = self.thread_prefetch_images()   
+        self.prefetcher_worker.setAutoDelete(False)
         
+        
+    @thread_worker
+    def thread_prefetch_images(self):
+        '''
+        Thread worker for prefetching images for fast processing in the viewer
+        '''
+        assert self.predictor, "No model loaded."
+        assert self.predictor.is_initialized, "Model not initialized."
+        current_indices = self._viewer.dims.current_step
+        print(f'⚡️ Prefetching {self.chunk_size} images, start: {current_indices[0]}')
+        _ = self.predictor.images[slice(current_indices[0],current_indices[0]+self.chunk_size)]
+
+   
     def on_label_change(self):
         '''
         Callback function for the label list combobox.
@@ -402,7 +438,10 @@ class octron_widget(QWidget):
             current_obj_id = 0
         else:
             current_obj_id = max(self.obj_id_label.keys()) + 1
-            
+        
+        ######## Start prefetching images ##########################################################
+        self.prefetcher_worker.start()
+        
         ######### Create a new mask layer  ######################################################### 
         mask_layer_name = f"{label_name} MASKS"
         colors = DirectLabelColormap(color_dict=self.label_colors[0], 
@@ -419,6 +458,7 @@ class octron_widget(QWidget):
         # Start filling the dictionaries that keep track of layers and object IDs
         self.obj_id_label[current_obj_id] = label_name
         self.obj_id_layer[current_obj_id] = mask_layer
+        self.predicted_frame_indices[current_obj_id] = np.zeros(self.video_layer.data.shape[0])
         self.mask_2_annotation_layer[mask_layer] = None
         
         ######### Create a new annotation layer ####################################################
