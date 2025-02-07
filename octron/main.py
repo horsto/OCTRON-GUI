@@ -51,9 +51,16 @@ from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 
 # Layer creation tools
-from octron.sam2_octron.helpers.sam2_layers import (
+from octron.sam2_octron.helpers.sam2_layer import (
     add_sam2_mask_layer,
+    add_sam2_shapes_layer
 )                
+
+# Layer callbacks
+from octron.sam2_octron.helpers.sam2_layer_callback import (
+    on_shapes_changed,
+)                
+
 
 # Color tools
 from napari.utils import DirectLabelColormap
@@ -123,15 +130,15 @@ class octron_widget(QWidget):
             
         
         # Connect callbacks 
-        self.callback_functions()
+        self.gui_callback_functions()
         
         
         
         
 
-    def callback_functions(self):
+    def gui_callback_functions(self):
         '''
-        Connect all callback functions to buttons and lists 
+        Connect all callback functions to buttons and lists in the main GUI
         '''
         # Global layer insertion callback
         self._viewer.layers.events.inserted.connect(self.on_changed_layer)
@@ -343,29 +350,45 @@ class octron_widget(QWidget):
             
         ######### Create a new mask layer  ######################################################### 
         mask_layer_name = f"{label_name} MASKS"
-        base_color = DirectLabelColormap(color_dict=self.label_colors[0], 
-                                         use_selection=True, 
-                                         selection=current_obj_id,
-                                         )
-        mask_layer = add_sam2_mask_layer(viewer,
+        colors = DirectLabelColormap(color_dict=self.label_colors[0], 
+                                     use_selection=True, 
+                                     selection=current_obj_id,
+                                     )
+        mask_layer = add_sam2_mask_layer(self._viewer,
                                          self.video_layer,
                                          mask_layer_name,
-                                         base_color,
+                                         colors,
                                          )
-        mask_layer.metadata['_name'] = mask_layer_name # Octron convention. Save a copy of name
+        mask_layer.metadata['_name'] = mask_layer_name # Octron convention. Save a copy of the name
         self.obj_id_label[current_obj_id] = label_name
         self.obj_id_layer[current_obj_id] = mask_layer
         
         ######### Create a new annotation layer ####################################################
         
-        
-        
-        if layer_type == 'Shape Layer':
+        if layer_type == 'Shapes':
+            annotation_layer_name = f"{label_name} SHAPES"
             # Create a shape layer
+            annotation_layer = add_sam2_shapes_layer(self._viewer,
+                                                self.video_layer,
+                                                name=annotation_layer_name,
+                                                color=self.label_colors[0][1],
+                                                )
+            
+            
+            show_info(f"Created new mask + annotation layer '{annotation_layer_name}'")
+            
+            
             pass
-        elif layer_type == 'Point Layer':
+        elif layer_type == 'Points':
             # Create a point layer
             pass
+        
+        
+        
+        
+        
+        
+        
             
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
