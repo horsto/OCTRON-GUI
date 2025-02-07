@@ -1,6 +1,4 @@
 # This file contains helper functions to add layers to the napari viewer through OCTRON
-
-
 def add_sam2_mask_layer(viewer,
                         video_layer,
                         name,
@@ -48,7 +46,6 @@ def add_sam2_mask_layer(viewer,
 
 def add_sam2_shapes_layer(
     viewer,
-    video_layer,
     name,
     color,
     ):

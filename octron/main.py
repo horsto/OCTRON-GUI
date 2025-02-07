@@ -49,6 +49,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
+from octron.sam2_octron.helpers.sam2_zarr import create_image_zarr
 
 # Layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
@@ -56,10 +57,8 @@ from octron.sam2_octron.helpers.sam2_layer import (
     add_sam2_shapes_layer
 )                
 
-# Layer callbacks
-from octron.sam2_octron.helpers.sam2_layer_callback import (
-    on_shapes_changed,
-)                
+# Layer callbacks class
+from octron.sam2_octron.helpers.sam2_layer_callback import sam2_octron_callbacks
 
 
 # Color tools
@@ -98,8 +97,10 @@ class octron_widget(QWidget):
         
         # Initialize some variables
         self.video_layer = None
-        self.obj_id_label = {} # Object ID to label mapping
-        self.obj_id_layer = {} # Object ID to layer mapping
+        self.video_zarr = None
+        self.obj_id_label = {} # k: Object ID to v: label 
+        self.obj_id_layer = {} # k: Object ID to v: layer 
+        self.mask_2_annotation_layer = {} # k: Mask layer to v: annotation layer 
         # ... and some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
         
@@ -113,6 +114,10 @@ class octron_widget(QWidget):
         
         # Colors for the labels
         self.label_colors = create_label_colors(cmap='cmr.tropical')
+
+        ##################################################################################################
+
+
 
         ##################################################################################################
         # Initialize all UI components
@@ -129,11 +134,12 @@ class octron_widget(QWidget):
             self.sam2model_list.addItem(model['name'])
             
         
-        # Connect callbacks 
+        # Connect (global) GUI callbacks 
         self.gui_callback_functions()
         
-        
-        
+        # Connect layer specific callbacks
+        self.octron_sam2_callbacks = sam2_octron_callbacks(self)
+
         
 
     def gui_callback_functions(self):
@@ -176,6 +182,7 @@ class octron_widget(QWidget):
         self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
                                                         ckpt_path=checkpoint_path.as_posix(),
                                                         )
+        self.predictor.is_initialized = False
         show_info(f"Model {model_name} loaded on {self.device}")
         # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(False)
@@ -191,8 +198,9 @@ class octron_widget(QWidget):
         self.predict_next_batch_btn.setEnabled(True)
         # TODO: Implement the predict next batch function
         #self.predict_next_batch_btn.clicked.connect(FUNCTION)
-        
-    
+        # Check if you can create a zarr store for video
+        self.create_video_zarr()
+
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
     def remove_all_layers(self):
@@ -252,12 +260,44 @@ class octron_widget(QWidget):
                 video_layer.metadata['dummy'] = mask_layer_dummy
                 self.video_layer = video_layer
                 self._viewer.dims.set_point(0,0)
+                # Check if you can create a zarr store for video
+                self.create_video_zarr()
             else:
                 show_error("Video layer metadata incomplete; dummy mask not created.")
         else:
             show_warning("No video layer found.")
-            
-            
+    
+    
+    def create_video_zarr(self):
+        '''
+        Create a zarr store for the video layer.
+        This will only work if a video layer is found and a model is loaded, 
+        since both video and model information are required to create the zarr store.
+        # TODO: Tie this into project management
+        '''
+        
+        if self.video_zarr:
+            # Zarr store already exists
+            return
+        if not self.video_layer:
+            # only when a video layer is found
+            return
+        if not self.predictor:
+            # only when a model is loaded
+            return
+        
+        sample_dir = cur_path / 'sample_data'
+        sample_dir.mkdir(exist_ok=True)
+        sample_data_zarr = sample_dir / 'sample_data.zip'
+
+        self.video_zarr = create_image_zarr(sample_data_zarr,
+                                            num_frames=self.video_layer.metadata['num_frames'],
+                                            image_height=self.predictor.image_size,
+                                            chunk_size=self.chunk_size,
+                                            )
+        print(f'Created video zarr archive under "{sample_data_zarr}"')
+
+        
     def on_label_change(self):
         '''
         Callback function for the label list combobox.
@@ -276,6 +316,10 @@ class octron_widget(QWidget):
             if dialog.result() == QDialog.Accepted:
                 new_label_name = dialog.label_name.text()
                 new_label_name = new_label_name.strip().lower() # Make sure things are somehow unified
+                if not new_label_name:
+                    show_warning("Please enter a valid label name.")
+                    self.label_list_combobox.setCurrentIndex(0)
+                    return
                 if new_label_name in all_list_entries:
                     # Select the existing label
                     existing_index = all_list_entries.index(new_label_name)
@@ -305,11 +349,12 @@ class octron_widget(QWidget):
         else:
             print(f'Selected label {current_text}')   
    
+   
+   
     def create_annotation_layers(self):
         '''
         Callback function for the create annotation layer button.
         Creates a new annotation layer based on the selected label and layer type.
-        
         
         
         '''
@@ -321,6 +366,17 @@ class octron_widget(QWidget):
             show_warning("No video layer found.")
             return
         
+        # Prewarm SAM2 predictor (model)
+        # This needs the zarr store to be initialized first
+        # -> that happens when either the model is loaded or a video layer is found
+        # -> on_changed_layer() and load_model() take care of this
+        if not self.predictor.is_initialized:
+            self.predictor.init_state(video_data=self.video_layer.data, 
+                                      zarr_store=self.video_zarr,
+                                     )
+            self.predictor.is_initialized = True
+            
+
         # Get the selected label and layer type
         label = self.label_list_combobox.currentText().strip()
         label_idx = self.label_list_combobox.currentIndex()
@@ -336,7 +392,6 @@ class octron_widget(QWidget):
         
         label_name = f"{label} {label_suffix}".strip()
         # Check if the layer_name already exists in self.obj_id_label
-
         if label_name in self.obj_id_label.values():
             show_error(f"Layer with label '{label_name}' exists already.")
             return
@@ -352,7 +407,7 @@ class octron_widget(QWidget):
         mask_layer_name = f"{label_name} MASKS"
         colors = DirectLabelColormap(color_dict=self.label_colors[0], 
                                      use_selection=True, 
-                                     selection=current_obj_id,
+                                     selection=current_obj_id+1,
                                      )
         mask_layer = add_sam2_mask_layer(self._viewer,
                                          self.video_layer,
@@ -360,8 +415,11 @@ class octron_widget(QWidget):
                                          colors,
                                          )
         mask_layer.metadata['_name'] = mask_layer_name # Octron convention. Save a copy of the name
+        
+        # Start filling the dictionaries that keep track of layers and object IDs
         self.obj_id_label[current_obj_id] = label_name
         self.obj_id_layer[current_obj_id] = mask_layer
+        self.mask_2_annotation_layer[mask_layer] = None
         
         ######### Create a new annotation layer ####################################################
         
@@ -369,12 +427,11 @@ class octron_widget(QWidget):
             annotation_layer_name = f"{label_name} SHAPES"
             # Create a shape layer
             annotation_layer = add_sam2_shapes_layer(self._viewer,
-                                                self.video_layer,
-                                                name=annotation_layer_name,
-                                                color=self.label_colors[0][1],
-                                                )
-            
-            
+                                                     name=annotation_layer_name,
+                                                     color=self.label_colors[0][1],
+                                                     )
+            self.mask_2_annotation_layer[mask_layer] = annotation_layer
+            annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
             show_info(f"Created new mask + annotation layer '{annotation_layer_name}'")
             
             
@@ -386,13 +443,10 @@ class octron_widget(QWidget):
         
         
         
-        
-        
-        
             
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
-            
+
             
             
             
