@@ -120,7 +120,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="tabSpacing">
        <number>10</number>
@@ -325,22 +325,28 @@
             <property name="verticalSpacing">
              <number>9</number>
             </property>
-            <item row="0" column="2">
+            <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QComboBox" name="label_list_combobox">
               <property name="minimumSize">
                <size>
-                <width>80</width>
+                <width>110</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>80</width>
+                <width>110</width>
                 <height>25</height>
                </size>
               </property>
+              <property name="toolTip">
+               <string>Select, add or remove labels</string>
+              </property>
+              <property name="editable">
+               <bool>false</bool>
+              </property>
               <property name="currentText">
-               <string>Label</string>
+               <string>Pick label</string>
               </property>
               <property name="maxCount">
                <number>15</number>
@@ -359,27 +365,32 @@
               </property>
               <item>
                <property name="text">
-                <string>Label</string>
+                <string>Pick label</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>✚ Create</string>
+                <string>⊕ Create</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>⊖ Remove</string>
                </property>
               </item>
              </widget>
             </item>
-            <item row="0" column="0">
+            <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QComboBox" name="layer_type_combobox">
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>110</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>120</width>
+                <width>110</width>
                 <height>25</height>
                </size>
               </property>
@@ -423,7 +434,7 @@
               </item>
              </widget>
             </item>
-            <item row="0" column="4" alignment="Qt::AlignmentFlag::AlignRight">
+            <item row="0" column="4" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="create_annotation_layer_btn">
               <property name="minimumSize">
                <size>
@@ -442,7 +453,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="3">
+            <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignVCenter">
              <widget class="QLineEdit" name="label_suffix_lineedit">
               <property name="minimumSize">
                <size>
@@ -477,7 +488,7 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item row="1" column="4">
+            <item row="1" column="4" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="hard_reset_layer_btn">
               <property name="minimumSize">
                <size>
@@ -502,17 +513,17 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
+            <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="create_projection_layer_btn">
               <property name="minimumSize">
                <size>
-                <width>120</width>
+                <width>110</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>120</width>
+                <width>110</width>
                 <height>25</height>
                </size>
               </property>
@@ -523,7 +534,7 @@ and octo and suffix 2 for the second octo </string>
                <string/>
               </property>
               <property name="text">
-               <string>Create projection</string>
+               <string>Visualize all</string>
               </property>
              </widget>
             </item>

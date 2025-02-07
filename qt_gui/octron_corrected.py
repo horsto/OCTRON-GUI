@@ -129,15 +129,17 @@ class Ui_octron_widgetui(object):
         self.label_list_combobox = QComboBox(self.annotate_layer_create_groupbox)
         self.label_list_combobox.addItem("")
         self.label_list_combobox.addItem("")
+        self.label_list_combobox.addItem("")
         self.label_list_combobox.setObjectName(u"label_list_combobox")
-        self.label_list_combobox.setMinimumSize(QSize(80, 25))
-        self.label_list_combobox.setMaximumSize(QSize(80, 25))
+        self.label_list_combobox.setMinimumSize(QSize(110, 25))
+        self.label_list_combobox.setMaximumSize(QSize(110, 25))
+        self.label_list_combobox.setEditable(False)
         self.label_list_combobox.setMaxCount(15)
         self.label_list_combobox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.label_list_combobox.setIconSize(QSize(14, 14))
         self.label_list_combobox.setFrame(False)
 
-        self.gridLayout.addWidget(self.label_list_combobox, 0, 2, 1, 1)
+        self.gridLayout.addWidget(self.label_list_combobox, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.layer_type_combobox = QComboBox(self.annotate_layer_create_groupbox)
         self.layer_type_combobox.addItem("")
@@ -145,21 +147,21 @@ class Ui_octron_widgetui(object):
         self.layer_type_combobox.addItem("")
         self.layer_type_combobox.addItem("")
         self.layer_type_combobox.setObjectName(u"layer_type_combobox")
-        self.layer_type_combobox.setMinimumSize(QSize(120, 25))
-        self.layer_type_combobox.setMaximumSize(QSize(120, 25))
+        self.layer_type_combobox.setMinimumSize(QSize(110, 25))
+        self.layer_type_combobox.setMaximumSize(QSize(110, 25))
         self.layer_type_combobox.setMaxCount(15)
         self.layer_type_combobox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.layer_type_combobox.setIconSize(QSize(14, 14))
         self.layer_type_combobox.setFrame(False)
 
-        self.gridLayout.addWidget(self.layer_type_combobox, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.layer_type_combobox, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
         self.create_annotation_layer_btn.setMinimumSize(QSize(50, 25))
         self.create_annotation_layer_btn.setMaximumSize(QSize(50, 25))
 
-        self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight)
+        self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
         self.label_suffix_lineedit = QLineEdit(self.annotate_layer_create_groupbox)
         self.label_suffix_lineedit.setObjectName(u"label_suffix_lineedit")
@@ -169,7 +171,7 @@ class Ui_octron_widgetui(object):
         self.label_suffix_lineedit.setText(u"")
         self.label_suffix_lineedit.setMaxLength(100)
 
-        self.gridLayout.addWidget(self.label_suffix_lineedit, 0, 3, 1, 1)
+        self.gridLayout.addWidget(self.label_suffix_lineedit, 0, 3, 1, 1, Qt.AlignmentFlag.AlignVCenter)
 
         self.hard_reset_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.hard_reset_layer_btn.setObjectName(u"hard_reset_layer_btn")
@@ -177,14 +179,14 @@ class Ui_octron_widgetui(object):
         self.hard_reset_layer_btn.setMaximumSize(QSize(70, 25))
         self.hard_reset_layer_btn.setAutoRepeatInterval(2000)
 
-        self.gridLayout.addWidget(self.hard_reset_layer_btn, 1, 4, 1, 1)
+        self.gridLayout.addWidget(self.hard_reset_layer_btn, 1, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
         self.create_projection_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_projection_layer_btn.setObjectName(u"create_projection_layer_btn")
-        self.create_projection_layer_btn.setMinimumSize(QSize(120, 25))
-        self.create_projection_layer_btn.setMaximumSize(QSize(120, 25))
+        self.create_projection_layer_btn.setMinimumSize(QSize(110, 25))
+        self.create_projection_layer_btn.setMaximumSize(QSize(110, 25))
 
-        self.gridLayout.addWidget(self.create_projection_layer_btn, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.create_projection_layer_btn, 1, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.annotate_vertical_layout.addWidget(self.annotate_layer_create_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
@@ -333,7 +335,7 @@ class Ui_octron_widgetui(object):
 
         self.retranslateUi()
 
-        self.toolBox.setCurrentIndex(0)
+        self.toolBox.setCurrentIndex(1)
         self.toolBox.layout().setSpacing(10)
 
 
@@ -351,10 +353,14 @@ class Ui_octron_widgetui(object):
 
         self.load_model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("self", u"Layer controls", None))
-        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Label", None))
-        self.label_list_combobox.setItemText(1, QCoreApplication.translate("self", u"\u271a Create", None))
+        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Pick label", None))
+        self.label_list_combobox.setItemText(1, QCoreApplication.translate("self", u"\u2295 Create", None))
+        self.label_list_combobox.setItemText(2, QCoreApplication.translate("self", u"\u2296 Remove", None))
 
-        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Label", None))
+#if QT_CONFIG(tooltip)
+        self.label_list_combobox.setToolTip(QCoreApplication.translate("self", u"Select, add or remove labels", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Pick label", None))
         self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Layer Type", None))
         self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shape Layer", None))
         self.layer_type_combobox.setItemText(2, QCoreApplication.translate("self", u"Point Layer", None))
@@ -380,7 +386,7 @@ class Ui_octron_widgetui(object):
 #if QT_CONFIG(statustip)
         self.create_projection_layer_btn.setStatusTip("")
 #endif // QT_CONFIG(statustip)
-        self.create_projection_layer_btn.setText(QCoreApplication.translate("self", u"Create projection", None))
+        self.create_projection_layer_btn.setText(QCoreApplication.translate("self", u"Visualize all", None))
         self.annotate_param_groupbox.setTitle(QCoreApplication.translate("self", u"Parameters", None))
         self.kernel_label.setText(QCoreApplication.translate("self", u"Opening kernel radius", None))
         self.annotate_layer_predict_groupbox.setTitle(QCoreApplication.translate("self", u"Batch prediction", None))

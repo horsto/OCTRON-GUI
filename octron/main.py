@@ -7,17 +7,35 @@ import os, sys
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 from pathlib import Path
-cur_path = Path(os.path.abspath(__file__)).parent
-sys.path.append(cur_path.parent.as_posix())
+cur_path = Path(os.path.abspath(__file__)).parent.parent
+print(f"Adding {cur_path.as_posix()} to sys.path")
+sys.path.append(cur_path.as_posix())
 
-from qtpy.QtCore import *  # TODO: Import only what you need
-from qtpy.QtGui import *  
-from qtpy.QtWidgets import * 
-from qtpy.QtWidgets import QWidget
-from qtpy.QtWidgets import QStyleFactory
-
+from qtpy.QtCore import QSize, QRect, Qt, QCoreApplication
+from qtpy.QtGui import QCursor, QPixmap, QIcon
+from qtpy.QtWidgets import (
+    QWidget,
+    QDialog,
+    QFrame,
+    QApplication,
+    QStyleFactory,
+    QVBoxLayout,
+    QLabel,
+    QLayout,
+    QToolBox,
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QSizePolicy,
+    QLineEdit,
+    QSpinBox,
+    QProgressBar,
+    QPushButton,
+    QAbstractSpinBox,
+    QGridLayout
+)
 import napari
-from napari.utils.notifications import show_info, show_warning, show_error
+from napari.utils.notifications import show_info
 
 # SAM2 specific 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -26,9 +44,13 @@ from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 
 # Layers
-from octron.sam2_octron.helpers.sam2_mask_layer import add_sam2_mask_layer
+#from octron.sam2_octron.helpers.sam2_mask_layer import add_sam2_mask_layer
 
-
+# Custom dialog boxes
+from octron.dialog import (
+    add_new_label_dialog,
+    remove_label_dialog,
+)
 
 # If there's already a QApplication instance (as may be the case when running as a napari plugin),
 # then set its style explicitly:
@@ -48,9 +70,13 @@ class octron_widget(QWidget):
         self.cur_path = Path(os.path.abspath(__file__)).parent
         
         self._viewer = viewer
-        self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ... muahaha
+        self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ...🪦 muahaha
+        
+        
+        # Initialize some variables
         self.video_layer = None
-        # Some parameters
+        
+        # ... and some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
@@ -80,16 +106,18 @@ class octron_widget(QWidget):
         
         
 
-
     def callback_functions(self):
         '''
         Connect all callback functions to buttons and lists 
         '''
         # Global layer insertion callback
         self._viewer.layers.events.inserted.connect(self.on_changed_layer)
+        
+        # Buttons 
         self.load_model_btn.clicked.connect(self.load_model)
         
-        # self.sam2model_list.currentIndexChanged.connect(self.on_model_selected)
+        # Lists
+        self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
     
     
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
@@ -133,7 +161,53 @@ class octron_widget(QWidget):
         # TODO: Implement the predict next batch function
         #self.predict_next_batch_btn.clicked.connect(FUNCTION)
         
-
+    def on_label_change(self):
+        '''
+        Callback function for the label list combobox.
+        Handles the selection of labels, adding new labels, and removing labels. 
+        
+        '''
+        index = self.label_list_combobox.currentIndex()
+        current_text = self.label_list_combobox.currentText()
+        all_list_entries = [self.label_list_combobox.itemText(i) for i in range(self.label_list_combobox.count())]
+        if index == 0:
+            return
+        elif index == 1:
+            # Add new label was selected by user
+            dialog = add_new_label_dialog(self)
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                new_label_name = dialog.label_name.text()
+                new_label_name = new_label_name.strip().lower() # Make sure things are somehow unified
+                if new_label_name in all_list_entries:
+                    print(f'Label "{new_label_name}" already exists')
+                    # Select the existing label
+                    existing_index = all_list_entries.index(new_label_name)
+                    self.label_list_combobox.setCurrentIndex(existing_index)
+                else:
+                    print(f'Adding new label "{new_label_name}"')
+                    self.label_list_combobox.addItem(new_label_name)
+                    new_index = self.label_list_combobox.count()-1
+                    self.label_list_combobox.setCurrentIndex(new_index)
+            else:
+                self.label_list_combobox.setCurrentIndex(0)
+                return
+            
+        elif index == 2: 
+             # User wants to remove a label
+            dialog = remove_label_dialog(self, all_list_entries[3:])
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                selected_label = dialog.list_widget.currentItem().text()
+                print(f'Removing label "{selected_label}"')
+                self.label_list_combobox.removeItem(self.label_list_combobox.findText(selected_label))
+                self.label_list_combobox.setCurrentIndex(0)
+            else:
+                self.label_list_combobox.setCurrentIndex(0)
+                return
+        else:
+            print(f'Selected label {current_text}')   
+        
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
@@ -320,15 +394,17 @@ class octron_widget(QWidget):
         self.label_list_combobox = QComboBox(self.annotate_layer_create_groupbox)
         self.label_list_combobox.addItem("")
         self.label_list_combobox.addItem("")
+        self.label_list_combobox.addItem("")
         self.label_list_combobox.setObjectName(u"label_list_combobox")
-        self.label_list_combobox.setMinimumSize(QSize(80, 25))
-        self.label_list_combobox.setMaximumSize(QSize(80, 25))
+        self.label_list_combobox.setMinimumSize(QSize(110, 25))
+        self.label_list_combobox.setMaximumSize(QSize(110, 25))
+        self.label_list_combobox.setEditable(False)
         self.label_list_combobox.setMaxCount(15)
         self.label_list_combobox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.label_list_combobox.setIconSize(QSize(14, 14))
         self.label_list_combobox.setFrame(False)
 
-        self.gridLayout.addWidget(self.label_list_combobox, 0, 2, 1, 1)
+        self.gridLayout.addWidget(self.label_list_combobox, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.layer_type_combobox = QComboBox(self.annotate_layer_create_groupbox)
         self.layer_type_combobox.addItem("")
@@ -336,21 +412,21 @@ class octron_widget(QWidget):
         self.layer_type_combobox.addItem("")
         self.layer_type_combobox.addItem("")
         self.layer_type_combobox.setObjectName(u"layer_type_combobox")
-        self.layer_type_combobox.setMinimumSize(QSize(120, 25))
-        self.layer_type_combobox.setMaximumSize(QSize(120, 25))
+        self.layer_type_combobox.setMinimumSize(QSize(110, 25))
+        self.layer_type_combobox.setMaximumSize(QSize(110, 25))
         self.layer_type_combobox.setMaxCount(15)
         self.layer_type_combobox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.layer_type_combobox.setIconSize(QSize(14, 14))
         self.layer_type_combobox.setFrame(False)
 
-        self.gridLayout.addWidget(self.layer_type_combobox, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.layer_type_combobox, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
         self.create_annotation_layer_btn.setMinimumSize(QSize(50, 25))
         self.create_annotation_layer_btn.setMaximumSize(QSize(50, 25))
 
-        self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight)
+        self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
         self.label_suffix_lineedit = QLineEdit(self.annotate_layer_create_groupbox)
         self.label_suffix_lineedit.setObjectName(u"label_suffix_lineedit")
@@ -360,7 +436,7 @@ class octron_widget(QWidget):
         self.label_suffix_lineedit.setText(u"")
         self.label_suffix_lineedit.setMaxLength(100)
 
-        self.gridLayout.addWidget(self.label_suffix_lineedit, 0, 3, 1, 1)
+        self.gridLayout.addWidget(self.label_suffix_lineedit, 0, 3, 1, 1, Qt.AlignmentFlag.AlignVCenter)
 
         self.hard_reset_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.hard_reset_layer_btn.setObjectName(u"hard_reset_layer_btn")
@@ -368,14 +444,14 @@ class octron_widget(QWidget):
         self.hard_reset_layer_btn.setMaximumSize(QSize(70, 25))
         self.hard_reset_layer_btn.setAutoRepeatInterval(2000)
 
-        self.gridLayout.addWidget(self.hard_reset_layer_btn, 1, 4, 1, 1)
+        self.gridLayout.addWidget(self.hard_reset_layer_btn, 1, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
         self.create_projection_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_projection_layer_btn.setObjectName(u"create_projection_layer_btn")
-        self.create_projection_layer_btn.setMinimumSize(QSize(120, 25))
-        self.create_projection_layer_btn.setMaximumSize(QSize(120, 25))
+        self.create_projection_layer_btn.setMinimumSize(QSize(110, 25))
+        self.create_projection_layer_btn.setMaximumSize(QSize(110, 25))
 
-        self.gridLayout.addWidget(self.create_projection_layer_btn, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.create_projection_layer_btn, 1, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.annotate_vertical_layout.addWidget(self.annotate_layer_create_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
@@ -524,7 +600,7 @@ class octron_widget(QWidget):
 
         self.retranslateUi()
 
-        self.toolBox.setCurrentIndex(0)
+        self.toolBox.setCurrentIndex(1)
         self.toolBox.layout().setSpacing(10)
 
 
@@ -542,10 +618,14 @@ class octron_widget(QWidget):
 
         self.load_model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("self", u"Layer controls", None))
-        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Label", None))
-        self.label_list_combobox.setItemText(1, QCoreApplication.translate("self", u"\u271a Create", None))
+        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Pick label", None))
+        self.label_list_combobox.setItemText(1, QCoreApplication.translate("self", u"\u2295 Create", None))
+        self.label_list_combobox.setItemText(2, QCoreApplication.translate("self", u"\u2296 Remove", None))
 
-        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Label", None))
+#if QT_CONFIG(tooltip)
+        self.label_list_combobox.setToolTip(QCoreApplication.translate("self", u"Select, add or remove labels", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Pick label", None))
         self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Layer Type", None))
         self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shape Layer", None))
         self.layer_type_combobox.setItemText(2, QCoreApplication.translate("self", u"Point Layer", None))
@@ -571,7 +651,7 @@ class octron_widget(QWidget):
 #if QT_CONFIG(statustip)
         self.create_projection_layer_btn.setStatusTip("")
 #endif // QT_CONFIG(statustip)
-        self.create_projection_layer_btn.setText(QCoreApplication.translate("self", u"Create projection", None))
+        self.create_projection_layer_btn.setText(QCoreApplication.translate("self", u"Visualize all", None))
         self.annotate_param_groupbox.setTitle(QCoreApplication.translate("self", u"Parameters", None))
         self.kernel_label.setText(QCoreApplication.translate("self", u"Opening kernel radius", None))
         self.annotate_layer_predict_groupbox.setTitle(QCoreApplication.translate("self", u"Batch prediction", None))
@@ -601,18 +681,6 @@ class octron_widget(QWidget):
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

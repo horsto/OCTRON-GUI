@@ -44,7 +44,8 @@ def octron_reader(path):
         
     if path.is_file() and path.exists():
         if not path.suffix in ACCEPTED_CONTAINERS:
-            print(f"File {path} is not a video file. Accepted formats are {ACCEPTED_CONTAINERS}")
+            print(f"File {path} is not an accepted container. \
+                Accepted formats are {ACCEPTED_CONTAINERS}")
             return None
         else:
             return read_octron_video

@@ -670,7 +670,7 @@ def run_new_pred(predictor,
                  **kwargs,
                  ):
     '''
-    Run a new prediction on the SAM2 model.
+    Run a new prediction on the SAM2 model in OCTRON.
     This is a wrapper around the SAM2_octron functions that allow 
     for adding new points or masks.
     The function returns the mask image that can be re-added to the 
