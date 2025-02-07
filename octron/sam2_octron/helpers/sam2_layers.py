@@ -1,26 +1,29 @@
-### Generic mask layer for napari and SAM2
+# This file contains helper functions to add layers to the napari viewer through OCTRON
+
 
 def add_sam2_mask_layer(viewer,
-                        image_layer,
+                        video_layer,
                         name,
                         base_color,
                         ):
     '''
-    Iniiates the mask layer and fixes it's color to "base_color'.
+    Generic mask layer for napari and SAM2
+    Initiates the mask layer, a napari labels layer instance,
+    and fixes it's color to "base_color'.
     
     Parameters
     ----------
     viewer : napari.Viewer
         Napari viewer object.
-    image_layer : napari.layers.Image
-        Image layer = video layer object
+    video_layer : napari.layers.Image
+        Video layer = video layer object
     name : str
-        Name of the mask layer.
+        Name of the new mask layer.
     base_color : str or list
         Color of the mask layer.
     '''
     labels_layer = viewer.add_labels(
-        image_layer['mask_dummy'], 
+        video_layer.metadata['dummy'], 
         name=name,  
         opacity=0.4,  
         blending='additive',  
@@ -39,3 +42,5 @@ def add_sam2_mask_layer(viewer,
                         ]
     for btn in buttons_to_hide: 
         getattr(qctrl, btn).hide() 
+        
+    return labels_layer

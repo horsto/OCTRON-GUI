@@ -346,7 +346,7 @@
                <bool>false</bool>
               </property>
               <property name="currentText">
-               <string>Pick label</string>
+               <string>Label ... </string>
               </property>
               <property name="maxCount">
                <number>15</number>
@@ -365,7 +365,7 @@
               </property>
               <item>
                <property name="text">
-                <string>Pick label</string>
+                <string>Label ... </string>
                </property>
               </item>
               <item>
@@ -395,7 +395,7 @@
                </size>
               </property>
               <property name="currentText">
-               <string>Layer Type</string>
+               <string>Type ... </string>
               </property>
               <property name="maxCount">
                <number>15</number>
@@ -414,22 +414,22 @@
               </property>
               <item>
                <property name="text">
-                <string>Layer Type</string>
+                <string>Type ... </string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Shape Layer</string>
+                <string>Shapes</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Point Layer</string>
+                <string>Points</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Anchor Layer </string>
+                <string>Anchors</string>
                </property>
               </item>
              </widget>
@@ -438,18 +438,18 @@
              <widget class="QPushButton" name="create_annotation_layer_btn">
               <property name="minimumSize">
                <size>
-                <width>50</width>
+                <width>70</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>50</width>
+                <width>70</width>
                 <height>25</height>
                </size>
               </property>
               <property name="text">
-               <string>Create</string>
+               <string>⊕ Create</string>
               </property>
              </widget>
             </item>

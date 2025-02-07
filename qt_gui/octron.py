@@ -158,8 +158,8 @@ class Ui_octron_widgetui(object):
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
-        self.create_annotation_layer_btn.setMinimumSize(QSize(50, 25))
-        self.create_annotation_layer_btn.setMaximumSize(QSize(50, 25))
+        self.create_annotation_layer_btn.setMinimumSize(QSize(70, 25))
+        self.create_annotation_layer_btn.setMaximumSize(QSize(70, 25))
 
         self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -354,21 +354,21 @@ class Ui_octron_widgetui(object):
 
         self.load_model_btn.setText(QCoreApplication.translate("octron_widgetui", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Layer controls", None))
-        self.label_list_combobox.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Pick label", None))
+        self.label_list_combobox.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Label ... ", None))
         self.label_list_combobox.setItemText(1, QCoreApplication.translate("octron_widgetui", u"\u2295 Create", None))
         self.label_list_combobox.setItemText(2, QCoreApplication.translate("octron_widgetui", u"\u2296 Remove", None))
 
 #if QT_CONFIG(tooltip)
         self.label_list_combobox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Select, add or remove labels", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_list_combobox.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Pick label", None))
-        self.layer_type_combobox.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Layer Type", None))
-        self.layer_type_combobox.setItemText(1, QCoreApplication.translate("octron_widgetui", u"Shape Layer", None))
-        self.layer_type_combobox.setItemText(2, QCoreApplication.translate("octron_widgetui", u"Point Layer", None))
-        self.layer_type_combobox.setItemText(3, QCoreApplication.translate("octron_widgetui", u"Anchor Layer ", None))
+        self.label_list_combobox.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Label ... ", None))
+        self.layer_type_combobox.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Type ... ", None))
+        self.layer_type_combobox.setItemText(1, QCoreApplication.translate("octron_widgetui", u"Shapes", None))
+        self.layer_type_combobox.setItemText(2, QCoreApplication.translate("octron_widgetui", u"Points", None))
+        self.layer_type_combobox.setItemText(3, QCoreApplication.translate("octron_widgetui", u"Anchors", None))
 
-        self.layer_type_combobox.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Layer Type", None))
-        self.create_annotation_layer_btn.setText(QCoreApplication.translate("octron_widgetui", u"Create", None))
+        self.layer_type_combobox.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Type ... ", None))
+        self.create_annotation_layer_btn.setText(QCoreApplication.translate("octron_widgetui", u"\u2295 Create", None))
 #if QT_CONFIG(tooltip)
         self.label_suffix_lineedit.setToolTip(QCoreApplication.translate("octron_widgetui", u"The suffix disambiguates label layers from each other\n"
 "that have the same label name.\n"

@@ -158,8 +158,8 @@ class Ui_octron_widgetui(object):
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
-        self.create_annotation_layer_btn.setMinimumSize(QSize(50, 25))
-        self.create_annotation_layer_btn.setMaximumSize(QSize(50, 25))
+        self.create_annotation_layer_btn.setMinimumSize(QSize(70, 25))
+        self.create_annotation_layer_btn.setMaximumSize(QSize(70, 25))
 
         self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -353,21 +353,21 @@ class Ui_octron_widgetui(object):
 
         self.load_model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("self", u"Layer controls", None))
-        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Pick label", None))
+        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Label ... ", None))
         self.label_list_combobox.setItemText(1, QCoreApplication.translate("self", u"\u2295 Create", None))
         self.label_list_combobox.setItemText(2, QCoreApplication.translate("self", u"\u2296 Remove", None))
 
 #if QT_CONFIG(tooltip)
         self.label_list_combobox.setToolTip(QCoreApplication.translate("self", u"Select, add or remove labels", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Pick label", None))
-        self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Layer Type", None))
-        self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shape Layer", None))
-        self.layer_type_combobox.setItemText(2, QCoreApplication.translate("self", u"Point Layer", None))
-        self.layer_type_combobox.setItemText(3, QCoreApplication.translate("self", u"Anchor Layer ", None))
+        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Label ... ", None))
+        self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Type ... ", None))
+        self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shapes", None))
+        self.layer_type_combobox.setItemText(2, QCoreApplication.translate("self", u"Points", None))
+        self.layer_type_combobox.setItemText(3, QCoreApplication.translate("self", u"Anchors", None))
 
-        self.layer_type_combobox.setCurrentText(QCoreApplication.translate("self", u"Layer Type", None))
-        self.create_annotation_layer_btn.setText(QCoreApplication.translate("self", u"Create", None))
+        self.layer_type_combobox.setCurrentText(QCoreApplication.translate("self", u"Type ... ", None))
+        self.create_annotation_layer_btn.setText(QCoreApplication.translate("self", u"\u2295 Create", None))
 #if QT_CONFIG(tooltip)
         self.label_suffix_lineedit.setToolTip(QCoreApplication.translate("self", u"The suffix disambiguates label layers from each other\n"
 "that have the same label name.\n"

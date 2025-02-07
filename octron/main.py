@@ -1,10 +1,12 @@
 '''
 OCTRON
+Main GUI file.
 
 '''
 import os, sys
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+import warnings
 
 from pathlib import Path
 cur_path = Path(os.path.abspath(__file__)).parent.parent
@@ -35,7 +37,12 @@ from qtpy.QtWidgets import (
     QGridLayout
 )
 import napari
-from napari.utils.notifications import show_info
+from napari.utils.notifications import (
+    show_info,
+    show_warning,
+    show_error,
+)
+
 
 # SAM2 specific 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -43,8 +50,16 @@ import numpy as np
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 
-# Layers
-#from octron.sam2_octron.helpers.sam2_mask_layer import add_sam2_mask_layer
+# Layer creation tools
+from octron.sam2_octron.helpers.sam2_layers import (
+    add_sam2_mask_layer,
+)                
+
+# Color tools
+from napari.utils import DirectLabelColormap
+from octron.sam2_octron.helpers.sam2_colors import (
+    create_label_colors,
+)
 
 # Custom dialog boxes
 from octron.dialog import (
@@ -60,6 +75,7 @@ if app is not None:
     # for the ToolBox widget
     app.setStyle(QStyleFactory.create("Fusion")) 
 
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 class octron_widget(QWidget):
     '''
@@ -75,7 +91,8 @@ class octron_widget(QWidget):
         
         # Initialize some variables
         self.video_layer = None
-        
+        self.obj_id_label = {} # Object ID to label mapping
+        self.obj_id_layer = {} # Object ID to layer mapping
         # ... and some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
         
@@ -87,7 +104,9 @@ class octron_widget(QWidget):
                                                     )
         self.predictor, self.device = None, None
         
-        
+        # Colors for the labels
+        self.label_colors = create_label_colors(cmap='cmr.tropical')
+
         ##################################################################################################
         # Initialize all UI components
         self.setupUi()
@@ -115,6 +134,7 @@ class octron_widget(QWidget):
         
         # Buttons 
         self.load_model_btn.clicked.connect(self.load_model)
+        self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
         
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
@@ -129,7 +149,7 @@ class octron_widget(QWidget):
         '''
         index = self.sam2model_list.currentIndex()
         if index == 0:
-            print("Please select a valid model.")
+            show_warning("Please select a valid model.")
             return
     
         model_name = self.sam2model_list.currentText()
@@ -161,54 +181,7 @@ class octron_widget(QWidget):
         # TODO: Implement the predict next batch function
         #self.predict_next_batch_btn.clicked.connect(FUNCTION)
         
-    def on_label_change(self):
-        '''
-        Callback function for the label list combobox.
-        Handles the selection of labels, adding new labels, and removing labels. 
-        
-        '''
-        index = self.label_list_combobox.currentIndex()
-        current_text = self.label_list_combobox.currentText()
-        all_list_entries = [self.label_list_combobox.itemText(i) for i in range(self.label_list_combobox.count())]
-        if index == 0:
-            return
-        elif index == 1:
-            # Add new label was selected by user
-            dialog = add_new_label_dialog(self)
-            dialog.exec_()
-            if dialog.result() == QDialog.Accepted:
-                new_label_name = dialog.label_name.text()
-                new_label_name = new_label_name.strip().lower() # Make sure things are somehow unified
-                if new_label_name in all_list_entries:
-                    print(f'Label "{new_label_name}" already exists')
-                    # Select the existing label
-                    existing_index = all_list_entries.index(new_label_name)
-                    self.label_list_combobox.setCurrentIndex(existing_index)
-                else:
-                    print(f'Adding new label "{new_label_name}"')
-                    self.label_list_combobox.addItem(new_label_name)
-                    new_index = self.label_list_combobox.count()-1
-                    self.label_list_combobox.setCurrentIndex(new_index)
-            else:
-                self.label_list_combobox.setCurrentIndex(0)
-                return
-            
-        elif index == 2: 
-             # User wants to remove a label
-            dialog = remove_label_dialog(self, all_list_entries[3:])
-            dialog.exec_()
-            if dialog.result() == QDialog.Accepted:
-                selected_label = dialog.list_widget.currentItem().text()
-                print(f'Removing label "{selected_label}"')
-                self.label_list_combobox.removeItem(self.label_list_combobox.findText(selected_label))
-                self.label_list_combobox.setCurrentIndex(0)
-            else:
-                self.label_list_combobox.setCurrentIndex(0)
-                return
-        else:
-            print(f'Selected label {current_text}')   
-        
-
+    
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
     def remove_all_layers(self):
@@ -247,11 +220,11 @@ class octron_widget(QWidget):
                 if l._basename() == 'Image' and 'VIDEO' in l.name:
                     video_layers.append(l)
             except Exception as e:
-                print(f"💀 Error when checking layer: {e}")
+                show_error(f"💀 Error when checking layer: {e}")
         if len(video_layers) > 1:
             # TODO: 
             # For some reason this runs into an error when trying to remove the layer
-            print("💀 More than one video layer found; Remove the extra one.")
+            show_error("💀 More than one video layer found; Remove the extra one.")
             # Remove the most recently added video layer (or adjust as desired)
             #self._viewer.layers.remove(video_layers[-1])
         elif len(video_layers) == 1:
@@ -267,12 +240,137 @@ class octron_widget(QWidget):
                 ), dtype=np.uint8)
                 video_layer.metadata['dummy'] = mask_layer_dummy
                 self.video_layer = video_layer
+                self._viewer.dims.set_point(0,0)
             else:
-                print("Video layer metadata incomplete; dummy mask not created.")
+                show_error("Video layer metadata incomplete; dummy mask not created.")
         else:
-            print("No video layer found.")
+            show_warning("No video layer found.")
             
             
+    def on_label_change(self):
+        '''
+        Callback function for the label list combobox.
+        Handles the selection of labels, adding new labels, and removing labels. 
+        
+        '''
+        index = self.label_list_combobox.currentIndex()
+        current_text = self.label_list_combobox.currentText()
+        all_list_entries = [self.label_list_combobox.itemText(i) for i in range(self.label_list_combobox.count())]
+        if index == 0:
+            return
+        elif index == 1:
+            # Add new label was selected by user
+            dialog = add_new_label_dialog(self)
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                new_label_name = dialog.label_name.text()
+                new_label_name = new_label_name.strip().lower() # Make sure things are somehow unified
+                if new_label_name in all_list_entries:
+                    # Select the existing label
+                    existing_index = all_list_entries.index(new_label_name)
+                    self.label_list_combobox.setCurrentIndex(existing_index)
+                    show_warning(f'Label "{new_label_name}" already exists.')
+                else:
+                    self.label_list_combobox.addItem(new_label_name)
+                    new_index = self.label_list_combobox.count()-1
+                    self.label_list_combobox.setCurrentIndex(new_index)
+                    show_info(f'Added new label "{new_label_name}"')
+            else:
+                self.label_list_combobox.setCurrentIndex(0)
+                return
+            
+        elif index == 2: 
+             # User wants to remove a label
+            dialog = remove_label_dialog(self, all_list_entries[3:])
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                selected_label = dialog.list_widget.currentItem().text()
+                self.label_list_combobox.removeItem(self.label_list_combobox.findText(selected_label))
+                self.label_list_combobox.setCurrentIndex(0)
+                show_info(f'Removed label "{selected_label}"')
+            else:
+                self.label_list_combobox.setCurrentIndex(0)
+                return
+        else:
+            print(f'Selected label {current_text}')   
+   
+    def create_annotation_layers(self):
+        '''
+        Callback function for the create annotation layer button.
+        Creates a new annotation layer based on the selected label and layer type.
+        
+        
+        
+        '''
+        # First check if a model has been loaded
+        if not self.predictor:
+            show_warning("Please load a SAM2 model first.")
+            return
+        if not self.video_layer:
+            show_warning("No video layer found.")
+            return
+        
+        # Get the selected label and layer type
+        label = self.label_list_combobox.currentText().strip()
+        label_idx = self.label_list_combobox.currentIndex()
+        layer_type = self.layer_type_combobox.currentText().strip()
+        layer_idx = self.layer_type_combobox.currentIndex()     
+        if layer_idx == 0 or label_idx <= 2:
+            show_warning("Please select a layer type and a label.")
+            return
+        
+        # Get text from label suffix box
+        label_suffix = self.label_suffix_lineedit.text()
+        label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified        
+        
+        label_name = f"{label} {label_suffix}".strip()
+        # Check if the layer_name already exists in self.obj_id_label
+
+        if label_name in self.obj_id_label.values():
+            show_error(f"Layer with label '{label_name}' exists already.")
+            return
+            
+        # At this point, the basic checks are complete.
+        # Next, find out which obj_id should be used 
+        if not self.obj_id_label:
+            current_obj_id = 0
+        else:
+            current_obj_id = max(self.obj_id_label.keys()) + 1
+            
+        ######### Create a new mask layer  ######################################################### 
+        mask_layer_name = f"{label_name} MASKS"
+        base_color = DirectLabelColormap(color_dict=self.label_colors[0], 
+                                         use_selection=True, 
+                                         selection=current_obj_id,
+                                         )
+        mask_layer = add_sam2_mask_layer(viewer,
+                                         self.video_layer,
+                                         mask_layer_name,
+                                         base_color,
+                                         )
+        mask_layer.metadata['_name'] = mask_layer_name # Octron convention. Save a copy of name
+        self.obj_id_label[current_obj_id] = label_name
+        self.obj_id_layer[current_obj_id] = mask_layer
+        
+        ######### Create a new annotation layer ####################################################
+        
+        
+        
+        if layer_type == 'Shape Layer':
+            # Create a shape layer
+            pass
+        elif layer_type == 'Point Layer':
+            # Create a point layer
+            pass
+            
+        self.label_list_combobox.setCurrentIndex(0)
+        self.layer_type_combobox.setCurrentIndex(0)
+            
+            
+            
+            
+            
+               
     # Example key binding with Napari built-in viewer functions 
     # @viewer.bind_key('m')
     # def print_message(viewer):
@@ -423,8 +521,8 @@ class octron_widget(QWidget):
 
         self.create_annotation_layer_btn = QPushButton(self.annotate_layer_create_groupbox)
         self.create_annotation_layer_btn.setObjectName(u"create_annotation_layer_btn")
-        self.create_annotation_layer_btn.setMinimumSize(QSize(50, 25))
-        self.create_annotation_layer_btn.setMaximumSize(QSize(50, 25))
+        self.create_annotation_layer_btn.setMinimumSize(QSize(70, 25))
+        self.create_annotation_layer_btn.setMaximumSize(QSize(70, 25))
 
         self.gridLayout.addWidget(self.create_annotation_layer_btn, 0, 4, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -618,21 +716,21 @@ class octron_widget(QWidget):
 
         self.load_model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("self", u"Layer controls", None))
-        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Pick label", None))
+        self.label_list_combobox.setItemText(0, QCoreApplication.translate("self", u"Label ... ", None))
         self.label_list_combobox.setItemText(1, QCoreApplication.translate("self", u"\u2295 Create", None))
         self.label_list_combobox.setItemText(2, QCoreApplication.translate("self", u"\u2296 Remove", None))
 
 #if QT_CONFIG(tooltip)
         self.label_list_combobox.setToolTip(QCoreApplication.translate("self", u"Select, add or remove labels", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Pick label", None))
-        self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Layer Type", None))
-        self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shape Layer", None))
-        self.layer_type_combobox.setItemText(2, QCoreApplication.translate("self", u"Point Layer", None))
-        self.layer_type_combobox.setItemText(3, QCoreApplication.translate("self", u"Anchor Layer ", None))
+        self.label_list_combobox.setCurrentText(QCoreApplication.translate("self", u"Label ... ", None))
+        self.layer_type_combobox.setItemText(0, QCoreApplication.translate("self", u"Type ... ", None))
+        self.layer_type_combobox.setItemText(1, QCoreApplication.translate("self", u"Shapes", None))
+        self.layer_type_combobox.setItemText(2, QCoreApplication.translate("self", u"Points", None))
+        self.layer_type_combobox.setItemText(3, QCoreApplication.translate("self", u"Anchors", None))
 
-        self.layer_type_combobox.setCurrentText(QCoreApplication.translate("self", u"Layer Type", None))
-        self.create_annotation_layer_btn.setText(QCoreApplication.translate("self", u"Create", None))
+        self.layer_type_combobox.setCurrentText(QCoreApplication.translate("self", u"Type ... ", None))
+        self.create_annotation_layer_btn.setText(QCoreApplication.translate("self", u"\u2295 Create", None))
 #if QT_CONFIG(tooltip)
         self.label_suffix_lineedit.setToolTip(QCoreApplication.translate("self", u"The suffix disambiguates label layers from each other\n"
 "that have the same label name.\n"
