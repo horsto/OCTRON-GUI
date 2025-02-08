@@ -35,5 +35,6 @@ def create_label_colors(cmap='cmr.tropical',
                                             cmap_range=(slices[no],slices[no+1]), 
                                             return_fmt='int'
                                             ) 
+        label_colors = [np.concat([np.array(l) / 255., np.array([1])]) for l in label_colors]
         all_label_submaps.append(label_colors)
     return all_label_submaps

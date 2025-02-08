@@ -9,33 +9,46 @@ from octron.sam2_octron.helpers.sam2_colors import (
 class Obj(BaseModel):
     label: str
     suffix: str
+    label_id: Optional[int] = None
     color: Optional[list] = None
     mask_layer: Optional[Any] = None
     annotation_layer: Optional[Any] = None
     
+    class Config:
+        validate_assignment = True
+        
     @field_validator("color")
     def check_color_length(cls, v):
         if v is not None and len(v) != 4:
             raise ValueError("Color must be a list of length 4")
         return v
-    
+
     def __repr__(self) -> str:
-        return (f"Obj(label={self.label!r}, suffix={self.suffix!r}, "
-                f"color={self.color!r}, mask_layer={self.mask_layer!r}, "
-                f"annotation_layer={self.annotation_layer!r})")
+        return (
+            f"Obj(label={self.label!r}, suffix={self.suffix!r}, label_id={self.label_id!r}, "
+            f"color={self.color!r}, mask_layer={self.mask_layer!r}, annotation_layer={self.annotation_layer!r})"
+        )
 
 
 class ObjectOrganizer(BaseModel):
     '''
     This module provides pydantic-based classes for organizing and managing tracking entries in OCTRON. 
     It is designed to help you maintain a dictionary of object entries (named Obj), defined each by a unique ID,
-    that is also the one that SAM2 internally deals with, 
-    and representing attributes such as label, suffix, color, and optional layers. 
-
-
+    that is also the one that SAM2 internally deals with, and representing attributes such as label, suffix, color,
+    label_id, and optional layers.
+    
+    Example usage:
+    >>> object_organizer = ObjectOrganizer()
+    >>> object_organizer.add_entry(0, Obj(label='worm', suffix='0'))
+    >>> object_organizer.add_entry(1, Obj(label='worm', suffix='1')) # Color is picked automatically 
+    
     
     '''
     entries: Dict[int, Obj] = {}
+    # Mapping from label to its assigned label_id.
+    label_id_map: Dict[str, int] = {}
+    # The next available label_id.
+    next_label_id: int = 0
 
     def all_colors(self) -> tuple[list, list, list]:
         '''
@@ -50,12 +63,11 @@ class ObjectOrganizer(BaseModel):
         label_colors = create_label_colors(cmap='cmr.tropical', 
                                            n_labels=n_labels_max, 
                                            n_colors_submap=n_subcolors,
-                                           ) 
+                                           )
         # Create maximally different colors for each label and for each submap 
         indices_max_diff_labels = sample_maximally_different(list(range(n_labels_max)))
         indices_max_diff_subcolors = sample_maximally_different(list(range(n_subcolors)))
         return (label_colors, indices_max_diff_labels, indices_max_diff_subcolors)
-
 
     def exists_id(self, id_: int) -> bool:
         return id_ in self.entries
@@ -90,19 +102,27 @@ class ObjectOrganizer(BaseModel):
         if self.exists_combination(entry.label, entry.suffix):
             raise ValueError(f"Combination ({entry.label}, {entry.suffix}) already exists.")
         
-        # Check if label already exists
-        if self.exists_label(entry.label):
-            print(f"Label {entry.label} already exists. ")
-
+        # Check if label already exists and assign label_id accordingly.
+        if entry.label in self.label_id_map:
+            entry.label_id = self.label_id_map[entry.label]
+            print(f"Label {entry.label} already exists. Reusing label_id {entry.label_id}.")
+        else:
+            entry.label_id = self.next_label_id
+            self.label_id_map[entry.label] = self.next_label_id
+            self.next_label_id += 1
+            print(f"New label {entry.label} found. Assigning label_id {entry.label_id}.")
         
-        
-        # Find out which color to assign 
+        # Find out which color to assign (if necessary)
         if entry.color is None:
-            print('No color, finding one ... ')
+            n_subcolors = len(self.get_suffixes_by_label(entry.label)) # These colors must exist
+            label_colors, indices_max_diff_labels, indices_max_diff_subcolors = self.all_colors()
+            if entry.label_id >= len(indices_max_diff_labels):
+                raise ValueError(f"Label_id {entry.label_id} exceeds the maximum number of labels.")
+            print(f"Assigning color. Label ID: {entry.label_id} | Subcolor ID: {n_subcolors}")
+            this_color = label_colors[indices_max_diff_labels[entry.label_id]][indices_max_diff_subcolors[n_subcolors]]
+            print(f"Color assigned: {this_color}")
+            entry.color = this_color
             
-        
-        
-        
         self.entries[id_] = entry
 
     def update_entry(self, id_: int, entry: Obj) -> None:
@@ -131,10 +151,9 @@ class ObjectOrganizer(BaseModel):
         output_lines = ["ObjectOrganizer with entries:"]
         for id_, entry in self.entries.items():
             output_lines.append(
-                f"  ID {id_}: label='{entry.label}', suffix='{entry.suffix}', color='{entry.color}'"
+                f"  ID {id_}: label='{entry.label}', suffix='{entry.suffix}', label_id='{entry.label_id}', color='{entry.color}'"
             )
         return "\n".join(output_lines)
-    
     
 ### Helper functions for the ObjectOrganizer class
 def sample_maximally_different(seq):
@@ -142,6 +161,9 @@ def sample_maximally_different(seq):
     Given an ascending list of numbers, return a new ordering
     where each subsequent number is chosen such that its minimum
     absolute difference to all previously picked numbers is maximized.
+
+    I added this to choose colors that are maximally different from each other,
+    both for labels as well as for sub-label (same label, different suffix).
 
     Example:
         Input:  [1, 2, 3, 4, 5]
