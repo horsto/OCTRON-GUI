@@ -1,12 +1,12 @@
 name: octron
 channels:
-  - nvidia/label/cuda-12.6.0
+  - nvidia
   - conda-forge
   - defaults
 dependencies:
   - python=3.11.*
   - pip
-  - cudatoolkit=12.6.0  # [win32 or linux]
+  - cuda=12.6.0  # [win32 or linux]
   - pip:
       - --index-url https://download.pytorch.org/whl/cu126
       - .
