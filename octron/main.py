@@ -26,6 +26,7 @@ from napari.utils.notifications import (
     show_error,
 )
 from napari.qt.threading import thread_worker
+from napari.utils import DirectLabelColormap
 
 # GUI 
 from octron.gui_elements import octron_gui_elements
@@ -46,9 +47,8 @@ from octron.sam2_octron.helpers.sam2_layer import (
 # Layer callbacks class
 from octron.sam2_octron.helpers.sam2_layer_callback import sam2_octron_callbacks
 
-
-# Color tools
-from napari.utils import DirectLabelColormap
+# Object organizer
+from octron.sam2_octron.object_organizer import Obj, ObjectOrganizer
   
 # Custom dialog boxes
 from octron.gui_dialog_elements import (
@@ -79,15 +79,12 @@ class octron_widget(QWidget):
         self._viewer = viewer
         self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ...🪦 muahaha
         
-        
         # Initialize some variables
         self.video_layer = None
         self.video_zarr = None
-        self.obj_id_label = {} # k: Object ID to v: label 
-        self.obj_id_layer = {} # k: Object ID to v: layer 
-        self.mask_2_annotation_layer = {} # k: Mask layer to v: annotation layer 
         self.prefetcher_worker = None
-        self.predicted_frame_indices = {}
+        self.predictor, self.device = None, None
+        self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         
         # ... and some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
@@ -98,9 +95,7 @@ class octron_widget(QWidget):
                                                     models_yaml_path=models_yaml_path,
                                                     force_download=False,
                                                     )
-        self.predictor, self.device = None, None
         
-
         # Initialize all UI components
         octron_gui = octron_gui_elements(self)
         octron_gui.setupUi(base_path=base_path_parent)
@@ -187,9 +182,6 @@ class octron_widget(QWidget):
     def remove_all_layers(self):
         '''
         Remove all layers from the napari viewer.
-        This is important because we cannot guarantee that 
-        what has previously been loaded (maybe by accident)
-        has gone through proper inspection.
         '''
         if len(self._viewer.layers):
             self._viewer.layers.select_all()
@@ -215,6 +207,7 @@ class octron_widget(QWidget):
 
         # Search through viewer layers for video layers with the expected criteria
         video_layers = []
+        # Loop through all layers and check if they are video layers (TODO: Or others...)
         for l in self._viewer.layers:
             try:
                 if l._basename() == 'Image' and 'VIDEO' in l.name:
@@ -222,14 +215,13 @@ class octron_widget(QWidget):
             except Exception as e:
                 show_error(f"💀 Error when checking layer: {e}")
         if len(video_layers) > 1:
-            # TODO: 
-            # For some reason this runs into an error when trying to remove the layer
+            # TODO:For some reason this runs into an error when trying to remove the layer
             show_error("💀 More than one video layer found; Remove the extra one.")
             # Remove the most recently added video layer (or adjust as desired)
             #self._viewer.layers.remove(video_layers[-1])
         elif len(video_layers) == 1:
             video_layer = video_layers[0]
-            print(f"Found video layer >>> {video_layer.name}")
+            #print(f"Found video layer >>> {video_layer.name}")
             # Check if required metadata exists before creating the dummy mask
             required_keys = ['num_frames', 'height', 'width']
             if all(k in video_layer.metadata for k in required_keys):
@@ -246,8 +238,7 @@ class octron_widget(QWidget):
             else:
                 show_error("Video layer metadata incomplete; dummy mask not created.")
         else:
-            show_warning("No video layer found.")
-    
+            pass
 
     def predict_next_batch(self):
         '''
@@ -389,86 +380,62 @@ class octron_widget(QWidget):
                                      )
             self.predictor.is_initialized = True
             
-
         # Get the selected label and layer type
         label = self.label_list_combobox.currentText().strip()
-        label_idx = self.label_list_combobox.currentIndex()
+        # Get text from label suffix box
+        label_suffix = self.label_suffix_lineedit.text()
+        label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified    
+        
         layer_type = self.layer_type_combobox.currentText().strip()
-        layer_idx = self.layer_type_combobox.currentIndex()     
-        if layer_idx == 0 or label_idx <= 2:
+        label_idx_ = self.label_list_combobox.currentIndex()
+        layer_idx_ = self.layer_type_combobox.currentIndex()     
+        if layer_idx_ == 0 or label_idx_ <= 2:
             show_warning("Please select a layer type and a label.")
             return
         
+        # Start creating the new layer
+        new_layer_name = f"{label} {label_suffix}".strip()
+                
+        # Optimistically find out what the next object ID should be and add to the object organizer
+        obj_id = self.object_organizer.max_id() + 1
+        self.object_organizer.add_entry(obj_id, Obj(label=label, suffix=label_suffix))
         
-        # Logic for organizing obj ids and labels across this plugin
-        # 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # Get text from label suffix box
-        label_suffix = self.label_suffix_lineedit.text()
-        label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified        
-        
-        label_name = f"{label} {label_suffix}".strip()
-        # Check if the layer_name already exists in self.obj_id_label
-        if label_name in self.obj_id_label.values():
-            show_error(f"Layer with label '{label_name}' exists already.")
-            return
-            
-        # At this point, the basic checks are complete.
-        # Next, find out which obj_id should be used 
-        if not self.obj_id_label:
-            current_obj_id = 0
-        else:
-            current_obj_id = max(self.obj_id_label.keys()) + 1
-        
-        ######## Start prefetching images ##########################################################
-        self.prefetcher_worker.start()
+        new_organizer_entry = self.object_organizer.entries[obj_id] # Re-fetch to add more later
+        obj_color = new_organizer_entry.color
         
         ######### Create a new mask layer  ######################################################### 
-        mask_layer_name = f"{label_name} MASKS"
-        # colors = DirectLabelColormap(color_dict=self.label_colors[0], 
-        #                              use_selection=True, 
-        #                              selection=current_obj_id+1,
-        #                              )
+        
+        mask_layer_name = f"{new_layer_name} masks"
+        mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
+                                          use_selection=True, 
+                                          selection=1,
+                                          )
         mask_layer = add_sam2_mask_layer(self._viewer,
                                          self.video_layer,
                                          mask_layer_name,
-                                         colors,
+                                         mask_colors,
                                          )
-        mask_layer.metadata['_name'] = mask_layer_name # Octron convention. Save a copy of the name
-        
-        # Start filling the dictionaries that keep track of layers and object IDs
-        self.obj_id_label[current_obj_id] = label_name
-        self.obj_id_layer[current_obj_id] = mask_layer
-        self.predicted_frame_indices[current_obj_id] = np.zeros(self.video_layer.data.shape[0])
-        self.mask_2_annotation_layer[mask_layer] = None
-        
+        # For each layer that we create, write the object ID and the name to the metadata
+        mask_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
+        mask_layer.metadata['_obj_id'] = obj_id # Save the object ID
+        new_organizer_entry.mask_layer = mask_layer
+
         ######### Create a new annotation layer ####################################################
         
         if layer_type == 'Shapes':
-            annotation_layer_name = f"{label_name} SHAPES"
+            annotation_layer_name = f"{new_layer_name} shapes"
             # Create a shape layer
             annotation_layer = add_sam2_shapes_layer(self._viewer,
                                                      name=annotation_layer_name,
-                                                     color=self.label_colors[0][1],
+                                                     color=obj_color,
                                                      )
-            self.mask_2_annotation_layer[mask_layer] = annotation_layer
+            # For each layer that we create, write the object ID and the name to the metadata
+            annotation_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
+            annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
+            new_organizer_entry.annotation_layer = annotation_layer
+            # Connect callback
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
-            show_info(f"Created new mask + annotation layer '{annotation_layer_name}'")
-            
+            show_info(f"Created new mask + annotation layer '{new_layer_name}'")
             
             pass
         elif layer_type == 'Points':
@@ -477,8 +444,8 @@ class octron_widget(QWidget):
         
         
         
-        
-            
+        ######## Start prefetching images ##########################################################
+        self.prefetcher_worker.start()
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 

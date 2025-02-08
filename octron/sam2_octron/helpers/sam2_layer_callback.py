@@ -18,18 +18,6 @@ class sam2_octron_callbacks():
         self.octron = octron
         self.viewer = octron._viewer
     
-    def lookup_mask_layer(self, annotation_layer):
-        '''
-        Lookup the mask layer corresponding to an annotation layer.
-        These pairs / correspondences are stored in the octron object 
-        mask_2_annotation_layer dictionary.
-        
-        '''
-        mask_2_annotation_layer = self.octron.mask_2_annotation_layer
-        for mask_layer, other_layer in mask_2_annotation_layer.items():
-            if other_layer is annotation_layer:
-                return mask_layer
-
             
     def on_shapes_changed(self, event):
         '''
@@ -43,18 +31,17 @@ class sam2_octron_callbacks():
         '''
         
         
-        # TODO: Find obj_id 
-        # THIS NEEDS CAREFUL TREATMENT OF OBJECT IDS
-        
-        current_obj_id = 0 
-        predicted_frames = self.octron.predicted_frame_indices[current_obj_id]         
-        
         action = event.action
         if action in ['added','removed','changed']:
-            shapes_layer = event.source
             frame_idx = self.viewer.dims.current_step[0] 
-            mask_layer = self.lookup_mask_layer(shapes_layer)
+            shapes_layer = event.source
+            obj_id = shapes_layer.metadata['_obj_id']
+            
+            # Get the corresponding mask layer 
+            organizer_entry = self.octron.object_organizer.entries[obj_id]
+            mask_layer = organizer_entry.mask_layer
             if mask_layer is None:
+                # That should actually never happen 
                 self.octron.show_error('No corresponding mask layer found.')
                 return   
             
@@ -62,9 +49,7 @@ class sam2_octron_callbacks():
             video_width = self.octron.video_layer.metadata['width']   
             predictor = self.octron.predictor
             
-            
             ############################################################    
-            
             
             if shapes_layer.mode == 'add_rectangle':
                 if action == 'removed':
@@ -78,7 +63,7 @@ class sam2_octron_callbacks():
                 top_left, bottom_right = top_left[1:], bottom_right[1:]
                 mask = run_new_pred(predictor=predictor,
                                     frame_idx=frame_idx,
-                                    obj_id=current_obj_id,
+                                    obj_id=obj_id,
                                     labels=[1],
                                     box=[top_left[1],
                                          top_left[0],
@@ -101,17 +86,21 @@ class sam2_octron_callbacks():
                 label = 1 # Always positive for now
                 mask = run_new_pred(predictor=predictor,
                                     frame_idx=frame_idx,
-                                    obj_id=current_obj_id,
+                                    obj_id=obj_id,
                                     labels=label,
                                     masks=shape_mask,
                                     )
 
             mask_layer.data[frame_idx] = mask
             mask_layer.refresh()
-            predicted_frames[frame_idx] = 1
+            organizer_entry.add_predicted_frame(frame_idx)
             # Prefetch next batch of images
             if not self.octron.prefetcher_worker.is_running:
                 self.octron.prefetcher_worker.run()
+                
+        else:
+            # Catching all above with ['added','removed','changed']
+            pass
         return
     
     def batch_predict(self):

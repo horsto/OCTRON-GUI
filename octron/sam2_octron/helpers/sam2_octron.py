@@ -685,6 +685,7 @@ def run_new_pred(predictor,
         The current frame index - this is the frame to run the prediction on.
     obj_id : int
         The current object id for prediction.
+        Only one ID is allowed for now.
     labels : list
         A list of labels for the points. 
         These can be 0 (negative click) or 1 (positive click).
@@ -710,6 +711,7 @@ def run_new_pred(predictor,
     clear_old_points = kwargs.get('clear_old_points', True)
     normalize_coords = kwargs.get('normalize_coords', True)
 
+    assert isinstance(obj_id, int), f'Object ID must be an integer, got {type(obj_id)}'
     if isinstance(labels, int):
         assert labels in [0,1], f'Label must be 0 or 1, got "{labels}"'
     elif isinstance(labels, list):
@@ -734,7 +736,8 @@ def run_new_pred(predictor,
                                                     obj_id=obj_id,
                                                     mask=np.array(masks,dtype=bool),
                                                     )
-        mask = (video_res_masks[obj_id] > 0).cpu().numpy().astype(np.uint8)
+        index_obj_id = obj_ids.index(obj_id)
+        mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
                 
     ########### POINT INPUT ###################################################################
     if points is not None:
@@ -746,6 +749,8 @@ def run_new_pred(predictor,
                                                     clear_old_points=clear_old_points,
                                                     normalize_coords=normalize_coords
                                                     )
+        index_obj_id = obj_ids.index(obj_id)
+        mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
         
     ########### BOX INPUT #####################################################################
     if box is not None:
@@ -756,13 +761,8 @@ def run_new_pred(predictor,
                                                     clear_old_points=clear_old_points,
                                                     normalize_coords=normalize_coords
                                                     )
-        
-        # Add the mask image as a new labels layer
-        mask = (video_res_masks[obj_id] > 0).cpu().numpy().astype(np.uint8)
-        
-    # TODO ... this code here is ugly (works for now though):
-    current_label = obj_id+1
-    if len(np.unique(mask))>1:
-        mask[mask==np.unique(mask)[1]] = current_label 
-    mask = mask.squeeze()
-    return mask 
+        index_obj_id = obj_ids.index(obj_id)
+        mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
+    
+    mask = mask.squeeze() # From 4D => 2D (the first 2 dimensions are always 1)
+    return mask
