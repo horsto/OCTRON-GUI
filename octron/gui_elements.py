@@ -1,19 +1,37 @@
-# -*- coding: utf-8 -*-
+# All main GUI elements
 
-################################################################################
-## Form generated from reading UI file 'octron.ui'
-##
-## Created by: Qt User Interface Compiler version 5.15.16
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
+from qtpy.QtCore import QSize, QRect, Qt, QCoreApplication
+from qtpy.QtGui import QCursor, QPixmap, QIcon
+from qtpy.QtWidgets import (
+    QWidget,
+    QFrame,
+    QVBoxLayout,
+    QLabel,
+    QLayout,
+    QToolBox,
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QSizePolicy,
+    QLineEdit,
+    QSpinBox,
+    QProgressBar,
+    QPushButton,
+    QAbstractSpinBox,
+    QGridLayout
+)
 
-from qtpy.QtCore import *  # type: ignore
-from qtpy.QtGui import *  # type: ignore
-from qtpy.QtWidgets import *  # type: ignore
-
-
-class Ui_octron_widgetui(object):
+class octron_gui_elements(QWidget):
+    '''
+    Callback for octron and SAM2.
+    '''
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        # Store the reference to the main OCTRON widget
+        self.octron = parent
+        
+    ###### GUI SETUP CODE FROM QT DESIGNER ############################################################
+    
     def setupUi(self, base_path):
         if not self.octron.objectName():
             self.octron.setObjectName(u"self")

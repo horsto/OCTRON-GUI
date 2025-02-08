@@ -26,6 +26,9 @@ content = re.sub(r'from PySide2.QtWidgets import \*', 'from qtpy.QtWidgets impor
 # Modify the setupUi method signature
 content = re.sub(r'def setupUi\(self, octron_widgetui\)', 'def setupUi(self)', content)
 
+# Add the parameter "base_path" to the setupUi method definition
+content = re.sub(r'def setupUi\(self\):', 'def setupUi(self, base_path):', content)
+
 # Replace "octron_widgetui" with "self" when used as a parameter
 content = re.sub(r'\boctron_widgetui\b', 'self', content)
 
@@ -44,6 +47,22 @@ content = re.sub(r'def retranslateUi\(self, self\)', 'def retranslateUi(self)', 
 
 # Change 'self.retranslateUi(octron_widgetui)' to 'self.retranslateUi()'
 content = re.sub(r'self.retranslateUi\(self\)', 'self.retranslateUi()', content)
+
+# Delete the self.retranslateUi() call entirely
+content = re.sub(r'\s*self\.retranslateUi\(\)\n', '\n', content)
+# Delete only the retranslateUi method header line, leaving its body intact.
+content = re.sub(r'\n\s*def retranslateUi\(self\):\n', '\n', content, flags=re.MULTILINE)
+
+
+# Convert every "self." underneath the setupUi header to "self.octron." for the entire function body.
+# This pattern captures the function header and the complete body until the next top-level definition or EOF.
+content = re.sub(
+    r'(def setupUi\(self, base_path\):\n)([\s\S]+?)(?=^def |\Z)',
+    lambda m: m.group(1) + re.sub(r'\bself\.(?!octron\.)', 'self.octron.', m.group(2)),
+    content,
+    flags=re.MULTILINE
+)
+
 
 # Write the corrected content to the output file
 with open(output_file_path, 'w') as file:
