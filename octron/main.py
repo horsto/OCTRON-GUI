@@ -49,12 +49,9 @@ from octron.sam2_octron.helpers.sam2_layer_callback import sam2_octron_callbacks
 
 # Color tools
 from napari.utils import DirectLabelColormap
-from octron.sam2_octron.helpers.sam2_colors import (
-    create_label_colors,
-)
-
+  
 # Custom dialog boxes
-from octron.dialog import (
+from octron.gui_dialog_elements import (
     add_new_label_dialog,
     remove_label_dialog,
 )
@@ -103,14 +100,7 @@ class octron_widget(QWidget):
                                                     )
         self.predictor, self.device = None, None
         
-        # Colors for the labels
-        self.label_colors = create_label_colors(cmap='cmr.tropical')
 
-        ##################################################################################################
-
-
-
-        ##################################################################################################
         # Initialize all UI components
         octron_gui = octron_gui_elements(self)
         octron_gui.setupUi(base_path=base_path_parent)
@@ -127,17 +117,17 @@ class octron_widget(QWidget):
             
         # Connect (global) GUI callbacks 
         self.gui_callback_functions()
-        
         # Connect layer specific callbacks
         self.octron_sam2_callbacks = sam2_octron_callbacks(self)
 
-
+    ###################################################################################################
+    
     def gui_callback_functions(self):
         '''
         Connect all callback functions to buttons and lists in the main GUI
         '''
         # Global layer insertion callback
-        self._viewer.layers.events.inserted.connect(self.on_changed_layer)
+        self._viewer.layers.events.inserted.connect(self.consolidate_layers)
         
         # Buttons 
         self.load_model_btn.clicked.connect(self.load_model)
@@ -207,7 +197,7 @@ class octron_widget(QWidget):
             print("💀 Auto-deleted all old layers")
             
     
-    def on_changed_layer(self, event):
+    def consolidate_layers(self, event):
         """
         Callback triggered when a layers are changed in the viewer.
         Currently triggered only on INSERTION events (layers are added).
@@ -409,6 +399,24 @@ class octron_widget(QWidget):
             show_warning("Please select a layer type and a label.")
             return
         
+        
+        # Logic for organizing obj ids and labels across this plugin
+        # 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         # Get text from label suffix box
         label_suffix = self.label_suffix_lineedit.text()
         label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified        
@@ -431,10 +439,10 @@ class octron_widget(QWidget):
         
         ######### Create a new mask layer  ######################################################### 
         mask_layer_name = f"{label_name} MASKS"
-        colors = DirectLabelColormap(color_dict=self.label_colors[0], 
-                                     use_selection=True, 
-                                     selection=current_obj_id+1,
-                                     )
+        # colors = DirectLabelColormap(color_dict=self.label_colors[0], 
+        #                              use_selection=True, 
+        #                              selection=current_obj_id+1,
+        #                              )
         mask_layer = add_sam2_mask_layer(self._viewer,
                                          self.video_layer,
                                          mask_layer_name,

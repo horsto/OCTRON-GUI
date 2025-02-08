@@ -3,27 +3,37 @@
 import numpy as np
 import cmasher as cmr
 
-def create_label_colors(cmap='cmr.tropical', label_n=4, obj_n=5):
+def create_label_colors(cmap='cmr.tropical', 
+                        n_labels=10, 
+                        n_colors_submap=250
+                        ):
     '''
-    Create color map dictionary for labels 
-    label(int) -> color list -> color(4D)
+    Create label submaps from cmap. 
+    Each submap is a list of colors that represent a label.
+    For this, the cmap is being divided into n_labels submaps.
+    Each submap is then divided into n_colors_submap colors
     
-    For each label (n=label_cat_n) create a sub colormap with color_cat_n colors.
     
+    Parameters
+    ----------
+    cmap : str
+        Name of the colormap to use.
+    n_labels : int
+        Number of labels to create submaps for.
+    n_colors_submap : int
+        Number of colors per submap.
+        
     '''
 
-    label_cat_rel = np.linspace(0,1,label_n+1) # This must be the ugliest written fctn in the world
-
-    label_colors = {}
-    for cat in range(len(label_cat_rel)-1):
-        rel_range = label_cat_rel[cat:cat+2]
-        colors = np.array(cmr.take_cmap_colors(cmap, 
-                                              obj_n, 
-                                              cmap_range=(rel_range[0], rel_range[1]), 
-                                              return_fmt='int'
-                                              ) 
-                        ) / 255.0
-        colors4d = np.hstack([colors, np.ones((len(colors), 1))])
-        label_colors[cat] = {i+1: color for i, color in enumerate(colors4d)} # Keys start at 1 !
-        label_colors[cat][None] = np.array([0,0,0,0]).astype(np.float32)
-    return label_colors
+    n_labels = 10 # Max number of labels that is currently supported
+    n_colors_submap = 250
+    slices = np.linspace(0, 1, n_labels+1)
+    all_label_submaps = []
+    for no in range(0, n_labels):
+        label_colors = cmr.take_cmap_colors(cmap, 
+                                            N=n_colors_submap, 
+                                            cmap_range=(slices[no],slices[no+1]), 
+                                            return_fmt='int'
+                                            ) 
+        all_label_submaps.append(label_colors)
+    return all_label_submaps

@@ -46,8 +46,6 @@ class sam2_octron_callbacks():
         # TODO: Find obj_id 
         # THIS NEEDS CAREFUL TREATMENT OF OBJECT IDS
         
-        
-        
         current_obj_id = 0 
         predicted_frames = self.octron.predicted_frame_indices[current_obj_id]         
         
