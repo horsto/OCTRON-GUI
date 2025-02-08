@@ -6,7 +6,7 @@
 
 Follow these steps: 
 
-1. Make sure ffmpeg is installed on the system
+1. Make sure ffmpeg is installed on the system. Some packages rely on it.
     ![FFmpeg Test](pics/ffmpeg_test.png)
     - If this output fails for some reason, make sure you install ffmpeg first:
         - [step by step guide for windows](ffmpeg_windows.md)
@@ -15,28 +15,25 @@ Follow these steps:
 
 2. Download miniconda. Open your web browser and go to the official Miniconda download page: [Miniconda Download](https://docs.conda.io/en/latest/miniconda.html). Download and execute the installer for your operating system (Windows, macOS, or Linux). Then restart your terminal.
 
-3. Create a new Conda environment called "octron" with Python version 3.11:
-    ```sh
-    conda create --name octron python=3.11 -y
-    ```
+3. Clone this repository and browse to the folder that you cloned it to (`cd "YOUR/CLONED/FOLDER"`)
 
-4. Activate the new environment:
+4. Create a new Conda environment called "octron" with Python version 3.11:
+    ```sh
+    conda env create -f environment.yaml
+    ```
+    This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
+5. Activate the new environment:
     ```sh
     conda activate octron
     ```
-5. Clone this repository and browse to the folder that you cloned it to 
-6. Install OCTRON:
-    ```sh
-    pip install -e .
-    ```
-    This installs the package and all the required libraries in "edit" mode. That means that if you change the code, at next execution of the plugin, it will run the newest (updated) version.
-7. Check the accessibility of GPU resources on your computer:
+6. Check the accessibility of GPU resources on your computer:
     ```sh
     python test_gpu.py
     ```
 
 ## Usage
-1. Activate the new environment:
+1. Browse to the folder that you cloned this repository to.
+2. Activate the new environment:
     ```sh
     conda activate octron
     ```
