@@ -29,9 +29,13 @@ content = re.sub(r'def setupUi\(self, octron_widgetui\)', 'def setupUi(self)', c
 # Replace "octron_widgetui" with "self" when used as a parameter
 content = re.sub(r'\boctron_widgetui\b', 'self', content)
 
-# Add "qt_gui/" within every SVG path in the strings
-content = re.sub(r'(")([^"]*\.svg")', r'\1qt_gui/\2', content)
-
+# Add base_path in front of 'qt_gui/' within every SVG path in the strings,
+# with the variable appearing as {base_path} using an f-string with double braces.
+content = re.sub(
+    r'\bu"([^"]*\.svg")',
+    lambda m: f'f"{{base_path}}/qt_gui/{m.group(1)}',
+    content
+)
 # Delete any lines containing "connectSlotsByName"
 content = re.sub(r'^.*connectSlotsByName.*$\n?', '', content, flags=re.MULTILINE)
 

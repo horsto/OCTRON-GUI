@@ -8,16 +8,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "octron"
 version = "0.0.1"
-description = "OCTRON"
+description = "OCTRON - a napari based tool for video segmentation, animal tracking and behavior quantification"
 authors = [
     { name = "Horst A. Obenhaus", email = "hobenhaus@gmail.com" }
 ]
-license = { text = "GPL-3.0" }
+license = { text = "GPL-3.0-or-later" }
 readme = "README.md"
 keywords = ["octron", "video segmentation", "napari", "object tracking", "behavior quantification", "machine learning", "sam2", "yolo11"]
 classifiers = [
     "Framework :: napari",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
 ]
 
 requires-python = ">=3.11,<3.12"
@@ -41,16 +43,9 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/horsto/octron"
-
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "black"
-]
-# Windows CUDA extra:
-win_cuda = [
-    "nvidia-cuda-runtime-cu12==12.6.37; sys_platform=='win32'",
-]
+Repository = "https://github.com/horsto/octron.git"
+Issues = "https://github.com/horsto/octron/issues"
+Changelog = "https://github.com/horsto/octron/blob/master/CHANGELOG.md"
 
 [project.entry-points."napari.manifest"]
 octron = "octron:napari.yaml"
@@ -58,8 +53,13 @@ octron = "octron:napari.yaml"
 [project.scripts]
 octron = "octron:napari.yaml"
 
-[tool.setuptools.package-data]
-"*" = ["*.yaml", "*.md", "*.rst"]
+[project.gui-scripts]
+octron-gui = "octron.main:octron_gui"
 
-[tool.setuptools.data-files]
-"data" = ["data/*.dat"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["octron*", "qt_gui"]
+exclude = ["pics", "sample_data"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.svg", "*.md"]

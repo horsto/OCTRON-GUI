@@ -1,0 +1,3 @@
+recursive-include octron/sam2_octron/configs *.yaml
+recursive-include octron/qt_gui/icons *.svg
+recursive-include octron *.md

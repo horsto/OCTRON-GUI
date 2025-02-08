@@ -1,4 +1,5 @@
 # Code for checking the availability of the SAM2 model configurations and checkpoints
+import os 
 from pathlib import Path
 import requests
 import yaml
@@ -130,6 +131,8 @@ def check_model_availability(SAM2p1_BASE_URL,
         model_config_path = (sam2_path  / models_dict[model]['config_path'])
         assert model_config_path.exists(), f"Config file {model_config_path} does not exist" 
         model_checkpt_path = (sam2_path  / models_dict[model]['checkpoint_path'])
+        if not model_checkpt_path.parent.exists():
+            os.mkdir(model_checkpt_path.parent)
         assert model_checkpt_path.parent.exists(), f"Checkpoint folder {model_checkpt_path.parent} does not exist"
         
         # Check if the checkpoint file exists. If not, download it.

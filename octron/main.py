@@ -9,9 +9,9 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import warnings
 
 from pathlib import Path
-cur_path = Path(os.path.abspath(__file__)).parent.parent
-print(f"Adding {cur_path.as_posix()} to sys.path")
-sys.path.append(cur_path.as_posix())
+cur_path  = Path(os.path.abspath(__file__)).parent.parent
+base_path = Path(os.path.dirname(__file__)) # Important for example for .svg files
+sys.path.append(cur_path.as_posix()) 
 
 from qtpy.QtCore import QSize, QRect, Qt, QCoreApplication
 from qtpy.QtGui import QCursor, QPixmap, QIcon
@@ -90,8 +90,7 @@ class octron_widget(QWidget):
     '''
     def __init__(self, viewer: 'napari.viewer.Viewer', parent=None):
         super().__init__(parent)
-        self.cur_path = Path(os.path.abspath(__file__)).parent
-        
+        self.base_path = Path(os.path.abspath(__file__)).parent
         self._viewer = viewer
         self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ...🪦 muahaha
         
@@ -109,7 +108,7 @@ class octron_widget(QWidget):
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
-        models_yaml_path = self.cur_path / 'sam2_octron/models.yaml'
+        models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
         self.models_dict = check_model_availability(SAM2p1_BASE_URL='',
                                                     models_yaml_path=models_yaml_path,
                                                     force_download=False,
@@ -182,7 +181,7 @@ class octron_widget(QWidget):
         print(f"Loading model {model_id}")
         model = self.models_dict[model_id]
         config_path = Path(model['config_path'])
-        checkpoint_path = self.cur_path / Path(f"sam2_octron/{model['checkpoint_path']}")
+        checkpoint_path = self.base_path / Path(f"sam2_octron/{model['checkpoint_path']}")
         self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
                                                         ckpt_path=checkpoint_path.as_posix(),
                                                         )
@@ -521,7 +520,7 @@ class octron_widget(QWidget):
         self.octron_logo.setMinimumSize(QSize(410, 100))
         self.octron_logo.setBaseSize(QSize(0, 0))
         self.octron_logo.setLineWidth(0)
-        self.octron_logo.setPixmap(QPixmap(u"qt_gui/octron_logo.svg"))
+        self.octron_logo.setPixmap(QPixmap(f"{base_path}/qt_gui/octron_logo.svg"))
         self.octron_logo.setAlignment(Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
 
         self.mainLayout.addWidget(self.octron_logo, 0, Qt.AlignmentFlag.AlignLeft)
@@ -550,7 +549,7 @@ class octron_widget(QWidget):
         sizePolicy1.setHeightForWidth(self.project_tab.sizePolicy().hasHeightForWidth())
         self.project_tab.setSizePolicy(sizePolicy1)
         icon = QIcon()
-        icon.addFile(u"qt_gui/icons/noun-project-7158867.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(f"{base_path}/qt_gui/icons/noun-project-7158867.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolBox.addItem(self.project_tab, icon, u"Project")
         self.annotate_tab = QWidget()
         self.annotate_tab.setObjectName(u"annotate_tab")
@@ -793,7 +792,7 @@ class octron_widget(QWidget):
         self.annotate_vertical_layout.addWidget(self.annotate_layer_save_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignBottom)
 
         icon1 = QIcon()
-        icon1.addFile(u"qt_gui/icons/noun-copywriting-7158879.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(f"{base_path}/qt_gui/icons/noun-copywriting-7158879.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolBox.addItem(self.annotate_tab, icon1, u"Generate training data (annotate)")
         self.train_tab = QWidget()
         self.train_tab.setObjectName(u"train_tab")
@@ -801,7 +800,7 @@ class octron_widget(QWidget):
         sizePolicy1.setHeightForWidth(self.train_tab.sizePolicy().hasHeightForWidth())
         self.train_tab.setSizePolicy(sizePolicy1)
         icon2 = QIcon()
-        icon2.addFile(u"qt_gui/icons/noun-rocket-7158872.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(f"{base_path}/qt_gui/icons/noun-rocket-7158872.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolBox.addItem(self.train_tab, icon2, u"Train model")
         self.predict_tab = QWidget()
         self.predict_tab.setObjectName(u"predict_tab")
@@ -809,7 +808,7 @@ class octron_widget(QWidget):
         sizePolicy1.setHeightForWidth(self.predict_tab.sizePolicy().hasHeightForWidth())
         self.predict_tab.setSizePolicy(sizePolicy1)
         icon3 = QIcon()
-        icon3.addFile(u"qt_gui/icons/noun-conversion-7158876.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(f"{base_path}/qt_gui/icons/noun-conversion-7158876.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolBox.addItem(self.predict_tab, icon3, u"Analyze (new) videos")
 
         self.mainLayout.addWidget(self.toolBox)
@@ -903,6 +902,29 @@ class octron_widget(QWidget):
 
 
 
+
+
+
+
+def octron_gui():
+    '''
+    This is the main entry point for the GUI call
+    defined in the pyproject.toml file as 
+    #      [project.gui-scripts]
+    #      octron-gui = "octron.main:octron_gui"
+
+    '''
+    
+    # If there's already a QApplication instance (as may be the case when running as a napari plugin),
+    # then set its style explicitly:
+    app = QApplication.instance()
+    if app is not None:
+        # This is a hack to get the style to look similar on darwin and windows systems
+        # for the ToolBox widget
+        app.setStyle(QStyleFactory.create("Fusion")) 
+    viewer = napari.Viewer()
+    viewer.window.add_dock_widget(octron_widget(viewer))
+    napari.run()
 
 
 if __name__ == "__main__":
