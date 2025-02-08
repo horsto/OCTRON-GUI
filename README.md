@@ -1,6 +1,7 @@
 # OCTRON
 
-
+OCTRON is a [napari](https://www.napari.org) plugin that allows for tracking animals in behavioral setups. It helps you to create rich annotation and training data that can be used to train your own machine learning tracker.
+This enables dense quantification of animal behavior across a wide range of species and video recording conditions. 
 
 ## Installation 
 
@@ -15,37 +16,38 @@ Follow these steps:
 
 2. Download miniconda. Open your web browser and go to the official Miniconda download page: [Miniconda Download](https://docs.conda.io/en/latest/miniconda.html). Download and execute the installer for your operating system (Windows, macOS, or Linux). Then restart your terminal.
 
-3. Clone this repository and browse to the folder that you cloned it to (`cd "YOUR/CLONED/FOLDER"`)
+3. Clone this repository and in a terminal (CMD on Windows) browse to the folder that you cloned it to (`cd "YOUR/CLONED/FOLDER"`)
 
 4. Create a new Conda environment called "octron" with Python version 3.11:
     ```sh
     conda env create -f environment.yaml
+    ```
+    **ATTENTION**
+    If you have a CUDA compatible graphics card in your computer (NVIDIA card), make sure you use. 
+    ```sh
+    conda env create -f environment_cuda.yaml
     ```
     This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
 5. Activate the new environment:
     ```sh
     conda activate octron
     ```
-6. Pip install the package (again... this time in editable mode):
-    ```sh
-    pip install -e .
-    ```
-7. Check the accessibility of GPU resources on your computer:
+6. Check the accessibility of GPU resources on your computer:
     ```sh
     python test_gpu.py
     ```
+    This should show your graphics card, if it is correctly installed and accessible by pytorch. If this fails, you should correct this first, since OCTRON will not engage your GPU otherwise (and that is much slower).
 
 ## Usage
-1. Browse to the folder that you cloned this repository to.
-2. Activate the new environment:
+1. Activate the new environment:
     ```sh
     conda activate octron
     ```
-2. Open Napari
-    ```sh
-    napari
+2. ```sh
+    octron-gui
     ```
-3. Within Napari, OCTRON should appear under the Plugins Menu. Click it and *have fun*!
+    ... and enjoy! 
+    On first start this will literally take forever to load, since also the SAM2 models are all downloaded once. But subsequent startups will be much quicker. 
 
 More instructions to follow ... stay tuned! 
 
@@ -53,5 +55,5 @@ More instructions to follow ... stay tuned!
 
 ---
 
-## Attributions
+### Attributions
 - Interface button and icon images were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
