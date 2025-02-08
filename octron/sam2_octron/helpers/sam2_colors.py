@@ -25,8 +25,6 @@ def create_label_colors(cmap='cmr.tropical',
         
     '''
 
-    n_labels = 10 # Max number of labels that is currently supported
-    n_colors_submap = 250
     slices = np.linspace(0, 1, n_labels+1)
     all_label_submaps = []
     for no in range(0, n_labels):
