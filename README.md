@@ -26,7 +26,11 @@ Follow these steps:
     ```sh
     conda activate octron
     ```
-6. Check the accessibility of GPU resources on your computer:
+6. Pip install the package (again... this time in editable mode):
+    ```sh
+    pip install -e .
+    ```
+7. Check the accessibility of GPU resources on your computer:
     ```sh
     python test_gpu.py
     ```
