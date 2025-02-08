@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.11.*
   - pip
-  - "cudatoolkit=12.6.0; (sys_platform=='win32' or sys_platform=='linux')"
+  - cudatoolkit=12.6.0  # [win32 or linux]
   - pip:
       - --index-url https://download.pytorch.org/whl/cu126
       - .
