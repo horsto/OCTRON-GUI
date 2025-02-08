@@ -8,5 +8,5 @@ dependencies:
   - pip
   - cuda=12.6.0  # [win32 or linux]
   - pip:
-      - --index-url https://download.pytorch.org/whl/cu126
+      - --extra-index-url https://download.pytorch.org/whl/cu126
       - .
