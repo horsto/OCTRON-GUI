@@ -914,6 +914,7 @@ def octron_gui():
     #      octron-gui = "octron.main:octron_gui"
 
     '''
+    viewer = napari.Viewer()
     
     # If there's already a QApplication instance (as may be the case when running as a napari plugin),
     # then set its style explicitly:
@@ -922,7 +923,7 @@ def octron_gui():
         # This is a hack to get the style to look similar on darwin and windows systems
         # for the ToolBox widget
         app.setStyle(QStyleFactory.create("Fusion")) 
-    viewer = napari.Viewer()
+    
     viewer.window.add_dock_widget(octron_widget(viewer))
     napari.run()
 
