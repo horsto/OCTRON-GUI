@@ -52,8 +52,6 @@ octron = "octron:napari.yaml"
 
 [project.scripts]
 octron = "octron:napari.yaml"
-
-[project.gui-scripts]
 octron-gui = "octron.main:octron_gui"
 
 [tool.setuptools.packages.find]
