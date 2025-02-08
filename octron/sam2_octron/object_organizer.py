@@ -15,7 +15,7 @@ class Obj(BaseModel):
     annotation_layer: Optional[Any] = None
     
     class Config:
-        validate_assignment = True
+        validate_assignment = True # To make sure that internally generated values are validated
         
     @field_validator("color")
     def check_color_length(cls, v):
@@ -33,9 +33,20 @@ class Obj(BaseModel):
 class ObjectOrganizer(BaseModel):
     '''
     This module provides pydantic-based classes for organizing and managing tracking entries in OCTRON. 
-    It is designed to help you maintain a dictionary of object entries (named Obj), defined each by a unique ID,
-    that is also the one that SAM2 internally deals with, and representing attributes such as label, suffix, color,
-    label_id, and optional layers.
+    It is designed to help maintain a dictionary of object entries (named Obj, see above), 
+    defined each by a unique ID,
+    that is also the one that SAM2 internally deals with, 
+    and representing attributes such as label, a unique label ID, suffix, color. 
+    It also assigns a unique mask layer and annotation layer to each object.
+    This way, all information for objects flowing through OCTRON is saved in one place. 
+    
+    
+    I am using a color picking strategy that is based on the number of labels and suffixes. 
+    A colormap is created (see self.all_colors) and then maximally different colors are picked 
+    for each label and suffix combination.
+    Labels are assigend "slices" of a colormap and then each suffix is assigned a color from that slice.
+    You CAN assign a color yourself, but I would recommend using the internal strategy.
+    
     
     Example usage:
     >>> object_organizer = ObjectOrganizer()
@@ -59,7 +70,7 @@ class ObjectOrganizer(BaseModel):
                 -> colors for each label
         '''
         n_labels_max = 10 # MAXIMUM NUMBER OF LABELS 
-        n_subcolors = 250
+        n_subcolors = 100
         label_colors = create_label_colors(cmap='cmr.tropical', 
                                            n_labels=n_labels_max, 
                                            n_colors_submap=n_subcolors,
