@@ -17,8 +17,19 @@ class sam2_octron_callbacks():
         # Store the reference to the main OCTRON widget
         self.octron = octron
         self.viewer = octron._viewer
-    
+        self.left_right_click = None
             
+    def on_mouse_press(self, layer, event):
+        '''
+        Generic function to catch left and right mouse clicks
+        '''
+        if event.type == 'mouse_press':
+            if event.button == 1:  # Left-click
+                self.left_right_click = 'left'
+            elif event.button == 2:  # Right-click
+                self.left_right_click = 'right'     
+        
+    
     def on_shapes_changed(self, event):
         '''
         Callback function for napari annotation "Shapes" layer.
@@ -102,6 +113,81 @@ class sam2_octron_callbacks():
             # Catching all above with ['added','removed','changed']
             pass
         return
+    
+    
+    def on_points_changed(self, event):
+        '''
+        Callback function for napari annotation "Points" layer.
+        This function is called whenever changes are made to annotation points.
+
+        '''
+        action = event.action
+        
+        left_positive_color  = [0.59607846, 0.98431373, 0.59607846, 1.]
+        right_negative_color = [1., 1., 1., 1.]
+        
+        frame_idx  = self.viewer.dims.current_step[0] 
+        points_layer = event.source
+        obj_id = points_layer.metadata['_obj_id']
+        
+        predictor = self.octron.predictor
+        
+        # Get the corresponding mask layer 
+        organizer_entry = self.octron.object_organizer.entries[obj_id]
+        mask_layer = organizer_entry.mask_layer
+        if mask_layer is None:
+            # That should actually never happen 
+            self.octron.show_error('No corresponding mask layer found.')
+            return    
+        
+        if action == 'added':
+            # A new point has just been added. 
+            # Find out if you are dealing with a left or right click    
+            if self.left_right_click == 'left':
+                label = 1
+                points_layer.face_color[-1] = left_positive_color
+                points_layer.symbol[-1] = 'o'
+            elif self.left_right_click == 'right':
+                label = 0
+                points_layer.face_color[-1] = right_negative_color
+                points_layer.symbol[-1] = 'x'
+            points_layer.refresh() # THIS IS IMPORTANT
+            # Prefetch next batch of images
+            if not self.octron.prefetcher_worker.is_running:
+                self.octron.prefetcher_worker.run()
+            
+        # Loop through all the data and create points and labels
+        if action in ['added','removed','changed']:
+            labels = []
+            point_data = []
+            for pt_no, pt in enumerate(points_layer.data):
+                # Find out which label was attached to the point
+                # by going through the symbol lists
+                cur_symbol = points_layer.symbol[pt_no]
+                if cur_symbol in ['o','disc']:
+                    label = 1
+                else:
+                    label = 0
+                labels.append(label)
+                point_data.append(pt[1:][::-1]) # index 0 is the frame number
+                
+            # Then run the actual prediction
+            mask = run_new_pred(predictor=predictor,
+                                frame_idx=frame_idx,
+                                obj_id=0,
+                                labels=labels,
+                                points=point_data,
+                                )
+            mask_layer.data[frame_idx,:,:] = mask
+            mask_layer.refresh()  
+            organizer_entry.add_predicted_frame(frame_idx)
+        else:
+            # Catching all above with ['added','removed','changed']
+            pass
+        return    
+    
+    
+    
     
     def batch_predict(self):
         '''

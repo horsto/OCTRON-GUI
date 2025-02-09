@@ -41,7 +41,8 @@ from octron.sam2_octron.helpers.sam2_zarr import create_image_zarr
 # Layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
     add_sam2_mask_layer,
-    add_sam2_shapes_layer
+    add_sam2_shapes_layer,
+    add_sam2_points_layer,
 )                
 
 # Layer callbacks class
@@ -437,10 +438,24 @@ class octron_widget(QWidget):
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
             show_info(f"Created new mask + annotation layer '{new_layer_name}'")
             
-            pass
+            
         elif layer_type == 'Points':
             # Create a point layer
-            pass
+            annotation_layer_name = f"{new_layer_name} points"
+            # Create a shape layer
+            annotation_layer = add_sam2_points_layer(self._viewer,
+                                                     name=annotation_layer_name,
+                                                     )
+            # For each layer that we create, write the object ID and the name to the metadata
+            annotation_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
+            annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
+            new_organizer_entry.annotation_layer = annotation_layer
+            # Connect callback
+            annotation_layer.mouse_drag_callbacks.append(self.octron_sam2_callbacks.on_mouse_press)
+            annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_points_changed)
+            show_info(f"Created new mask + annotation layer '{new_layer_name}'")
+            
+            
         
         
         
@@ -449,8 +464,6 @@ class octron_widget(QWidget):
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
-            
-            
             
             
                

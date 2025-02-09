@@ -90,3 +90,38 @@ def add_sam2_shapes_layer(
     viewer.layers.selection.active = shapes_layer
     viewer.layers.selection.active.mode = 'pan_zoom'
     return shapes_layer
+
+
+def add_sam2_points_layer(    
+    viewer,
+    name,
+    ):
+    '''
+    Generic shapes layer for napari and SAM2.
+    Initiates the shapes layer, a napari shapes layer instance,
+    
+    Parameters
+    ----------
+    viewer : napari.Viewer
+        Napari viewer object.
+    video_layer : napari.layers.Image
+        Video layer = video layer object
+    name : str
+        Name of the new shapes layer.
+    base_color : str or list
+        Color of the shapes layer.
+    '''
+    points_layer = viewer.add_points(None, 
+                                 ndim=3,
+                                 name=name, 
+                                 scale=(1,1),
+                                 size=40,
+                                 border_color='dimgrey',
+                                 border_width=.2,
+                                 opacity=.6,
+                                 )
+
+    # Select the current, add tool for the points layer
+    viewer.layers.selection.active = points_layer
+    viewer.layers.selection.active.mode = 'add'
+    return points_layer
