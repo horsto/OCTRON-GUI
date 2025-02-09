@@ -123,10 +123,6 @@ class sam2_octron_callbacks():
         '''
         action = event.action
         predictor = self.octron.predictor
-        
-        left_positive_color  = [0.59607846, 0.98431373, 0.59607846, 1.]
-        right_negative_color = [1., 1., 1., 1.]
-        
         frame_idx  = self.viewer.dims.current_step[0] 
         points_layer = event.source
         obj_id = points_layer.metadata['_obj_id']
@@ -134,6 +130,8 @@ class sam2_octron_callbacks():
         # Get the corresponding mask layer 
         organizer_entry = self.octron.object_organizer.entries[obj_id]
         mask_layer = organizer_entry.mask_layer
+        color = organizer_entry.color
+        
         if mask_layer is None:
             # That should actually never happen 
             self.octron.show_error('No corresponding mask layer found.')
@@ -144,11 +142,13 @@ class sam2_octron_callbacks():
             # Find out if you are dealing with a left or right click    
             if self.left_right_click == 'left':
                 label = 1
-                points_layer.face_color[-1] = left_positive_color
+                points_layer.face_color[-1] = color
+                points_layer.border_color[-1] = [.7, .7, .7, 1]
                 points_layer.symbol[-1] = 'o'
             elif self.left_right_click == 'right':
                 label = 0
-                points_layer.face_color[-1] = right_negative_color
+                points_layer.face_color[-1] = [.7, .7, .7, 1]
+                points_layer.border_color[-1] = color 
                 points_layer.symbol[-1] = 'x'
             points_layer.refresh() # THIS IS IMPORTANT
             # Prefetch next batch of images
