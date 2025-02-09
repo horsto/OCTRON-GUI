@@ -1,47 +1,61 @@
 from pathlib import Path
-import napari
+from typing import Union, Sequence, Callable, List, Optional
+from napari.types import LayerData
+from napari.utils.notifications import (
+    show_error,
+)
+# Define some types
+PathLike = str
+PathOrPaths = Union[PathLike, Sequence[PathLike]]
+ReaderFunction = Callable[[PathOrPaths], List[LayerData]]
+
 import warnings
-from octron.sam2_octron.helpers.video_loader import probe_video, get_vfile_hash
-from napari_pyav._reader import FastVideoReader
 warnings.simplefilter("once")
 
 
-def octron_reader(path):
+def octron_reader(path: "PathOrPaths") -> Optional["ReaderFunction"]:
     """
     OCTRON napari reader.
     Accepts OCTRON project folders.
     
-
-    
     Parameters
     ----------
     path : str or list of str
-        Path to file, or list of paths.
-
+        Path to a file or folder.
+    
     Returns
     -------
-    out : list of tuple
-        List of tuples containing the video reader object, 
-        metadata dictionary and the layer type.
+    function : Callable
+        Function to read the file or folder.
+        
     """
-    paths = [Path(path)] if isinstance(path, str) else path
-    if len(paths) > 1:
-        return None
     
-    # Folder or video file ? 
-    path = paths[0]
+    path = Path(path)
     if path.is_dir() and path.exists():
         return read_octron_folder
         
-    if path.is_file():
-        return None
+    if path.is_file() and path.exists():
+        return read_octron_file
 
+def read_octron_file(path: "PathOrPaths") -> List["LayerData"]:
+    """
+    Single file reads that are dropped in the main window are not supported.
+    """
+    show_error(
+        f"Single file drops to main window are not supported"
+    )
+    return [(None,)]
 
-def read_octron_folder(path):
-    path = Path(path)
+def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
     print(
         f"🐙 Checking putative OCTRON project folder: {path}"
     )
-    return None
+    # Check if the folder contains the necessary files
+    
+    
+    
+    
+    
+    return [(None,)]
 
 

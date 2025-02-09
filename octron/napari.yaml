@@ -5,13 +5,14 @@ contributions:
     - id: octron.octron_widget
       title: OCTRON
       python_name: octron:octron_widget
-    - id: octron.get_reader
-      title: OCTRON Reader
+    - id: octron.octron_reader
+      title: OCTRON project reader
       python_name: octron:octron_reader
   readers:
-    - command: octron.get_reader
+    - command: octron.octron_reader
       accepts_directories: true
-      filename_patterns: ['*'] # Catch all of the files - filter out in reader
+      filename_patterns: 
+      - '*' 
   widgets:
     - command: octron.octron_widget
       display_name: OCTRON

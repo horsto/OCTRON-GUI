@@ -27,7 +27,7 @@ from napari.utils.notifications import (
 )
 from napari.qt.threading import thread_worker
 from napari.utils import DirectLabelColormap
-from napari.layers import Layer
+
 # Napari PyAV reader 
 from napari_pyav._reader import FastVideoReader
 
