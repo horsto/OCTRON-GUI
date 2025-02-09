@@ -70,8 +70,14 @@ class sam2_octron_callbacks():
                 box = shapes_layer.data[-1]
                 if len(box) > 4:
                     box = box[-4:]
-                top_left, _, bottom_right, _ = box
-                top_left, bottom_right = top_left[1:], bottom_right[1:]
+                # Find out what the top left and bottom right coordinates are
+                box = np.stack(box)[:,1:]
+                box_sum = np.sum(box, axis=1)
+                top_left_idx = np.argmin(box_sum, axis=0)
+                bottom_right_idx = np.argmax(box_sum, axis=0)
+                top_left, bottom_right = box[top_left_idx,:], box[bottom_right_idx,:]
+                
+                
                 mask = run_new_pred(predictor=predictor,
                                     frame_idx=frame_idx,
                                     obj_id=obj_id,
@@ -160,6 +166,8 @@ class sam2_octron_callbacks():
             labels = []
             point_data = []
             for pt_no, pt in enumerate(points_layer.data):
+                if pt[0] != frame_idx:  
+                    continue
                 # Find out which label was attached to the point
                 # by going through the symbol lists
                 cur_symbol = points_layer.symbol[pt_no]
