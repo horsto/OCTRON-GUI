@@ -10,19 +10,19 @@
     <x>0</x>
     <y>0</y>
     <width>410</width>
-    <height>700</height>
+    <height>600</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>410</width>
-    <height>700</height>
+    <height>600</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>410</width>
-    <height>800</height>
+    <height>600</height>
    </size>
   </property>
   <property name="cursor">
@@ -40,7 +40,7 @@
      <x>0</x>
      <y>0</y>
      <width>412</width>
-     <height>651</height>
+     <height>591</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="mainLayout">
@@ -50,7 +50,7 @@
     <property name="sizeConstraint">
      <enum>QLayout::SizeConstraint::SetNoConstraint</enum>
     </property>
-    <item alignment="Qt::AlignmentFlag::AlignLeft">
+    <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
      <widget class="QLabel" name="octron_logo">
       <property name="enabled">
        <bool>true</bool>
@@ -58,7 +58,13 @@
       <property name="minimumSize">
        <size>
         <width>410</width>
-        <height>100</height>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>410</width>
+        <height>120</height>
        </size>
       </property>
       <property name="baseSize">
@@ -81,7 +87,7 @@
       </property>
      </widget>
     </item>
-    <item>
+    <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
      <widget class="QToolBox" name="toolBox">
       <property name="enabled">
        <bool>true</bool>
@@ -94,14 +100,14 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>0</width>
-        <height>0</height>
+        <width>410</width>
+        <height>450</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
         <width>410</width>
-        <height>750</height>
+        <height>450</height>
        </size>
       </property>
       <property name="cursor">
@@ -120,7 +126,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <property name="tabSpacing">
        <number>10</number>
@@ -131,7 +137,7 @@
          <x>0</x>
          <y>0</y>
          <width>410</width>
-         <height>387</height>
+         <height>314</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -150,6 +156,140 @@
        <attribute name="toolTip">
         <string>Create new octron projects or load existing ones</string>
        </attribute>
+       <widget class="QWidget" name="verticalLayoutWidget_3">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>-1</y>
+          <width>402</width>
+          <height>241</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="project_vertical_layout">
+         <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
+          <widget class="QGroupBox" name="folder_sect_groupbox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>400</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>400</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="title">
+            <string/>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_11">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <property name="leftMargin">
+             <number>9</number>
+            </property>
+            <property name="topMargin">
+             <number>9</number>
+            </property>
+            <property name="rightMargin">
+             <number>9</number>
+            </property>
+            <property name="bottomMargin">
+             <number>9</number>
+            </property>
+            <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="create_project_btn">
+              <property name="minimumSize">
+               <size>
+                <width>250</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>300</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>⊕ Create octron project</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
+          <widget class="QGroupBox" name="project_video_drop_groupbox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>400</width>
+             <height>150</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>400</width>
+             <height>150</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>Video files</string>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <property name="leftMargin">
+             <number>9</number>
+            </property>
+            <property name="topMargin">
+             <number>9</number>
+            </property>
+            <property name="rightMargin">
+             <number>9</number>
+            </property>
+            <property name="bottomMargin">
+             <number>9</number>
+            </property>
+            <item>
+             <widget class="QWidget" name="video_file_drop_widget" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>380</width>
+                <height>110</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>380</width>
+                <height>110</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Drag and drop .mp4 files here</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
       <widget class="QWidget" name="annotate_tab">
        <property name="geometry">
@@ -157,7 +297,7 @@
          <x>0</x>
          <y>0</y>
          <width>405</width>
-         <height>387</height>
+         <height>314</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -543,6 +683,9 @@ and octo and suffix 2 for the second octo </string>
          </item>
          <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
           <widget class="QGroupBox" name="annotate_param_groupbox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
              <horstretch>100</horstretch>
@@ -855,7 +998,7 @@ and octo and suffix 2 for the second octo </string>
          <x>0</x>
          <y>0</y>
          <width>410</width>
-         <height>387</height>
+         <height>314</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -881,7 +1024,7 @@ and octo and suffix 2 for the second octo </string>
          <x>0</x>
          <y>0</y>
          <width>410</width>
-         <height>387</height>
+         <height>314</height>
         </rect>
        </property>
        <property name="sizePolicy">

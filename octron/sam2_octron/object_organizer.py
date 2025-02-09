@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, Dict, List, Any
 
 from octron.sam2_octron.helpers.sam2_colors import (
@@ -15,9 +15,8 @@ class Obj(BaseModel):
     annotation_layer: Optional[Any] = None
     predicted_frames: List[Any] = Field(default_factory=list)
     
-    class Config:
-        validate_assignment = True # To make sure that internally generated values are validated
-        
+    model_config = ConfigDict(validate_assignment=True)
+
     @field_validator("color")
     def check_color_length(cls, v):
         if v is not None and len(v) != 4:

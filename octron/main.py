@@ -27,6 +27,9 @@ from napari.utils.notifications import (
 )
 from napari.qt.threading import thread_worker
 from napari.utils import DirectLabelColormap
+from napari.layers import Layer
+# Napari PyAV reader 
+from napari_pyav._reader import FastVideoReader
 
 # GUI 
 from octron.gui_elements import octron_gui_elements
@@ -34,6 +37,7 @@ from octron.gui_elements import octron_gui_elements
 # SAM2 specific 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
+from octron.sam2_octron.helpers.video_loader import probe_video, get_vfile_hash
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
 from octron.sam2_octron.helpers.sam2_zarr import create_image_zarr
@@ -99,7 +103,7 @@ class octron_widget(QWidget):
         
         # Initialize all UI components
         octron_gui = octron_gui_elements(self)
-        octron_gui.setupUi(base_path=base_path_parent)
+        octron_gui.setupUi(base_path=base_path_parent) # base_path is important for .svg files
         
         # (De)activate certain functionality while WIP 
         # TODO
@@ -133,6 +137,8 @@ class octron_widget(QWidget):
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
     
+        # Drop widget (not needed because has its own callback  )
+        #self.video_file_drop_widget.fileDropped.connect(lambda files: print("Drag'n'Drop signal received:", files))
     
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     def load_model(self):
@@ -177,6 +183,20 @@ class octron_widget(QWidget):
         #self.predict_next_batch_btn.clicked.connect(FUNCTION)
         # Check if you can create a zarr store for video
         self.create_video_zarr_prefetcher()
+        
+    
+
+    def predict_next_batch(self):
+        '''
+        Thread worker for predicting the next batch of images
+        
+        '''
+        print('Thread predicting ... WIP')
+        # assert self.predictor, "No model loaded."
+        # assert self.predictor.is_initialized, "Model not initialized."
+        # self.batch_predictor = self.octron_sam2_callbacks.thread_predict()
+        # self.batch_predictor.start()
+            
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
@@ -240,19 +260,39 @@ class octron_widget(QWidget):
                 show_error("Video layer metadata incomplete; dummy mask not created.")
         else:
             pass
-
-    def predict_next_batch(self):
-        '''
-        Thread worker for predicting the next batch of images
         
+        
+    def on_file_dropped_area(self, video_paths):
         '''
-        print('Thread predicting ... WIP')
-        # assert self.predictor, "No model loaded."
-        # assert self.predictor.is_initialized, "Model not initialized."
-        # self.batch_predictor = self.octron_sam2_callbacks.thread_predict()
-        # self.batch_predictor.start()
-            
-
+        Adds video layer on freshly dropped mp4 file.
+        Callback function for the file drop area. 
+        The area itself (a widget) is already filtering for mp4 files.
+        '''
+        print("MP4 dropped:", video_paths)
+        if len(video_paths) > 1:
+            show_warning("Please drop only one file at a time.")
+            return
+        
+        video_path = Path(video_paths[0]) # Take only the first file if there are multiple
+        # Load video file and meta info
+        if not video_path.exists():
+            show_error("File does not exist.")
+            return
+        
+        video_dict = probe_video(video_path)
+        # Create hash and save it in the metadata
+        video_file_hash = get_vfile_hash(video_path)
+        video_dict['hash'] = video_file_hash
+        # Layer name 
+        layer_name = f'VIDEO [name: {video_path.stem}]'
+        video_dict['_name'] = layer_name # Octron convention. Save the name in metadata.
+        layer_dict = {'name'    : layer_name,
+                      'metadata': video_dict,
+                     }
+        add_layer = getattr(self._viewer, "add_image")
+        add_layer(FastVideoReader(video_path, read_format='rgb24'), **layer_dict)
+        
+        
     def create_video_zarr_prefetcher(self):
         '''
         This function deals with storage (temporary and long term).
@@ -353,7 +393,6 @@ class octron_widget(QWidget):
                 return
         else:
             print(f'Selected label {current_text}')   
-   
    
    
     def create_annotation_layers(self):
