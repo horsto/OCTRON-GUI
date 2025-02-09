@@ -88,7 +88,7 @@ class octron_widget(QWidget):
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         
         # ... and some parameters
-        self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
+        self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
         models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
@@ -456,7 +456,9 @@ class octron_widget(QWidget):
             show_info(f"Created new mask + annotation layer '{new_layer_name}'")
             
             
-        
+        else: 
+            # Reserved space for anchor point layer here ... 
+            pass
         
         
         ######## Start prefetching images ##########################################################

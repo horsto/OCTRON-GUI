@@ -98,7 +98,7 @@ class ObjectOrganizer(BaseModel):
             -> label
                 -> colors for each label
         '''
-        n_labels_max = 10 # MAXIMUM NUMBER OF LABELS 
+        n_labels_max = 10 # MAXIMUM ALLOWED NUMBER OF LABELS 
         n_subcolors =  50
         label_colors = create_label_colors(cmap='cmr.tropical', 
                                            n_labels=n_labels_max, 

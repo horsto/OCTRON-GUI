@@ -122,6 +122,7 @@ class sam2_octron_callbacks():
 
         '''
         action = event.action
+        predictor = self.octron.predictor
         
         left_positive_color  = [0.59607846, 0.98431373, 0.59607846, 1.]
         right_negative_color = [1., 1., 1., 1.]
@@ -129,8 +130,6 @@ class sam2_octron_callbacks():
         frame_idx  = self.viewer.dims.current_step[0] 
         points_layer = event.source
         obj_id = points_layer.metadata['_obj_id']
-        
-        predictor = self.octron.predictor
         
         # Get the corresponding mask layer 
         organizer_entry = self.octron.object_organizer.entries[obj_id]
@@ -174,7 +173,7 @@ class sam2_octron_callbacks():
             # Then run the actual prediction
             mask = run_new_pred(predictor=predictor,
                                 frame_idx=frame_idx,
-                                obj_id=0,
+                                obj_id=obj_id,
                                 labels=labels,
                                 points=point_data,
                                 )

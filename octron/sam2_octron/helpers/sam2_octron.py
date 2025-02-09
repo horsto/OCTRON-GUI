@@ -46,7 +46,7 @@ class SAM2_octron(SAM2VideoPredictor):
         super().__init__(**kwargs)
        
         
-        print('\nLoaded SAM2VideoPredictor OCTRON')
+        print('Loaded SAM2VideoPredictor OCTRON')
         
     @torch.inference_mode()
     def init_state(
@@ -111,7 +111,7 @@ class SAM2_octron(SAM2VideoPredictor):
         inference_state["areas"] = {} # -> obj_id ->  frame_idx : area of region
         # Warm up the visual backbone and cache the image feature on frame 0
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
-        print('\n🚀 Initialized SAM2 model\n')
+        print('🚀 Initialized SAM2 model')
         
         self.video_data = video_data            
         

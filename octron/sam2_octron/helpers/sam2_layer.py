@@ -97,8 +97,8 @@ def add_sam2_points_layer(
     name,
     ):
     '''
-    Generic shapes layer for napari and SAM2.
-    Initiates the shapes layer, a napari shapes layer instance,
+    Generic points layer for napari and SAM2.
+    Initiates the points layer, a napari points layer instance,
     
     Parameters
     ----------
@@ -107,9 +107,7 @@ def add_sam2_points_layer(
     video_layer : napari.layers.Image
         Video layer = video layer object
     name : str
-        Name of the new shapes layer.
-    base_color : str or list
-        Color of the shapes layer.
+        Name of the new points layer.
     '''
     points_layer = viewer.add_points(None, 
                                  ndim=3,
