@@ -80,7 +80,7 @@ class octron_gui_elements(QWidget):
     
     def setupUi(self, base_path):
         if not self.octron.objectName():
-            self.octron.setObjectName(u"self")
+            self.octron.setObjectName(u"OCTRON")
         self.octron.setEnabled(True)
         self.octron.resize(410, 600)
         self.octron.setMinimumSize(QSize(410, 600))

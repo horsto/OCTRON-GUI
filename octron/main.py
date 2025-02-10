@@ -110,7 +110,8 @@ class octron_widget(QWidget):
         # TODO
         last_index = self.layer_type_combobox.count() - 1
         self.layer_type_combobox.model().item(last_index).setEnabled(False)
-                
+        self.create_project_btn.setEnabled(False)
+        
         # Populate SAM2 dropdown list with available models
         for model_id, model in self.models_dict.items():
             print(f"Adding model {model_id}")
