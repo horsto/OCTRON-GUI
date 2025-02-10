@@ -93,10 +93,17 @@ class sam2_octron_callbacks():
                 
             else:
                 # In all other cases, just treat shapes as masks 
-                shape_mask = shapes_layer.to_masks((video_height, video_width))
-                shape_mask = np.sum(shape_mask, axis=0)
-                if not isinstance(shape_mask, np.ndarray):
-                    return
+                shape_masks = np.stack(shapes_layer.to_masks((video_height, video_width)))
+                if len(shape_masks) == 1: 
+                    shape_mask = shape_masks[0]
+                else:
+                    frame_indices = np.array([s[0][0] for s in shapes_layer.data]).astype(int)
+                    valid_indices = np.argwhere(frame_indices == frame_idx)
+                    valid_masks = shape_masks[valid_indices].squeeze()
+                    if valid_masks.ndim == 3:
+                        shape_mask = np.sum(valid_masks, axis=0)
+                    else:
+                        shape_mask = valid_masks
                 shape_mask[shape_mask > 0] = 1
                 shape_mask = shape_mask.astype(np.uint8)
             
