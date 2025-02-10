@@ -15,7 +15,7 @@ This enables dense quantification of animal behavior across a wide range of spec
 
 Follow these steps: 
 
-1. Make sure ffmpeg is installed on the system. Some packages rely on it.
+1. Make sure **ffmpeg** is installed on the system. Some packages rely on it.<br><br>
     ![FFmpeg Test](pics/ffmpeg_test.png)
     - If this output fails for some reason, make sure you install ffmpeg first:
         - [step by step guide for windows](ffmpeg_windows.md)
@@ -30,7 +30,7 @@ Follow these steps:
     ```sh
     conda env create -f environment.yaml
     ```
-    > :warning: **If you have a CUDA compatible graphics card in your computer (NVIDIA card), do instead**:<br>
+    > :warning: **If you have a CUDA compatible graphics card in your computer (NVIDIA card), do *instead***:<br>
         `conda env create -f environment_cuda.yaml`
     <br>This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
 5. Activate the new environment:
