@@ -31,9 +31,7 @@ Follow these steps:
     conda env create -f environment.yaml
     ```
     > :warning: **If you have a CUDA compatible graphics card in your computer (NVIDIA card), do instead**:<br>
-        ```sh
-        conda env create -f environment_cuda.yaml
-        ```
+        `conda env create -f environment_cuda.yaml`
     <br>This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
 5. Activate the new environment:
     ```sh
