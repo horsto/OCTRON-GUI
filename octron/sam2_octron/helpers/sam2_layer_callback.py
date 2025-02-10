@@ -194,75 +194,42 @@ class sam2_octron_callbacks():
         return    
     
     
-    
-    
     def batch_predict(self):
         '''
-        Threaded function to run the predictor on a batch of frames.
+        Threaded function to run the predictor forward on a batch of frames.
         Uses SAM2 => propagate_in_video function.
         
-        
         '''
-        # TODO: Find obj_id 
-        # THIS WHOLE THING IS NOT OBJECT SPECIFIC !!!!!
+        max_imgs = self.octron.chunk_size
+        frame_idx = self.viewer.dims.current_step[0]        
+
+        # Prefetch images if they are not cached yet 
+        if getattr(self.octron.predictor, 'images', None) is not None:
+            print(f'⚡️ Prefetching {max_imgs} images, start: {frame_idx}')
+            _ = self.octron.predictor.images[slice(frame_idx,frame_idx+max_imgs)]
         
-        
-        # Make sure user cannot click twice 
+        # Disable the button
         self.octron.predict_next_batch_btn.setEnabled(False)
         
-        
-        
-        current_obj_id = 0 
-        max_imgs = self.octron.chunk_size
-        
-        frame_idx = self.viewer.dims.current_step[0]        
-        video_segments = {} 
-        start_time = time.time()
-        # Prefetch images if they are not cached yet 
-        _ = self.octron.predictor.images[slice(frame_idx,frame_idx+max_imgs)]
-        
-        # Loop over frames and run prediction (single frame!)
-        frame_counter = 0 
+        start_time = time.time()        
+        #Loop over frames and run prediction (single frame!)
+        counter = 1
         for out_frame_idx, out_obj_ids, out_mask_logits in self.octron.predictor.propagate_in_video(start_frame_idx=frame_idx, 
                                                                                                     max_frame_num_to_track=max_imgs):
             
+            if counter == max_imgs:
+                last_run = True
+            else:
+                last_run = False
             for i, out_obj_id in enumerate(out_obj_ids):
-                
-                torch_mask = out_mask_logits[i] > 0.0
-                out_mask = torch_mask.cpu().numpy()
+                mask = (out_mask_logits[i] > 0).cpu().numpy().astype(np.uint8)
+                yield counter, out_frame_idx, out_obj_id, mask.squeeze(), last_run
 
-                video_segments[out_frame_idx] = {out_obj_id: out_mask}
-                if not out_obj_id in self.octron.predictor.inference_state['centroids']:
-                    self.octron.predictor.inference_state['centroids'][out_obj_id] = {}
-                if not out_obj_id in self.octron.predictor.inference_state['areas']:
-                    self.octron.predictor.inference_state['areas'][out_obj_id] = {}
-            
-            self.octron.predicted_frame_indices[current_obj_id][out_frame_idx] = 1  
-                  
-            # PICK ONE OBJ (OBJ_ID = 0 or whatever)
-            #  Add the mask image as a new labels layer
-            mask = video_segments[out_frame_idx][current_obj_id] # THIS NEEDS TO BE MADE LAYER SPECIFIC 
-            current_label = current_obj_id+1
-            if len(np.unique(mask))>1:
-                mask[mask==np.unique(mask)[1]] = current_label 
-            mask = mask.squeeze()
-            
-            self.octron.obj_id_layer[current_obj_id].data[out_frame_idx,:,:] = mask
-            self.viewer.dims.set_point(0,out_frame_idx)
-            self.octron.obj_id_layer[current_obj_id].refresh()
-            
-            props = measure.regionprops(mask.astype(int))[0]
-            self.octron.predictor.inference_state['centroids'][current_obj_id][out_frame_idx] = props.centroid
-            self.octron.predictor.inference_state['areas'][current_obj_id][out_frame_idx] = props.area
-            frame_counter += 1
-            # Update octron progress bar
-            self.octron.batch_predict_progressbar.setValue(frame_counter)
-        
+            counter += 1
             
         end_time = time.time()
-        print(f'start idx {frame_idx} | {max_imgs} frames in {end_time-start_time} s')
-            
-        # Re-enable the predict button
+        print(f'Start idx {frame_idx} | Predicted {max_imgs} frames in {end_time-start_time:.2f} seconds')
+        
+        # And enable button again
         self.octron.predict_next_batch_btn.setEnabled(True)
-        # Update octron progress bar
-        self.octron.batch_predict_progressbar.setValue(0)
+        return

@@ -7,7 +7,6 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1" # Leaving this here out of pure 
 from collections import OrderedDict
 import torch
 import numpy as np
-from tqdm import tqdm
 from sam2.sam2_video_predictor import SAM2VideoPredictor
 from sam2.utils.misc import concat_points    
 
@@ -119,7 +118,7 @@ class SAM2_octron(SAM2VideoPredictor):
         # TODO Make configurable
         #self.fill_hole_area = 200
         # For morphological operations 
-        self.disk_size = 5
+        self.disk_size = 4
         self.perform_morphological_operations = True
         if self.perform_morphological_operations:
             self.closing_kernel = torch_tensor(disk(self.disk_size).tolist()).to(compute_device)
@@ -250,7 +249,7 @@ class SAM2_octron(SAM2VideoPredictor):
             processing_order = range(start_frame_idx, end_frame_idx + 1)
                     
         try:
-            for frame_idx in tqdm(processing_order, desc="Predicting"):
+            for frame_idx in processing_order:
                 pred_masks_per_obj = [None] * batch_size
                 for obj_idx in range(batch_size):
                     obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]

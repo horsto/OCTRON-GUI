@@ -135,6 +135,12 @@ class ObjectOrganizer(BaseModel):
         '''
         return list({entry.label for entry in self.entries.values()})
     
+    def get_entries_by_label(self, label: str) -> List[Obj]:
+        """
+        Return a list of entries (Obj) that have the given label.
+        """
+        return [entry for entry in self.entries.values() if entry.label == label]
+
     def get_suffixes_by_label(self, label: str) -> List[str]:
         '''
         For a given label, return a list of all suffixes from entries matching that label.

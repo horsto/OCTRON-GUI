@@ -31,7 +31,7 @@ class Mp4DropWidget(QWidget):
         self.setAcceptDrops(True)
         self.callback = callback
         layout = QVBoxLayout(self)
-        self.label = QLabel("🎥 Drag and drop MP4 files here", self)
+        self.label = QLabel("🎥 Drag and drop .MP4 files here", self)
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
         self.setLayout(layout)

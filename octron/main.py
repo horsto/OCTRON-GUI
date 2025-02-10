@@ -25,8 +25,8 @@ from napari.utils.notifications import (
     show_warning,
     show_error,
 )
-from napari.qt.threading import thread_worker
-from napari.utils import DirectLabelColormap
+from napari.qt import create_worker
+from napari.utils import Colormap, DirectLabelColormap
 
 # Napari PyAV reader 
 from napari_pyav._reader import FastVideoReader
@@ -47,6 +47,7 @@ from octron.sam2_octron.helpers.sam2_layer import (
     add_sam2_mask_layer,
     add_sam2_shapes_layer,
     add_sam2_points_layer,
+    add_annotation_projection,
 )                
 
 # Layer callbacks class
@@ -132,8 +133,10 @@ class octron_widget(QWidget):
         # Buttons 
         self.load_model_btn.clicked.connect(self.load_model)
         self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
-        self.predict_next_batch_btn.clicked.connect(self.predict_next_batch)
-        
+        self.predict_next_batch_btn.clicked.connect(self.init_prediction_threaded)
+        self.create_projection_layer_btn.clicked.connect(self.create_annotation_projections)
+        self.hard_reset_layer_btn.clicked.connect(self.reset_predictor)
+        self.hard_reset_layer_btn.setEnabled(False)
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
     
@@ -141,6 +144,7 @@ class octron_widget(QWidget):
         #self.video_file_drop_widget.fileDropped.connect(lambda files: print("Drag'n'Drop signal received:", files))
     
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
+    
     def load_model(self):
         '''
         Load the selected SAM2 model and enable the batch prediction button, 
@@ -177,26 +181,43 @@ class octron_widget(QWidget):
         # Take care of chunk size for batch prediction
         self.batch_predict_progressbar.setMaximum(self.chunk_size)
         self.batch_predict_progressbar.setValue(0)
-        self.predict_next_batch_btn.setText(f'▷ Predict next {self.chunk_size} frames')
+        self.predict_next_batch_btn.setText(f'▷ Predict {self.chunk_size} frames')
         self.predict_next_batch_btn.setEnabled(True)
-        # TODO: Implement the predict next batch function
-        #self.predict_next_batch_btn.clicked.connect(FUNCTION)
-        # Check if you can create a zarr store for video
-        self.create_video_zarr_prefetcher()
-        
-    
 
-    def predict_next_batch(self):
+        self.init_zarr_prefetcher_threaded()
+        
+    def reset_predictor(self):
+        '''
+        Reset the predictor and all layers.
+        '''
+        self.predictor.reset_state()
+        show_info("SAM2 predictor was reset.")
+    
+    def _batch_predict_yielded(self, value):
+        '''
+        Called upon yielding from the batch prediction thread worker.
+        Updates the progress bar and the mask layer with the predicted mask.
+        '''
+        progress, frame_idx, obj_id, mask, last_run = value
+        organizer_entry = self.object_organizer.get_entry(obj_id)
+        organizer_entry.add_predicted_frame(frame_idx)
+        # Extract current mask layer
+        mask_layer = organizer_entry.mask_layer
+        mask_layer.data[frame_idx,:,:] = mask
+        mask_layer.refresh()  
+        if self._viewer.dims.current_step[0] != frame_idx and not last_run:
+            self._viewer.dims.set_point(0, frame_idx)
+        self.batch_predict_progressbar.setValue(progress)
+
+    def init_prediction_threaded(self):
         '''
         Thread worker for predicting the next batch of images
-        
         '''
-        print('Thread predicting ... WIP')
-        # assert self.predictor, "No model loaded."
-        # assert self.predictor.is_initialized, "Model not initialized."
-        # self.batch_predictor = self.octron_sam2_callbacks.thread_predict()
-        # self.batch_predictor.start()
-            
+        self.prediction_worker = create_worker(self.octron_sam2_callbacks.batch_predict)
+        self.prediction_worker.setAutoDelete(True)
+        self.prediction_worker.yielded.connect(self._batch_predict_yielded)
+        self.prediction_worker.start()
+        
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
@@ -255,7 +276,7 @@ class octron_widget(QWidget):
                 self.video_layer = video_layer
                 self._viewer.dims.set_point(0,0)
                 # Check if you can create a zarr store for video
-                self.create_video_zarr_prefetcher()
+                self.init_zarr_prefetcher_threaded()
             else:
                 show_error("Video layer metadata incomplete; dummy mask not created.")
         else:
@@ -268,7 +289,6 @@ class octron_widget(QWidget):
         Callback function for the file drop area. 
         The area itself (a widget) is already filtering for mp4 files.
         '''
-        print("MP4 dropped:", video_paths)
         if len(video_paths) > 1:
             show_warning("Please drop only one file at a time.")
             return
@@ -293,11 +313,11 @@ class octron_widget(QWidget):
         add_layer(FastVideoReader(video_path, read_format='rgb24'), **layer_dict)
         
         
-    def create_video_zarr_prefetcher(self):
+    def init_zarr_prefetcher_threaded(self):
         '''
         This function deals with storage (temporary and long term).
         Long term: Zarr store
-        Short term: Prefetcher worker
+        Short term: Threaded prefetcher worker
         
         ...
         Create a zarr store for the video layer.
@@ -327,11 +347,10 @@ class octron_widget(QWidget):
                                             )
         print(f'💾 Created video zarr archive under "{sample_data_zarr}"')
         # Set up thread worker to deal with prefetching batches of images
-        self.prefetcher_worker = self.thread_prefetch_images()   
+        self.prefetcher_worker = create_worker(self.thread_prefetch_images) 
         self.prefetcher_worker.setAutoDelete(False)
         
         
-    @thread_worker
     def thread_prefetch_images(self):
         '''
         Thread worker for prefetching images for fast processing in the viewer
@@ -418,6 +437,7 @@ class octron_widget(QWidget):
             self.predictor.init_state(video_data=self.video_layer.data, 
                                       zarr_store=self.video_zarr,
                                      )
+            self.hard_reset_layer_btn.setEnabled(True)
             self.predictor.is_initialized = True
             
         # Get the selected label and layer type
@@ -463,7 +483,7 @@ class octron_widget(QWidget):
         ######### Create a new annotation layer ####################################################
         
         if layer_type == 'Shapes':
-            annotation_layer_name = f"{new_layer_name} shapes"
+            annotation_layer_name = f"⌖ {new_layer_name} shapes"
             # Create a shape layer
             annotation_layer = add_sam2_shapes_layer(self._viewer,
                                                      name=annotation_layer_name,
@@ -480,7 +500,7 @@ class octron_widget(QWidget):
             
         elif layer_type == 'Points':
             # Create a point layer
-            annotation_layer_name = f"{new_layer_name} points"
+            annotation_layer_name = f"⌖ {new_layer_name} points"
             # Create a shape layer
             annotation_layer = add_sam2_points_layer(self._viewer,
                                                      name=annotation_layer_name,
@@ -505,7 +525,46 @@ class octron_widget(QWidget):
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
-            
+    def create_annotation_projections(self):
+        '''
+        Create a projection layer for each annotation layer.
+        '''
+        self.create_projection_layer_btn.setEnabled(False)  
+        
+        # Retrieve colors which are saved as part of the object organizer
+        # since there they are used to assign unique colors to newly created label suffix combinations
+        (label_colors, indices_max_diff_labels, _) = self.object_organizer.all_colors()
+        
+        # Loop over all annotation labels and execute add_annotation_projection
+        # TODO: Outsource this to a separate function add_annotation_projection in sam2_layer.py
+        for label in self.object_organizer.get_current_labels():
+            collected_mask_data = []
+            for entry in self.object_organizer.get_entries_by_label(label):
+                mask_layer_data = entry.mask_layer.data
+                annotation_layer = entry.annotation_layer
+                # Get color and make map 
+                colors = label_colors[indices_max_diff_labels[entry.label_id]]
+                colors.insert(0, [0.,0.,0.,0.]) # Add transparent color for background
+                cm = Colormap(colors, name=label, display_name=label)
+                # Filter by prediction indices
+                predicted_indices = entry.predicted_frames
+                if predicted_indices:
+                    mask_layer_data = mask_layer_data[predicted_indices]
+                    collected_mask_data.append(mask_layer_data)
+                    annotation_layer.visible = False
+            collected_mask_data = np.vstack(collected_mask_data)
+            collected_mask_data_mean = np.mean(collected_mask_data, axis=0)
+            self._viewer.add_image(collected_mask_data_mean, 
+                                   rgb=False, 
+                                   blending='additive',
+                                   opacity=0.75, 
+                                   interpolation='cubic', 
+                                   colormap=cm, 
+                                   name=f'Projection for {label} (n={collected_mask_data.shape[0]})',
+                                   )            
+        
+        self.create_projection_layer_btn.setEnabled(True) 
+        
             
                
     # Example key binding with Napari built-in viewer functions 

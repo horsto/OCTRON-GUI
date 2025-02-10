@@ -123,3 +123,10 @@ def add_sam2_points_layer(
     viewer.layers.selection.active = points_layer
     viewer.layers.selection.active.mode = 'add'
     return points_layer
+
+
+def add_annotation_projection(    
+    viewer,
+    name,
+    ):
+    pass
