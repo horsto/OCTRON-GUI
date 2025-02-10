@@ -6,11 +6,11 @@ This enables dense quantification of animal behavior across a wide range of spec
 ## Installation
 
 > :warning: **This repo is undergoing a lot of changes**: <br>
-    Just a heads up that there will be changes accumulating in the repo over these days. So the first thing that you before opening the GUI (after you installed it successfully once, see below), should be: <br>
-    1. Pull latest changes from main (in the github desktop app for example) <br>
-    2. In your terminal, browse to your cloned repository folder on disk and ... <br>
-    3. `pip install . -U` for installing the new code <br>
-    If you ever mess up completely, do not despair! You can trash everything with `conda deactivate && conda env remove --name octron --yes` - then you have to start with the environment_cuda.yml again (see Readme steps). 
+    Just a heads up that there will be changes accumulating in the repo over these days. So the first thing that you should do before playing with OCTRON (after you installed it successfully once, see below), should be:<br>
+    1. Pull latest changes from main (in the github desktop app for example)<br>
+    2. In your terminal, browse to your cloned repository folder on disk and ...<br>
+    3. `pip install . -U` for installing the new code<br><br>
+    If you ever mess up completely, do not despair! You can trash everything with<br>`conda deactivate && conda env remove --name octron --yes`.<br>Then you have to start with the *environment_cuda.yml* again (see steps explained below). 
 
 
 Follow these steps: 
