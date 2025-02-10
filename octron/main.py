@@ -93,7 +93,7 @@ class octron_widget(QWidget):
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         
         # ... and some parameters
-        self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
+        self.chunk_size = 12 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
         models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
@@ -209,13 +209,25 @@ class octron_widget(QWidget):
             self._viewer.dims.set_point(0, frame_idx)
         self.batch_predict_progressbar.setValue(progress)
 
+    def _on_prediction_finished(self):
+        '''
+        Callback for when worker within init_prediction_threaded() 
+        has finished executing. 
+        '''
+        # Enable the predcition button again
+        self.predict_next_batch_btn.setEnabled(True)
+
     def init_prediction_threaded(self):
         '''
         Thread worker for predicting the next batch of images
         '''
+        # Disable the predcition button
+        self.predict_next_batch_btn.setEnabled(False)
+        
         self.prediction_worker = create_worker(self.octron_sam2_callbacks.batch_predict)
         self.prediction_worker.setAutoDelete(True)
         self.prediction_worker.yielded.connect(self._batch_predict_yielded)
+        self.prediction_worker.finished.connect(self._on_prediction_finished)
         self.prediction_worker.start()
         
 

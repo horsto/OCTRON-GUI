@@ -215,9 +215,6 @@ class sam2_octron_callbacks():
             print(f'⚡️ Prefetching {max_imgs} images, start: {frame_idx}')
             _ = self.octron.predictor.images[slice(frame_idx,frame_idx+max_imgs)]
         
-        # Disable the button
-        self.octron.predict_next_batch_btn.setEnabled(False)
-        
         start_time = time.time()        
         #Loop over frames and run prediction (single frame!)
         counter = 1
@@ -237,6 +234,4 @@ class sam2_octron_callbacks():
         end_time = time.time()
         print(f'Start idx {frame_idx} | Predicted {max_imgs} frames in {end_time-start_time:.2f} seconds')
         
-        # And enable button again
-        self.octron.predict_next_batch_btn.setEnabled(True)
         return
