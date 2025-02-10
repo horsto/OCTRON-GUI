@@ -10,7 +10,7 @@ This enables dense quantification of animal behavior across a wide range of spec
     1. Pull latest changes from main (in the github desktop app for example)<br>
     2. In your terminal, browse to your cloned repository folder on disk and ...<br>
     3. `pip install . -U` for installing the new code<br><br>
-    If you ever mess up completely, do not despair! You can trash everything with<br>`conda deactivate && conda env remove --name octron --yes`.<br>Then you have to start with the *environment_cuda.yml* again (see steps explained below). 
+    If you ever mess up completely, do not despair! You can trash everything with<br>`conda deactivate && conda env remove --name octron --yes`.<br>Then you have to start with the conda *.yml* again (see steps explained below). 
 
 
 Follow these steps: 
