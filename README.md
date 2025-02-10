@@ -30,12 +30,11 @@ Follow these steps:
     ```sh
     conda env create -f environment.yaml
     ```
-    **ATTENTION**
-    If you have a CUDA compatible graphics card in your computer (NVIDIA card), make sure you use. 
-    ```sh
-    conda env create -f environment_cuda.yaml
-    ```
-    This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
+    > :warning: **If you have a CUDA compatible graphics card in your computer (NVIDIA card), do instead**:<br>
+        ```sh
+        conda env create -f environment_cuda.yaml
+        ```
+    <br>This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
 5. Activate the new environment:
     ```sh
     conda activate octron
