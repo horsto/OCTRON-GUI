@@ -558,7 +558,7 @@ class octron_widget(QWidget):
                                    rgb=False, 
                                    blending='additive',
                                    opacity=0.75, 
-                                   interpolation='cubic', 
+                                   interpolation2d='cubic', 
                                    colormap=cm, 
                                    name=f'Projection for {label} (n={collected_mask_data.shape[0]})',
                                    )            
