@@ -18,7 +18,8 @@ from qtpy.QtWidgets import (
     QProgressBar,
     QPushButton,
     QAbstractSpinBox,
-    QGridLayout
+    QGridLayout,
+    QFileDialog,
 )
 
 
@@ -31,7 +32,7 @@ class Mp4DropWidget(QWidget):
         self.setAcceptDrops(True)
         self.callback = callback
         layout = QVBoxLayout(self)
-        self.label = QLabel("🎥 Drag and drop .MP4 file here", self)
+        self.label = QLabel("🎥 Click, or drag and drop .MP4 file here", self)
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
         self.setLayout(layout)
@@ -65,7 +66,16 @@ class Mp4DropWidget(QWidget):
                 self.callback(files)
         event.acceptProposedAction()
         
-        
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            file, _ = QFileDialog.getOpenFileName(self, "Select MP4 file", "", "MP4 Files (*.mp4)")
+            if file:
+                self.fileDropped.emit([file])
+                if self.callback is not None:
+                    self.callback([file])
+            event.accept()
+        else:
+            super().mousePressEvent(event)
 
 class octron_gui_elements(QWidget):
     '''
