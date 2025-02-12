@@ -205,22 +205,53 @@
             <property name="bottomMargin">
              <number>9</number>
             </property>
-            <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+            <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="create_project_btn">
               <property name="minimumSize">
                <size>
-                <width>250</width>
+                <width>100</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>300</width>
+                <width>100</width>
                 <height>25</height>
                </size>
               </property>
               <property name="text">
-               <string>⊕ Choose folder</string>
+               <string>⊕ Choose</string>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QLabel" name="project_folder_path_label">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>250</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>250</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Project folder path</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="margin">
+               <number>0</number>
               </property>
              </widget>
             </item>
@@ -997,8 +1028,8 @@ and octo and suffix 2 for the second octo </string>
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>98</width>
-         <height>28</height>
+         <width>410</width>
+         <height>314</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -1023,8 +1054,8 @@ and octo and suffix 2 for the second octo </string>
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>98</width>
-         <height>28</height>
+         <width>410</width>
+         <height>314</height>
         </rect>
        </property>
        <property name="sizePolicy">

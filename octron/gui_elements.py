@@ -161,10 +161,21 @@ class octron_gui_elements(QWidget):
         self.octron.horizontalLayout_11.setContentsMargins(9, 9, 9, 9)
         self.octron.create_project_btn = QPushButton(self.octron.folder_sect_groupbox)
         self.octron.create_project_btn.setObjectName(u"create_project_btn")
-        self.octron.create_project_btn.setMinimumSize(QSize(250, 25))
-        self.octron.create_project_btn.setMaximumSize(QSize(300, 25))
+        self.octron.create_project_btn.setMinimumSize(QSize(100, 25))
+        self.octron.create_project_btn.setMaximumSize(QSize(100, 25))
 
-        self.octron.horizontalLayout_11.addWidget(self.octron.create_project_btn, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_11.addWidget(self.octron.create_project_btn, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+
+        self.octron.project_folder_path_label = QLabel(self.octron.folder_sect_groupbox)
+        self.octron.project_folder_path_label.setObjectName(u"project_folder_path_label")
+        self.octron.project_folder_path_label.setEnabled(False)
+        self.octron.project_folder_path_label.setMinimumSize(QSize(250, 35))
+        self.octron.project_folder_path_label.setMaximumSize(QSize(250, 35))
+        self.octron.project_folder_path_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.project_folder_path_label.setWordWrap(True)
+        self.octron.project_folder_path_label.setMargin(0)
+
+        self.octron.horizontalLayout_11.addWidget(self.octron.project_folder_path_label, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.octron.project_vertical_layout.addWidget(self.octron.folder_sect_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
@@ -435,7 +446,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.annotate_tab, icon1, u"Generate training data (annotate)")
         self.octron.train_tab = QWidget()
         self.octron.train_tab.setObjectName(u"train_tab")
-        self.octron.train_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.octron.train_tab.setGeometry(QRect(0, 0, 410, 314))
         sizePolicy1.setHeightForWidth(self.octron.train_tab.sizePolicy().hasHeightForWidth())
         self.octron.train_tab.setSizePolicy(sizePolicy1)
         icon2 = QIcon()
@@ -443,7 +454,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.train_tab, icon2, u"Train model")
         self.octron.predict_tab = QWidget()
         self.octron.predict_tab.setObjectName(u"predict_tab")
-        self.octron.predict_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.octron.predict_tab.setGeometry(QRect(0, 0, 410, 314))
         sizePolicy1.setHeightForWidth(self.octron.predict_tab.sizePolicy().hasHeightForWidth())
         self.octron.predict_tab.setSizePolicy(sizePolicy1)
         icon3 = QIcon()
@@ -463,7 +474,8 @@ class octron_gui_elements(QWidget):
         self.octron.setWindowTitle(QCoreApplication.translate("self", u"octron_gui", None))
         self.octron.octron_logo.setText("")
         self.octron.folder_sect_groupbox.setTitle(QCoreApplication.translate("self", u"Project folder", None))
-        self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Choose folder", None))
+        self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Choose", None))
+        self.octron.project_folder_path_label.setText(QCoreApplication.translate("self", u"Project folder path", None))
         self.octron.project_video_drop_groupbox.setTitle(QCoreApplication.translate("self", u"Video files", None))
 #if QT_CONFIG(tooltip)
         self.octron.video_file_drop_widget.setToolTip(QCoreApplication.translate("self", u"Drag and drop .mp4 files here", None))
@@ -540,3 +552,4 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
+

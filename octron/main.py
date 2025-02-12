@@ -255,8 +255,13 @@ class octron_widget(QWidget):
         if folder:
             print(f"Project base folder selected: {folder}")
             show_info(f"Project: {folder}")    
-            # Check this folder  ... 
-            self.project_path = Path(folder)
+            
+            folder = Path(folder)
+            self.project_folder_path_label.setEnabled(False)
+            self.project_folder_path_label.setText(f'📁 {folder.as_posix()}')
+            
+            # Check this folder TODO ... 
+            self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
         else:
             print("No folder selected.")
