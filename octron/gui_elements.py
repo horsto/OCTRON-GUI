@@ -31,7 +31,7 @@ class Mp4DropWidget(QWidget):
         self.setAcceptDrops(True)
         self.callback = callback
         layout = QVBoxLayout(self)
-        self.label = QLabel("🎥 Drag and drop .MP4 files here", self)
+        self.label = QLabel("🎥 Drag and drop .MP4 file here", self)
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
         self.setLayout(layout)
@@ -143,8 +143,8 @@ class octron_gui_elements(QWidget):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.octron.folder_sect_groupbox.sizePolicy().hasHeightForWidth())
         self.octron.folder_sect_groupbox.setSizePolicy(sizePolicy2)
-        self.octron.folder_sect_groupbox.setMinimumSize(QSize(400, 50))
-        self.octron.folder_sect_groupbox.setMaximumSize(QSize(400, 50))
+        self.octron.folder_sect_groupbox.setMinimumSize(QSize(400, 70))
+        self.octron.folder_sect_groupbox.setMaximumSize(QSize(400, 70))
         self.octron.horizontalLayout_11 = QHBoxLayout(self.octron.folder_sect_groupbox)
         self.octron.horizontalLayout_11.setSpacing(20)
         self.octron.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
@@ -425,7 +425,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.annotate_tab, icon1, u"Generate training data (annotate)")
         self.octron.train_tab = QWidget()
         self.octron.train_tab.setObjectName(u"train_tab")
-        self.octron.train_tab.setGeometry(QRect(0, 0, 410, 314))
+        self.octron.train_tab.setGeometry(QRect(0, 0, 98, 28))
         sizePolicy1.setHeightForWidth(self.octron.train_tab.sizePolicy().hasHeightForWidth())
         self.octron.train_tab.setSizePolicy(sizePolicy1)
         icon2 = QIcon()
@@ -433,7 +433,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.train_tab, icon2, u"Train model")
         self.octron.predict_tab = QWidget()
         self.octron.predict_tab.setObjectName(u"predict_tab")
-        self.octron.predict_tab.setGeometry(QRect(0, 0, 410, 314))
+        self.octron.predict_tab.setGeometry(QRect(0, 0, 98, 28))
         sizePolicy1.setHeightForWidth(self.octron.predict_tab.sizePolicy().hasHeightForWidth())
         self.octron.predict_tab.setSizePolicy(sizePolicy1)
         icon3 = QIcon()
@@ -452,8 +452,8 @@ class octron_gui_elements(QWidget):
     # setupUi
         self.octron.setWindowTitle(QCoreApplication.translate("self", u"octron_gui", None))
         self.octron.octron_logo.setText("")
-        self.octron.folder_sect_groupbox.setTitle("")
-        self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Create octron project", None))
+        self.octron.folder_sect_groupbox.setTitle(QCoreApplication.translate("self", u"Project folder", None))
+        self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Choose folder", None))
         self.octron.project_video_drop_groupbox.setTitle(QCoreApplication.translate("self", u"Video files", None))
 #if QT_CONFIG(tooltip)
         self.octron.video_file_drop_widget.setToolTip(QCoreApplication.translate("self", u"Drag and drop .mp4 files here", None))
@@ -530,4 +530,3 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
-

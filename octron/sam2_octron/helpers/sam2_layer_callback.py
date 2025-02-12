@@ -1,12 +1,13 @@
 # OCTRON SAM2 related callbacks
 import time
 import numpy as np
-from skimage import measure
-
-from napari.qt.threading import thread_worker
-
-from octron.sam2_octron.helpers.sam2_octron import (SAM2_octron,
-                                                    run_new_pred,
+from napari.utils.notifications import (
+    show_info, 
+    show_error,
+)
+from octron.sam2_octron.helpers.sam2_octron import (
+    SAM2_octron,
+    run_new_pred,
 )
 
 class sam2_octron_callbacks():
@@ -209,6 +210,18 @@ class sam2_octron_callbacks():
         '''
         max_imgs = self.octron.chunk_size
         frame_idx = self.viewer.dims.current_step[0]        
+
+        # Necessary to have at least "some" input somewhere ... 
+        # Loop over all entries in the object organizer and check 
+        # if at least one predicted_frames entry exists.
+        has_predicted = False
+        for entry in self.octron.object_organizer.entries.values():
+            if entry.predicted_frames:
+                has_predicted = True
+                break
+        if not has_predicted:
+            show_error('No input data found. Please add annotations first.')
+            return
 
         # Prefetch images if they are not cached yet 
         if getattr(self.octron.predictor, 'images', None) is not None:

@@ -1,7 +1,12 @@
 # This file contains helper functions to add layers to the napari viewer through OCTRON
+from pathlib import Path
+import numpy as np
+from napari.utils.notifications import show_info, show_error
+
 def add_sam2_mask_layer(viewer,
                         video_layer,
                         name,
+                        project_path,
                         color,
                         ):
     '''
@@ -17,11 +22,45 @@ def add_sam2_mask_layer(viewer,
         Video layer = video layer object
     name : str
         Name of the new mask layer.
+    project_path : str or Path
+        Path to the project directory.
     base_color : str or list
         Color of the mask layer.
     '''
+    project_path = Path(project_path)
+    
+    assert project_path.exists(), f"Project path {project_path.as_posix()} does not exist."  
+
+    # Check if required metadata exists before creating the dummy mask
+    required_keys = ['num_frames', 'height', 'width']
+    if all(k in video_layer.metadata for k in required_keys):        
+        # Create a numpy memmap file for the mask layer array
+        num_frames = video_layer.metadata['num_frames']
+        height = video_layer.metadata['height']
+        width = video_layer.metadata['width']
+        data_shape = (num_frames, height, width)
+        memmap_file_path = project_path / f"{name}.dat"
+        if memmap_file_path.exists():
+            mask_layer_data = np.memmap(memmap_file_path, 
+                                        mode='r+', 
+                                        dtype=np.uint8, 
+                                        shape=data_shape
+                                        )
+            show_info(f"Mask layer data found at {memmap_file_path.as_posix()}")
+        else:
+            mask_layer_data = np.memmap(memmap_file_path, 
+                                        mode='w+', 
+                                        dtype=np.uint8, 
+                                        shape=data_shape
+                                        )
+            mask_layer_data[:] = 0 # All zeros
+            mask_layer_data.flush()
+    else:
+        show_error("Video layer metadata incomplete; dummy mask not created.")
+        return
+    
     labels_layer = viewer.add_labels(
-        video_layer.metadata['dummy'], 
+        mask_layer_data,
         name=name,  
         opacity=0.4,  
         blending='additive',  

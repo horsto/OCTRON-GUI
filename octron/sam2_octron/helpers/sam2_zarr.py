@@ -28,7 +28,7 @@ def create_image_zarr(zip_path,
     image_width : int
         Width of the resized image (as in SAM2 input)
         If None, then image_width = image_height
-    chunk_size : int
+    chunk_size : int, optional
         Size of the chunk to store in the zarr archive. 
         
     Returns
@@ -57,6 +57,72 @@ def create_image_zarr(zip_path,
                                    )
     return image_zarr
 
+def load_image_zarr(zip_path, 
+                    num_frames, 
+                    image_height,
+                    image_width=None,
+                    chunk_size=20,
+                    ):
+    '''
+    Loads an existing zarr archive for storing and retrieving image data,
+    and checks if the stored array has the expected parameters.
+    
+    Parameters
+    ---------
+    zip_path : pathlib.Path
+        Path to the zarr archive. Must end in .zip and exist.
+    num_frames : int
+        Expected number of frames in the video.
+    image_height : int
+        Expected height of the resized image (as in SAM2 input).
+    image_width : int, optional
+        Expected width of the resized image (as in SAM2 input). 
+        If None, then image_width = image_height.
+    chunk_size : int, optional
+        Size of a chunk stored in the zarr archive.
+        
+    Returns
+    -------
+    image_zarr : zarr.core.Array
+        The loaded zarr array storing the image data.
+    status : bool
+        True if the array was loaded successfully, False otherwise.   
+
+    '''
+    assert zip_path.exists(), f'Zip file {zip_path.as_posix()} does not exist.'
+    assert image_height > 0, f'image_height must be > 0, not {image_height}'
+    if image_width is None:
+        image_width = image_height
+
+    # Open the ZipStore in read mode and load the group.
+    store = zarr.storage.ZipStore(zip_path, mode='a')
+    root = zarr.open_group(store=store, mode='a')
+    print("Existing keys in zarr archive:", list(root.array_keys()))
+    # Attempt to load the array named 'masks'
+    if 'masks' not in root:
+        print(f"Array 'masks' not found in {zip_path.as_posix()}")
+        return None, False
+    else:
+        image_zarr = root['masks']
+
+    # Check shape: expected (num_frames, 3, image_height, image_width)
+    expected_shape = (num_frames, 3, image_height, image_width)
+    if image_zarr.shape != expected_shape:
+        print(f"Shape mismatch: expected {expected_shape}, got {image_zarr.shape}")
+        return None, False
+    
+    # Check chunks: expected (chunk_size, 3, image_height, image_width)
+    expected_chunks = (chunk_size, 3, image_height, image_width)
+    if image_zarr.chunks != expected_chunks:
+        print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
+        return None, False
+    
+    # Check dtype: expected float32
+    if image_zarr.dtype != 'float32':
+        print(f"dtype mismatch: expected float32, got {image_zarr.dtype}")
+        return None, False
+    
+    return image_zarr, True
 
 
 class OctoZarr:

@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QDialog,
     QApplication,
     QStyleFactory,
+    QFileDialog,
 )
 import napari
 from napari.utils.notifications import (
@@ -40,7 +41,10 @@ import numpy as np
 from octron.sam2_octron.helpers.video_loader import probe_video, get_vfile_hash
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
 from octron.sam2_octron.helpers.sam2_checks import check_model_availability
-from octron.sam2_octron.helpers.sam2_zarr import create_image_zarr
+from octron.sam2_octron.helpers.sam2_zarr import (
+    create_image_zarr,
+    load_image_zarr,
+)
 
 # Layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
@@ -86,6 +90,7 @@ class octron_widget(QWidget):
         self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ...🪦 muahaha
         
         # Initialize some variables
+        self.project_path = None # Main project path that the user selects
         self.video_layer = None
         self.video_zarr = None
         self.prefetcher_worker = None
@@ -93,7 +98,7 @@ class octron_widget(QWidget):
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         
         # ... and some parameters
-        self.chunk_size = 12 # Global parameter valid for both creation of zarr array and batch prediction 
+        self.chunk_size = 10 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
         models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
@@ -110,7 +115,6 @@ class octron_widget(QWidget):
         # TODO
         last_index = self.layer_type_combobox.count() - 1
         self.layer_type_combobox.model().item(last_index).setEnabled(False)
-        self.create_project_btn.setEnabled(False)
         
         # Populate SAM2 dropdown list with available models
         for model_id, model in self.models_dict.items():
@@ -132,6 +136,7 @@ class octron_widget(QWidget):
         self._viewer.layers.events.inserted.connect(self.consolidate_layers)
         
         # Buttons 
+        self.create_project_btn.clicked.connect(self.open_project_folder_dialog)
         self.load_model_btn.clicked.connect(self.load_model)
         self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
         self.predict_next_batch_btn.clicked.connect(self.init_prediction_threaded)
@@ -143,6 +148,13 @@ class octron_widget(QWidget):
     
         # Drop widget (not needed because has its own callback  )
         #self.video_file_drop_widget.fileDropped.connect(lambda files: print("Drag'n'Drop signal received:", files))
+    
+        # Upon start, disable some of the toolbox tabs and functionality for video drop 
+        self.project_video_drop_groupbox.setEnabled(False)
+        self.toolBox.widget(1).setEnabled(False) 
+        self.toolBox.widget(2).setEnabled(False) 
+        self.toolBox.widget(3).setEnabled(False) 
+    
     
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     
@@ -234,6 +246,23 @@ class octron_widget(QWidget):
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
+    def open_project_folder_dialog(self):
+        """
+        Open a file dialog for the user to choose a base folder for the current OCTRON project.
+        """
+        # Open a directory selection dialog
+        folder = QFileDialog.getExistingDirectory(self, "Select Base Folder", str(Path.home()))
+        if folder:
+            print(f"Project base folder selected: {folder}")
+            show_info(f"Project: {folder}")    
+            # Check this folder  ... 
+            self.project_path = Path(folder)
+            self.project_video_drop_groupbox.setEnabled(True)
+        else:
+            print("No folder selected.")
+        return 
+    
+
     def remove_all_layers(self):
         '''
         Remove all layers from the napari viewer.
@@ -259,8 +288,9 @@ class octron_widget(QWidget):
         
         layer_name = event.value
         print(f"New layer added >>> {layer_name}")
-
         # Search through viewer layers for video layers with the expected criteria
+        # Starting here as an example with video layers, but 
+        # this could be anything in the future ... let's see if we need it 
         video_layers = []
         # Loop through all layers and check if they are video layers (TODO: Or others...)
         for l in self._viewer.layers:
@@ -269,6 +299,13 @@ class octron_widget(QWidget):
                     video_layers.append(l)
             except Exception as e:
                 show_error(f"💀 Error when checking layer: {e}")
+
+        if self.video_layer:
+            # The video layer was already set previously 
+            # Currently only one shot is allowed 
+            # If the video were to be "refreshed", we need some additional logic here
+            return
+
         if len(video_layers) > 1:
             # TODO:For some reason this runs into an error when trying to remove the layer
             show_error("💀 More than one video layer found; Remove the extra one.")
@@ -276,25 +313,15 @@ class octron_widget(QWidget):
             #self._viewer.layers.remove(video_layers[-1])
         elif len(video_layers) == 1:
             video_layer = video_layers[0]
-            #print(f"Found video layer >>> {video_layer.name}")
-            # Check if required metadata exists before creating the dummy mask
-            required_keys = ['num_frames', 'height', 'width']
-            if all(k in video_layer.metadata for k in required_keys):
-                mask_layer_dummy = np.zeros((
-                    video_layer.metadata['num_frames'],
-                    video_layer.metadata['height'],
-                    video_layer.metadata['width']
-                ), dtype=np.uint8)
-                video_layer.metadata['dummy'] = mask_layer_dummy
-                self.video_layer = video_layer
-                self._viewer.dims.set_point(0,0)
-                # Check if you can create a zarr store for video
-                self.init_zarr_prefetcher_threaded()
-            else:
-                show_error("Video layer metadata incomplete; dummy mask not created.")
+            self.video_layer = video_layer
+            self._viewer.dims.set_point(0,0)
+            # Check if you can create a zarr store for video
+            self.init_zarr_prefetcher_threaded()
+            self.toolBox.widget(1).setEnabled(True) 
         else:
             pass
         
+        return
         
     def on_file_dropped_area(self, video_paths):
         '''
@@ -338,7 +365,8 @@ class octron_widget(QWidget):
         since both video and model information are required to create the zarr store.
         # TODO: Tie this into project management
         '''
-        
+        if not self.project_path:
+            return
         if self.video_zarr:
             # Zarr store already exists
             return
@@ -349,16 +377,29 @@ class octron_widget(QWidget):
             # only when a model is loaded
             return
         
-        sample_dir = cur_path / 'sample_data'
-        sample_dir.mkdir(exist_ok=True)
-        sample_data_zarr = sample_dir / 'sample_data.zip'
-
-        self.video_zarr = create_image_zarr(sample_data_zarr,
-                                            num_frames=self.video_layer.metadata['num_frames'],
-                                            image_height=self.predictor.image_size,
-                                            chunk_size=self.chunk_size,
-                                            )
-        print(f'💾 Created video zarr archive under "{sample_data_zarr}"')
+        zarr_video_dir = self.project_path
+        video_zarr_path = zarr_video_dir / 'video_data.zip'
+        status = False
+        if video_zarr_path.exists():
+            # Zarr store already exists. Check and load. 
+            # If the checks fail, the zarr store will be recreated.
+            video_zarr, status = load_image_zarr(video_zarr_path,
+                                                 num_frames=self.video_layer.metadata['num_frames'],
+                                                 image_height=self.predictor.image_size,
+                                                 chunk_size=self.chunk_size,
+                                                )
+        if not status or not video_zarr_path.exists():
+            if video_zarr_path.exists():
+                video_zarr_path.unlink()
+            self.video_zarr = create_image_zarr(video_zarr_path,
+                                                num_frames=self.video_layer.metadata['num_frames'],
+                                                image_height=self.predictor.image_size,
+                                                chunk_size=self.chunk_size,
+                                                )
+            print(f'💾 New video zarr archive created "{video_zarr_path.as_posix()}"')
+        else:
+            self.video_zarr = video_zarr
+            print(f'💾 Video zarr archive loaded "{video_zarr_path.as_posix()}"')
         # Set up thread worker to deal with prefetching batches of images
         self.prefetcher_worker = create_worker(self.thread_prefetch_images) 
         self.prefetcher_worker.setAutoDelete(False)
@@ -486,6 +527,7 @@ class octron_widget(QWidget):
         mask_layer = add_sam2_mask_layer(self._viewer,
                                          self.video_layer,
                                          mask_layer_name,
+                                         self.project_path,
                                          mask_colors,
                                          )
         # For each layer that we create, write the object ID and the name to the metadata
