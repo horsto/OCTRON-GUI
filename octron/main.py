@@ -98,7 +98,7 @@ class octron_widget(QWidget):
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         
         # ... and some parameters
-        self.chunk_size = 10 # Global parameter valid for both creation of zarr array and batch prediction 
+        self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         
         # Model yaml for SAM2
         models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
@@ -194,7 +194,10 @@ class octron_widget(QWidget):
         # Take care of chunk size for batch prediction
         self.batch_predict_progressbar.setMaximum(self.chunk_size)
         self.batch_predict_progressbar.setValue(0)
-        self.predict_next_batch_btn.setText(f'▷ Predict {self.chunk_size} frames')
+        
+        self.predict_next_batch_btn.setText(f'▷ {self.chunk_size} frames')
+        self.predict_next_oneframe_btn.setText('▷')
+        self.predict_next_oneframe_btn.setEnabled(True)
         self.predict_next_batch_btn.setEnabled(True)
 
         self.init_zarr_prefetcher_threaded()

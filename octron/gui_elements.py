@@ -379,8 +379,8 @@ class octron_gui_elements(QWidget):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.octron.batch_predict_progressbar.sizePolicy().hasHeightForWidth())
         self.octron.batch_predict_progressbar.setSizePolicy(sizePolicy5)
-        self.octron.batch_predict_progressbar.setMinimumSize(QSize(140, 25))
-        self.octron.batch_predict_progressbar.setMaximumSize(QSize(140, 25))
+        self.octron.batch_predict_progressbar.setMinimumSize(QSize(130, 25))
+        self.octron.batch_predict_progressbar.setMaximumSize(QSize(130, 25))
         self.octron.batch_predict_progressbar.setMaximum(20)
         self.octron.batch_predict_progressbar.setValue(0)
 
@@ -392,16 +392,18 @@ class octron_gui_elements(QWidget):
         self.octron.skip_label.setMaximumSize(QSize(30, 25))
         self.octron.skip_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.octron.horizontalLayout_2.addWidget(self.octron.skip_label, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_2.addWidget(self.octron.skip_label, 0, Qt.AlignmentFlag.AlignRight)
 
         self.octron.skip_frames_spinbox = QSpinBox(self.octron.annotate_layer_predict_groupbox)
         self.octron.skip_frames_spinbox.setObjectName(u"skip_frames_spinbox")
-        self.octron.skip_frames_spinbox.setMinimumSize(QSize(40, 25))
-        self.octron.skip_frames_spinbox.setMaximumSize(QSize(40, 25))
+        sizePolicy3.setHeightForWidth(self.octron.skip_frames_spinbox.sizePolicy().hasHeightForWidth())
+        self.octron.skip_frames_spinbox.setSizePolicy(sizePolicy3)
+        self.octron.skip_frames_spinbox.setMinimumSize(QSize(35, 25))
+        self.octron.skip_frames_spinbox.setMaximumSize(QSize(35, 25))
         self.octron.skip_frames_spinbox.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
         self.octron.skip_frames_spinbox.setMaximum(200)
 
-        self.octron.horizontalLayout_2.addWidget(self.octron.skip_frames_spinbox, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_2.addWidget(self.octron.skip_frames_spinbox)
 
         self.octron.predict_next_oneframe_btn = QPushButton(self.octron.annotate_layer_predict_groupbox)
         self.octron.predict_next_oneframe_btn.setObjectName(u"predict_next_oneframe_btn")
@@ -412,7 +414,7 @@ class octron_gui_elements(QWidget):
         self.octron.predict_next_oneframe_btn.setMaximumSize(QSize(20, 25))
         self.octron.predict_next_oneframe_btn.setBaseSize(QSize(15, 25))
 
-        self.octron.horizontalLayout_2.addWidget(self.octron.predict_next_oneframe_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_2.addWidget(self.octron.predict_next_oneframe_btn)
 
         self.octron.predict_next_batch_btn = QPushButton(self.octron.annotate_layer_predict_groupbox)
         self.octron.predict_next_batch_btn.setObjectName(u"predict_next_batch_btn")
@@ -420,7 +422,7 @@ class octron_gui_elements(QWidget):
         self.octron.predict_next_batch_btn.setMinimumSize(QSize(80, 25))
         self.octron.predict_next_batch_btn.setMaximumSize(QSize(80, 25))
 
-        self.octron.horizontalLayout_2.addWidget(self.octron.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_2.addWidget(self.octron.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
 
         self.octron.annotate_vertical_layout.addWidget(self.octron.annotate_layer_predict_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignBottom)
@@ -554,9 +556,19 @@ class octron_gui_elements(QWidget):
 #endif // QT_CONFIG(tooltip)
         self.octron.batch_predict_progressbar.setFormat(QCoreApplication.translate("self", u"%p%", None))
         self.octron.skip_label.setText(QCoreApplication.translate("self", u"Skip", None))
+#if QT_CONFIG(tooltip)
+        self.octron.skip_frames_spinbox.setToolTip(QCoreApplication.translate("self", u"How many frames should be skipped in\n"
+"batch prediction?", None))
+#endif // QT_CONFIG(tooltip)
         self.octron.skip_frames_spinbox.setSuffix("")
         self.octron.skip_frames_spinbox.setPrefix("")
+#if QT_CONFIG(tooltip)
+        self.octron.predict_next_oneframe_btn.setToolTip(QCoreApplication.translate("self", u"Predict next frame", None))
+#endif // QT_CONFIG(tooltip)
         self.octron.predict_next_oneframe_btn.setText("")
+#if QT_CONFIG(tooltip)
+        self.octron.predict_next_batch_btn.setToolTip(QCoreApplication.translate("self", u"Predict batch of next frames", None))
+#endif // QT_CONFIG(tooltip)
         self.octron.predict_next_batch_btn.setText("")
         self.octron.annotate_layer_save_groupbox.setTitle(QCoreApplication.translate("self", u"Export training data", None))
 #if QT_CONFIG(tooltip)
@@ -579,5 +591,4 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
-
 

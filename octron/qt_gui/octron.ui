@@ -859,13 +859,13 @@ and octo and suffix 2 for the second octo </string>
               </property>
               <property name="minimumSize">
                <size>
-                <width>140</width>
+                <width>130</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>140</width>
+                <width>130</width>
                 <height>25</height>
                </size>
               </property>
@@ -883,7 +883,7 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+            <item alignment="Qt::AlignmentFlag::AlignRight">
              <widget class="QLabel" name="skip_label">
               <property name="minimumSize">
                <size>
@@ -905,19 +905,29 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+            <item>
              <widget class="QSpinBox" name="skip_frames_spinbox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimumSize">
                <size>
-                <width>40</width>
+                <width>35</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>40</width>
+                <width>35</width>
                 <height>25</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>How many frames should be skipped in
+batch prediction?</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -933,7 +943,7 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+            <item>
              <widget class="QPushButton" name="predict_next_oneframe_btn">
               <property name="enabled">
                <bool>false</bool>
@@ -962,12 +972,15 @@ and octo and suffix 2 for the second octo </string>
                 <height>25</height>
                </size>
               </property>
+              <property name="toolTip">
+               <string>Predict next frame</string>
+              </property>
               <property name="text">
                <string/>
               </property>
              </widget>
             </item>
-            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+            <item alignment="Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="predict_next_batch_btn">
               <property name="enabled">
                <bool>false</bool>
@@ -983,6 +996,9 @@ and octo and suffix 2 for the second octo </string>
                 <width>80</width>
                 <height>25</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>Predict batch of next frames</string>
               </property>
               <property name="text">
                <string/>

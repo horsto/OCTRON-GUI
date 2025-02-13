@@ -305,8 +305,8 @@ class Ui_octron_widgetui(object):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.batch_predict_progressbar.sizePolicy().hasHeightForWidth())
         self.batch_predict_progressbar.setSizePolicy(sizePolicy5)
-        self.batch_predict_progressbar.setMinimumSize(QSize(140, 25))
-        self.batch_predict_progressbar.setMaximumSize(QSize(140, 25))
+        self.batch_predict_progressbar.setMinimumSize(QSize(130, 25))
+        self.batch_predict_progressbar.setMaximumSize(QSize(130, 25))
         self.batch_predict_progressbar.setMaximum(20)
         self.batch_predict_progressbar.setValue(0)
 
@@ -318,16 +318,18 @@ class Ui_octron_widgetui(object):
         self.skip_label.setMaximumSize(QSize(30, 25))
         self.skip_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.horizontalLayout_2.addWidget(self.skip_label, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_2.addWidget(self.skip_label, 0, Qt.AlignmentFlag.AlignRight)
 
         self.skip_frames_spinbox = QSpinBox(self.annotate_layer_predict_groupbox)
         self.skip_frames_spinbox.setObjectName(u"skip_frames_spinbox")
-        self.skip_frames_spinbox.setMinimumSize(QSize(40, 25))
-        self.skip_frames_spinbox.setMaximumSize(QSize(40, 25))
+        sizePolicy3.setHeightForWidth(self.skip_frames_spinbox.sizePolicy().hasHeightForWidth())
+        self.skip_frames_spinbox.setSizePolicy(sizePolicy3)
+        self.skip_frames_spinbox.setMinimumSize(QSize(35, 25))
+        self.skip_frames_spinbox.setMaximumSize(QSize(35, 25))
         self.skip_frames_spinbox.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
         self.skip_frames_spinbox.setMaximum(200)
 
-        self.horizontalLayout_2.addWidget(self.skip_frames_spinbox, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_2.addWidget(self.skip_frames_spinbox)
 
         self.predict_next_oneframe_btn = QPushButton(self.annotate_layer_predict_groupbox)
         self.predict_next_oneframe_btn.setObjectName(u"predict_next_oneframe_btn")
@@ -338,7 +340,7 @@ class Ui_octron_widgetui(object):
         self.predict_next_oneframe_btn.setMaximumSize(QSize(20, 25))
         self.predict_next_oneframe_btn.setBaseSize(QSize(15, 25))
 
-        self.horizontalLayout_2.addWidget(self.predict_next_oneframe_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_2.addWidget(self.predict_next_oneframe_btn)
 
         self.predict_next_batch_btn = QPushButton(self.annotate_layer_predict_groupbox)
         self.predict_next_batch_btn.setObjectName(u"predict_next_batch_btn")
@@ -346,7 +348,7 @@ class Ui_octron_widgetui(object):
         self.predict_next_batch_btn.setMinimumSize(QSize(80, 25))
         self.predict_next_batch_btn.setMaximumSize(QSize(80, 25))
 
-        self.horizontalLayout_2.addWidget(self.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_2.addWidget(self.predict_next_batch_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
 
         self.annotate_vertical_layout.addWidget(self.annotate_layer_predict_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignBottom)
@@ -485,9 +487,19 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.batch_predict_progressbar.setFormat(QCoreApplication.translate("octron_widgetui", u"%p%", None))
         self.skip_label.setText(QCoreApplication.translate("octron_widgetui", u"Skip", None))
+#if QT_CONFIG(tooltip)
+        self.skip_frames_spinbox.setToolTip(QCoreApplication.translate("octron_widgetui", u"How many frames should be skipped in\n"
+"batch prediction?", None))
+#endif // QT_CONFIG(tooltip)
         self.skip_frames_spinbox.setSuffix("")
         self.skip_frames_spinbox.setPrefix("")
+#if QT_CONFIG(tooltip)
+        self.predict_next_oneframe_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Predict next frame", None))
+#endif // QT_CONFIG(tooltip)
         self.predict_next_oneframe_btn.setText("")
+#if QT_CONFIG(tooltip)
+        self.predict_next_batch_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Predict batch of next frames", None))
+#endif // QT_CONFIG(tooltip)
         self.predict_next_batch_btn.setText("")
         self.annotate_layer_save_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Export training data", None))
 #if QT_CONFIG(tooltip)
