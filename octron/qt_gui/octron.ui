@@ -10,19 +10,19 @@
     <x>0</x>
     <y>0</y>
     <width>410</width>
-    <height>600</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>410</width>
-    <height>600</height>
+    <height>700</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>410</width>
-    <height>600</height>
+    <height>700</height>
    </size>
   </property>
   <property name="cursor">
@@ -40,7 +40,7 @@
      <x>0</x>
      <y>0</y>
      <width>412</width>
-     <height>591</height>
+     <height>691</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="mainLayout">
@@ -101,13 +101,13 @@
       <property name="minimumSize">
        <size>
         <width>410</width>
-        <height>450</height>
+        <height>550</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
         <width>410</width>
-        <height>450</height>
+        <height>550</height>
        </size>
       </property>
       <property name="cursor">
@@ -137,7 +137,7 @@
          <x>0</x>
          <y>0</y>
          <width>410</width>
-         <height>314</height>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -328,7 +328,7 @@
          <x>0</x>
          <y>0</y>
          <width>405</width>
-         <height>314</height>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -359,20 +359,20 @@
           <x>0</x>
           <y>0</y>
           <width>402</width>
-          <height>391</height>
+          <height>411</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="annotate_vertical_layout">
          <property name="spacing">
-          <number>-1</number>
+          <number>20</number>
          </property>
          <property name="bottomMargin">
-          <number>10</number>
+          <number>15</number>
          </property>
          <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
           <widget class="QGroupBox" name="horizontalGroupBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -451,10 +451,10 @@
            </layout>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
+         <item alignment="Qt::AlignmentFlag::AlignTop">
           <widget class="QGroupBox" name="annotate_layer_create_groupbox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -496,8 +496,8 @@
             <property name="verticalSpacing">
              <number>9</number>
             </property>
-            <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
-             <widget class="QComboBox" name="label_list_combobox">
+            <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="create_projection_layer_btn">
               <property name="minimumSize">
                <size>
                 <width>110</width>
@@ -511,44 +511,14 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Select, add or remove labels</string>
+               <string>Create an average projection out of all segmented images for the current label</string>
               </property>
-              <property name="editable">
-               <bool>false</bool>
+              <property name="statusTip">
+               <string/>
               </property>
-              <property name="currentText">
-               <string>Label ... </string>
+              <property name="text">
+               <string>Visualize all</string>
               </property>
-              <property name="maxCount">
-               <number>15</number>
-              </property>
-              <property name="sizeAdjustPolicy">
-               <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>14</width>
-                <height>14</height>
-               </size>
-              </property>
-              <property name="frame">
-               <bool>false</bool>
-              </property>
-              <item>
-               <property name="text">
-                <string>Label ... </string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>⊕ Create</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>⊖ Remove</string>
-               </property>
-              </item>
              </widget>
             </item>
             <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
@@ -605,26 +575,7 @@
               </item>
              </widget>
             </item>
-            <item row="0" column="4" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
-             <widget class="QPushButton" name="create_annotation_layer_btn">
-              <property name="minimumSize">
-               <size>
-                <width>70</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>70</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>⊕ Create</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignVCenter">
+            <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignVCenter">
              <widget class="QLineEdit" name="label_suffix_lineedit">
               <property name="minimumSize">
                <size>
@@ -659,7 +610,62 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item row="1" column="4" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+            <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QComboBox" name="label_list_combobox">
+              <property name="minimumSize">
+               <size>
+                <width>110</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>110</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Select, add or remove labels</string>
+              </property>
+              <property name="editable">
+               <bool>false</bool>
+              </property>
+              <property name="currentText">
+               <string>Label ... </string>
+              </property>
+              <property name="maxCount">
+               <number>15</number>
+              </property>
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>14</width>
+                <height>14</height>
+               </size>
+              </property>
+              <property name="frame">
+               <bool>false</bool>
+              </property>
+              <item>
+               <property name="text">
+                <string>Label ... </string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>⊕ Create</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>⊖ Remove</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="hard_reset_layer_btn">
               <property name="minimumSize">
                <size>
@@ -684,42 +690,36 @@ and octo and suffix 2 for the second octo </string>
               </property>
              </widget>
             </item>
-            <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
-             <widget class="QPushButton" name="create_projection_layer_btn">
+            <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="create_annotation_layer_btn">
               <property name="minimumSize">
                <size>
-                <width>110</width>
+                <width>70</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>110</width>
+                <width>70</width>
                 <height>25</height>
                </size>
               </property>
-              <property name="toolTip">
-               <string>Create an average projection out of all segmented images for the current label</string>
-              </property>
-              <property name="statusTip">
-               <string/>
-              </property>
               <property name="text">
-               <string>Visualize all</string>
+               <string>⊕ Create</string>
               </property>
              </widget>
             </item>
            </layout>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
+         <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
           <widget class="QGroupBox" name="annotate_param_groupbox">
            <property name="enabled">
             <bool>false</bool>
            </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-             <horstretch>100</horstretch>
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
@@ -813,7 +813,7 @@ and octo and suffix 2 for the second octo </string>
          <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
           <widget class="QGroupBox" name="annotate_layer_predict_groupbox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -833,9 +833,9 @@ and octo and suffix 2 for the second octo </string>
            <property name="title">
             <string>Batch prediction</string>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
             <property name="spacing">
-             <number>20</number>
+             <number>4</number>
             </property>
             <property name="leftMargin">
              <number>9</number>
@@ -849,7 +849,7 @@ and octo and suffix 2 for the second octo </string>
             <property name="bottomMargin">
              <number>9</number>
             </property>
-            <item>
+            <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QProgressBar" name="batch_predict_progressbar">
               <property name="sizePolicy">
                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -859,13 +859,13 @@ and octo and suffix 2 for the second octo </string>
               </property>
               <property name="minimumSize">
                <size>
-                <width>200</width>
+                <width>140</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>255</width>
+                <width>140</width>
                 <height>25</height>
                </size>
               </property>
@@ -884,19 +884,103 @@ and octo and suffix 2 for the second octo </string>
              </widget>
             </item>
             <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QLabel" name="skip_label">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Skip</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QSpinBox" name="skip_frames_spinbox">
+              <property name="minimumSize">
+               <size>
+                <width>40</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>40</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+              <property name="suffix">
+               <string> </string>
+              </property>
+              <property name="prefix">
+               <string/>
+              </property>
+              <property name="maximum">
+               <number>200</number>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="predict_next_oneframe_btn">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>20</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>20</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="baseSize">
+               <size>
+                <width>15</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="predict_next_batch_btn">
               <property name="enabled">
                <bool>false</bool>
               </property>
               <property name="minimumSize">
                <size>
-                <width>0</width>
+                <width>80</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>250</width>
+                <width>80</width>
                 <height>25</height>
                </size>
               </property>
@@ -911,7 +995,7 @@ and octo and suffix 2 for the second octo </string>
          <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
           <widget class="QGroupBox" name="annotate_layer_save_groupbox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1029,7 +1113,7 @@ and octo and suffix 2 for the second octo </string>
          <x>0</x>
          <y>0</y>
          <width>410</width>
-         <height>314</height>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -1055,7 +1139,7 @@ and octo and suffix 2 for the second octo </string>
          <x>0</x>
          <y>0</y>
          <width>410</width>
-         <height>314</height>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
