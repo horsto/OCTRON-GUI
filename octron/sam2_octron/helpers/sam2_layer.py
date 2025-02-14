@@ -200,6 +200,10 @@ def add_annotation_projection(
             mask_layer_data = mask_layer_data[predicted_indices]
             collected_mask_data.append(mask_layer_data)
             annotation_layer.visible = False
+            
+    if not collected_mask_data:
+        show_error(f"No masks found for label '{label}'.")
+        return
     collected_mask_data = np.vstack(collected_mask_data)
     collected_mask_data_mean = np.mean(collected_mask_data, axis=0)
     viewer.add_image(collected_mask_data_mean, 
@@ -211,5 +215,4 @@ def add_annotation_projection(
                     name=f'Projection for {label} (n={collected_mask_data.shape[0]})',
                     )            
     
-    
-    
+    return
