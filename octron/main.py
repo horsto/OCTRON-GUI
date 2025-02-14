@@ -99,7 +99,7 @@ class octron_widget(QWidget):
         
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
-        
+        self.skip_frames = 1 # Skip frames for prefetching images
         # Model yaml for SAM2
         models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
         self.models_dict = check_model_availability(SAM2p1_BASE_URL='',
@@ -140,6 +140,7 @@ class octron_widget(QWidget):
         self.load_model_btn.clicked.connect(self.load_model)
         self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
         self.predict_next_batch_btn.clicked.connect(self.init_prediction_threaded)
+        self.predict_next_oneframe_btn.clicked.connect(self.init_prediction_threaded)    
         self.create_projection_layer_btn.clicked.connect(self.create_annotation_projections)
         self.hard_reset_layer_btn.clicked.connect(self.reset_predictor)
         self.hard_reset_layer_btn.setEnabled(False)
@@ -224,7 +225,7 @@ class octron_widget(QWidget):
         if self._viewer.dims.current_step[0] != frame_idx and not last_run:
             self._viewer.dims.set_point(0, frame_idx)
         self.batch_predict_progressbar.setValue(progress)
-
+          
     def _on_prediction_finished(self):
         '''
         Callback for when worker within init_prediction_threaded() 
@@ -232,19 +233,33 @@ class octron_widget(QWidget):
         '''
         # Enable the predcition button again
         self.predict_next_batch_btn.setEnabled(True)
+        self.predict_next_oneframe_btn.setEnabled(True)
+        self.skip_frames_spinbox.setEnabled(True)
+        self.batch_predict_progressbar.setValue(0)
 
     def init_prediction_threaded(self):
         '''
         Thread worker for predicting the next batch of images
         '''
+        # Identify the sender (button) that called this function
+        sender = self.sender()
+        
         # Disable the predcition button
         self.predict_next_batch_btn.setEnabled(False)
-        
-        self.prediction_worker = create_worker(self.octron_sam2_callbacks.batch_predict)
-        self.prediction_worker.setAutoDelete(True)
-        self.prediction_worker.yielded.connect(self._batch_predict_yielded)
-        self.prediction_worker.finished.connect(self._on_prediction_finished)
-        self.prediction_worker.start()
+        self.predict_next_oneframe_btn.setEnabled(False)
+        self.skip_frames_spinbox.setEnabled(False)
+        if sender == self.predict_next_batch_btn:
+            self.prediction_worker = create_worker(self.octron_sam2_callbacks.batch_predict)
+            self.prediction_worker.setAutoDelete(True)
+            self.prediction_worker.yielded.connect(self._batch_predict_yielded)
+            self.prediction_worker.finished.connect(self._on_prediction_finished)
+            self.prediction_worker.start()
+        elif sender == self.predict_next_oneframe_btn:
+            self.prediction_worker_one = create_worker(self.octron_sam2_callbacks.next_predict)
+            self.prediction_worker_one.setAutoDelete(True)
+            self.prediction_worker_one.yielded.connect(self._batch_predict_yielded)
+            self.prediction_worker_one.finished.connect(self._on_prediction_finished)
+            self.prediction_worker_one.start()
         
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
@@ -409,21 +424,10 @@ class octron_widget(QWidget):
             self.video_zarr = video_zarr
             print(f'💾 Video zarr archive loaded "{video_zarr_path.as_posix()}"')
         # Set up thread worker to deal with prefetching batches of images
-        self.prefetcher_worker = create_worker(self.thread_prefetch_images) 
+        self.prefetcher_worker = create_worker(self.octron_sam2_callbacks.prefetch_images)
         self.prefetcher_worker.setAutoDelete(False)
         
-        
-    def thread_prefetch_images(self):
-        '''
-        Thread worker for prefetching images for fast processing in the viewer
-        '''
-        assert self.predictor, "No model loaded."
-        assert self.predictor.is_initialized, "Model not initialized."
-        current_indices = self._viewer.dims.current_step
-        print(f'⚡️ Prefetching {self.chunk_size} images, start: {current_indices[0]}')
-        _ = self.predictor.images[slice(current_indices[0],current_indices[0]+self.chunk_size)]
-
-   
+    
     def on_label_change(self):
         '''
         Callback function for the label list combobox.

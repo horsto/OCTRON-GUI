@@ -211,14 +211,17 @@ class SAM2_octron(SAM2VideoPredictor):
     @torch.inference_mode()
     def propagate_in_video(
         self,
-        start_frame_idx,
-        max_frame_num_to_track,
+        start_frame_idx=None,
+        max_frame_num_to_track=None,
+        processing_order=None,
         reverse=False,
         ):
+        '''
+        Propagate the tracking results in the video.
         
-        # Fetch and cache images before starting the tracking
-        #_ = self.images[slice(start_frame_idx,start_frame_idx+max_frame_num_to_track)]
         
+        '''
+        # TODO: More checks for correct inputs
         self.propagate_in_video_preflight(self.inference_state)
 
         obj_ids = self.inference_state["obj_ids"]
@@ -226,27 +229,28 @@ class SAM2_octron(SAM2VideoPredictor):
         batch_size = self._get_obj_num(self.inference_state)
 
         # set start index, end index, and processing order
-        if start_frame_idx is None:
-            # default: start from the earliest frame with input points
-            start_frame_idx = min(
-                t
-                for obj_output_dict in self.inference_state["output_dict_per_obj"].values()
-                for t in obj_output_dict["cond_frame_outputs"]
-            )
-        if max_frame_num_to_track is None:
-            # default: track all the frames in the video
-            max_frame_num_to_track = num_frames
-        if reverse:
-            end_frame_idx = max(start_frame_idx - max_frame_num_to_track, 0)
-            if start_frame_idx > 0:
-                processing_order = range(start_frame_idx, end_frame_idx - 1, -1)
+        if processing_order is None:
+            if start_frame_idx is None:
+                # default: start from the earliest frame with input points
+                start_frame_idx = min(
+                    t
+                    for obj_output_dict in self.inference_state["output_dict_per_obj"].values()
+                    for t in obj_output_dict["cond_frame_outputs"]
+                )
+            if max_frame_num_to_track is None:
+                # default: track all the frames in the video
+                max_frame_num_to_track = num_frames
+            if reverse:
+                end_frame_idx = max(start_frame_idx - max_frame_num_to_track, 0)
+                if start_frame_idx > 0:
+                    processing_order = range(start_frame_idx, end_frame_idx - 1, -1)
+                else:
+                    processing_order = []  # skip reverse tracking if starting from frame 0
             else:
-                processing_order = []  # skip reverse tracking if starting from frame 0
-        else:
-            end_frame_idx = min(
-                start_frame_idx + max_frame_num_to_track, num_frames - 1
-            )
-            processing_order = range(start_frame_idx, end_frame_idx + 1)
+                end_frame_idx = min(
+                    start_frame_idx + max_frame_num_to_track, num_frames - 1
+                )
+                processing_order = range(start_frame_idx, end_frame_idx + 1)
                     
         try:
             for frame_idx in processing_order:

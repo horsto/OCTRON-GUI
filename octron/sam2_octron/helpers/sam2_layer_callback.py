@@ -202,14 +202,40 @@ class sam2_octron_callbacks():
         return    
     
     
-    def batch_predict(self):
+    def prefetch_images(self):
         '''
-        Threaded function to run the predictor forward on a batch of frames.
+        Thread worker for prefetching images for fast processing in the viewer
+        '''
+        predictor = self.octron.predictor
+        assert predictor, "No model loaded."
+        assert predictor.is_initialized, "Model not initialized."
+        
+        viewer = self.octron._viewer    
+        video_layer = self.octron.video_layer   
+        num_frames = video_layer.metadata['num_frames']
+        # Chunk size and skipping of frames
+        chunk_size = self.octron.chunk_size
+        skip_frames = self.octron.skip_frames   
+        
+        current_indices = viewer.dims.current_step
+        current_frame = current_indices[0]
+        
+        # Create slice and check if there are enough frames to prefetch
+        end_frame = min(num_frames-1, current_frame + chunk_size * skip_frames)
+        image_indices = list(range(current_frame, end_frame, skip_frames))
+        if not image_indices:
+            return
+        
+        print(f'⚡️ Prefetching {len(image_indices)} images, skipping {skip_frames} frames | start: {current_frame}')
+        _ = predictor.images[image_indices]
+
+    
+    def next_predict(self):
+        '''
+        Threaded function to run the predictor forward on exactly one frame.
         Uses SAM2 => propagate_in_video function.
         
-        '''
-        max_imgs = self.octron.chunk_size
-        frame_idx = self.viewer.dims.current_step[0]        
+        '''    
 
         # Necessary to have at least "some" input somewhere ... 
         # Loop over all entries in the object organizer and check 
@@ -224,17 +250,32 @@ class sam2_octron_callbacks():
             return
 
         # Prefetch images if they are not cached yet 
+        # For this, reset the chunk_size to 1
+        # This will ensure we are only prefetching one frame
+        # At the end of the function, we will reset the chunk_size to the original value
+        skip_frames = self.octron.skip_frames_spinbox.value()
+        if skip_frames < 1:
+            skip_frames = 1 # Just hard reset any unrealistic values here
+        self.octron.skip_frames = skip_frames  
+        chunk_size_real = self.octron.chunk_size
+        self.octron.chunk_size = 1
         if getattr(self.octron.predictor, 'images', None) is not None:
-            print(f'⚡️ Prefetching {max_imgs} images, start: {frame_idx}')
-            _ = self.octron.predictor.images[slice(frame_idx,frame_idx+max_imgs)]
+            self.prefetch_images()
         
-        start_time = time.time()        
-        #Loop over frames and run prediction (single frame!)
+        current_frame = self.viewer.dims.current_step[0]         
+        num_frames = self.octron.video_layer.metadata['num_frames']
+        end_frame = min(num_frames-1, current_frame + self.octron.chunk_size * skip_frames)
+        image_idxs = [current_frame, end_frame]
+        
+        start_time = time.time()    
+        # Just copying routine here from the batch_predict function    
+        # Loop over frames and run prediction (single frame!)
         counter = 1
-        for out_frame_idx, out_obj_ids, out_mask_logits in self.octron.predictor.propagate_in_video(start_frame_idx=frame_idx, 
-                                                                                                    max_frame_num_to_track=max_imgs):
+        for out_frame_idx, out_obj_ids, out_mask_logits in self.octron.predictor.propagate_in_video(
+            processing_order=image_idxs
+        ):
             
-            if counter == max_imgs:
+            if counter == 1:
                 last_run = True
             else:
                 last_run = False
@@ -245,6 +286,64 @@ class sam2_octron_callbacks():
             counter += 1
             
         end_time = time.time()
-        print(f'Start idx {frame_idx} | Predicted {max_imgs} frames in {end_time-start_time:.2f} seconds')
+        print(f'Start idx {current_frame} | Predicted 1 frame in {end_time-start_time:.2f} seconds')
+        
+        self.octron.chunk_size = chunk_size_real
+        return
+    
+    
+    
+    
+    def batch_predict(self):
+        '''
+        Threaded function to run the predictor forward on a batch of frames.
+        Uses SAM2 => propagate_in_video function.
+        
+        '''
+        
+        # Necessary to have at least "some" input somewhere ... 
+        # Loop over all entries in the object organizer and check 
+        # if at least one predicted_frames entry exists.
+        has_predicted = False
+        for entry in self.octron.object_organizer.entries.values():
+            if entry.predicted_frames:
+                has_predicted = True
+                break
+        if not has_predicted:
+            show_error('No input data found. Please add annotations first.')
+            return
+
+        skip_frames = self.octron.skip_frames_spinbox.value()
+        if skip_frames < 1:
+            skip_frames = 1 # Just hard reset any unrealistic values here
+        self.octron.skip_frames = skip_frames  
+
+        # Prefetch images if they are not cached yet 
+        if getattr(self.octron.predictor, 'images', None) is not None:
+            self.prefetch_images()
+        
+        current_frame = self.viewer.dims.current_step[0]         
+        num_frames = self.octron.video_layer.metadata['num_frames']
+        end_frame = min(num_frames-1, current_frame + self.octron.chunk_size * skip_frames)
+        image_idxs = list(range(current_frame, end_frame, skip_frames)) 
+        start_time = time.time()        
+        # Loop over frames and run prediction (single frame!)
+        counter = 1
+        for out_frame_idx, out_obj_ids, out_mask_logits in self.octron.predictor.propagate_in_video(
+            processing_order=image_idxs
+            ):
+            
+            if counter == end_frame:
+                last_run = True
+            else:
+                last_run = False
+            for i, out_obj_id in enumerate(out_obj_ids):
+                mask = (out_mask_logits[i] > 0).cpu().numpy().astype(np.uint8)
+                yield counter, out_frame_idx, out_obj_id, mask.squeeze(), last_run
+
+            counter += 1
+            
+        end_time = time.time()
+        print(f'Start idx {current_frame} | Predicted {self.octron.chunk_size} frames in {end_time-start_time:.2f} seconds')
         
         return
