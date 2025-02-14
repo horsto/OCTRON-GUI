@@ -3,6 +3,7 @@ from typing import Optional, Dict, List, Any
 
 from octron.sam2_octron.helpers.sam2_colors import (
     create_label_colors,
+    sample_maximally_different,
 )
 
 
@@ -88,6 +89,11 @@ class ObjectOrganizer(BaseModel):
     label_id_map: Dict[str, int] = {}
     # The next available label_id.
     next_label_id: int = 0
+    
+    # Color dictionary for all labels
+    n_labels_max: int = 10 # MAXIMUM ALLOWED NUMBER OF LABELS 
+    n_subcolors: int  = 50
+
 
     def all_colors(self) -> tuple[list, list, list]:
         '''
@@ -97,15 +103,13 @@ class ObjectOrganizer(BaseModel):
             -> label
                 -> colors for each label
         '''
-        n_labels_max = 10 # MAXIMUM ALLOWED NUMBER OF LABELS 
-        n_subcolors =  50
         label_colors = create_label_colors(cmap='cmr.tropical', 
-                                           n_labels=n_labels_max, 
-                                           n_colors_submap=n_subcolors,
+                                           n_labels=self.n_labels_max, 
+                                           n_colors_submap=self.n_subcolors,
                                            )
         # Create maximally different colors for each label and for each submap 
-        indices_max_diff_labels = sample_maximally_different(list(range(n_labels_max)))
-        indices_max_diff_subcolors = sample_maximally_different(list(range(n_subcolors)))
+        indices_max_diff_labels = sample_maximally_different(list(range(self.n_labels_max)))
+        indices_max_diff_subcolors = sample_maximally_different(list(range(self.n_subcolors)))
         return (label_colors, indices_max_diff_labels, indices_max_diff_subcolors)
 
     def exists_id(self, id_: int) -> bool:
@@ -206,31 +210,3 @@ class ObjectOrganizer(BaseModel):
             )
         return "\n".join(output_lines)
  
- 
-################################################################################################################################   
-# Helper functions for the ObjectOrganizer class
-def sample_maximally_different(seq):
-    '''
-    Given an ascending list of numbers, return a new ordering
-    where each subsequent number is chosen such that its minimum
-    absolute difference to all previously picked numbers is maximized.
-
-    I added this to choose colors that are maximally different from each other,
-    both for labels as well as for sub-label (same label, different suffix).
-
-    Example:
-        Input:  [1, 2, 3, 4, 5]
-        Possible Output: [1, 5, 2, 4, 3]
-    '''
-    if not seq:
-        return []
-    # Start with the first element.
-    sample = [seq[0]]
-    remaining = list(seq[1:])
-    while remaining:
-        # For each candidate, compute the minimum distance to any element in sample,
-        # then select the candidate with the maximum such distance.
-        candidate = max(remaining, key=lambda x: min(abs(x - s) for s in sample))
-        sample.append(candidate)
-        remaining.remove(candidate)
-    return sample

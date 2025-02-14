@@ -36,3 +36,30 @@ def create_label_colors(cmap='cmr.tropical',
         label_colors = [np.concat([np.array(l) / 255., np.array([1])]) for l in label_colors]
         all_label_submaps.append(label_colors)
     return all_label_submaps
+
+
+def sample_maximally_different(seq):
+    '''
+    Given an ascending list of numbers, return a new ordering
+    where each subsequent number is chosen such that its minimum
+    absolute difference to all previously picked numbers is maximized.
+
+    I added this to choose colors that are maximally different from each other,
+    both for labels as well as for sub-label (same label, different suffix).
+
+    Example:
+        Input:  [1, 2, 3, 4, 5]
+        Possible Output: [1, 5, 2, 4, 3]
+    '''
+    if not seq:
+        return []
+    # Start with the first element.
+    sample = [seq[0]]
+    remaining = list(seq[1:])
+    while remaining:
+        # For each candidate, compute the minimum distance to any element in sample,
+        # then select the candidate with the maximum such distance.
+        candidate = max(remaining, key=lambda x: min(abs(x - s) for s in sample))
+        sample.append(candidate)
+        remaining.remove(candidate)
+    return sample

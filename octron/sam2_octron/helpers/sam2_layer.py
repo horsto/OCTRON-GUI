@@ -1,6 +1,7 @@
 # This file contains helper functions to add layers to the napari viewer through OCTRON
 from pathlib import Path
 import numpy as np
+from napari.utils import Colormap
 from napari.utils.notifications import show_info, show_error
 
 def add_sam2_mask_layer(viewer,
@@ -166,6 +167,49 @@ def add_sam2_points_layer(
 
 def add_annotation_projection(    
     viewer,
+    object_organizer,
+    label,
     name,
     ):
-    pass
+    '''
+    Creates a average projection of all masks for a given label.
+    This visualizes the current annotation state for a given label 
+    and lets the user decide on the quality of the annotation.
+    
+    
+    '''
+    
+    # Retrieve colors which are saved as part of the object organizer
+    # since there they are used to assign unique colors to newly created label suffix combinations
+    (label_colors, indices_max_diff_labels, _) = object_organizer.all_colors()
+    
+    collected_mask_data = []
+    for entry in object_organizer.get_entries_by_label(label):
+        # There might be multiple entries (with suffixes) for the same label
+        # This is why we loop here over all entries for that label ... 
+        
+        mask_layer_data = entry.mask_layer.data
+        annotation_layer = entry.annotation_layer
+        # Get color and make map 
+        colors = label_colors[indices_max_diff_labels[entry.label_id]]
+        colors.insert(0, [0.,0.,0.,0.]) # Add transparent color for background
+        cm = Colormap(colors, name=label, display_name=label)
+        # Filter by prediction indices
+        predicted_indices = entry.predicted_frames
+        if predicted_indices:
+            mask_layer_data = mask_layer_data[predicted_indices]
+            collected_mask_data.append(mask_layer_data)
+            annotation_layer.visible = False
+    collected_mask_data = np.vstack(collected_mask_data)
+    collected_mask_data_mean = np.mean(collected_mask_data, axis=0)
+    viewer.add_image(collected_mask_data_mean, 
+                    rgb=False, 
+                    blending='additive',
+                    opacity=0.75, 
+                    interpolation2d='cubic', 
+                    colormap=cm, 
+                    name=f'Projection for {label} (n={collected_mask_data.shape[0]})',
+                    )            
+    
+    
+    

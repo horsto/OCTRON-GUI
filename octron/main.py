@@ -27,7 +27,7 @@ from napari.utils.notifications import (
     show_error,
 )
 from napari.qt import create_worker
-from napari.utils import Colormap, DirectLabelColormap
+from napari.utils import DirectLabelColormap
 
 # Napari PyAV reader 
 from napari_pyav._reader import FastVideoReader
@@ -146,9 +146,6 @@ class octron_widget(QWidget):
         self.hard_reset_layer_btn.setEnabled(False)
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
-    
-        # Drop widget (not needed because has its own callback  )
-        #self.video_file_drop_widget.fileDropped.connect(lambda files: print("Drag'n'Drop signal received:", files))
     
         # Upon start, disable some of the toolbox tabs and functionality for video drop 
         self.project_video_drop_groupbox.setEnabled(False)
@@ -536,11 +533,11 @@ class octron_widget(QWidget):
                                           use_selection=True, 
                                           selection=1,
                                           )
-        mask_layer = add_sam2_mask_layer(self._viewer,
-                                         self.video_layer,
-                                         mask_layer_name,
-                                         self.project_path,
-                                         mask_colors,
+        mask_layer = add_sam2_mask_layer(viewer=self._viewer,
+                                         video_layer=self.video_layer,
+                                         name=mask_layer_name,
+                                         project_path=self.project_path,
+                                         color=mask_colors,
                                          )
         # For each layer that we create, write the object ID and the name to the metadata
         mask_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
@@ -552,7 +549,7 @@ class octron_widget(QWidget):
         if layer_type == 'Shapes':
             annotation_layer_name = f"⌖ {new_layer_name} shapes"
             # Create a shape layer
-            annotation_layer = add_sam2_shapes_layer(self._viewer,
+            annotation_layer = add_sam2_shapes_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
                                                      color=obj_color,
                                                      )
@@ -569,7 +566,7 @@ class octron_widget(QWidget):
             # Create a point layer
             annotation_layer_name = f"⌖ {new_layer_name} points"
             # Create a shape layer
-            annotation_layer = add_sam2_points_layer(self._viewer,
+            annotation_layer = add_sam2_points_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
                                                      )
             # For each layer that we create, write the object ID and the name to the metadata
@@ -592,46 +589,27 @@ class octron_widget(QWidget):
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
+
+
     def create_annotation_projections(self):
         '''
-        Create a projection layer for each annotation layer.
+        Create a projection layer for annotated label.
         '''
         self.create_projection_layer_btn.setEnabled(False)  
-        
-        # Retrieve colors which are saved as part of the object organizer
-        # since there they are used to assign unique colors to newly created label suffix combinations
-        (label_colors, indices_max_diff_labels, _) = self.object_organizer.all_colors()
-        
+
         # Loop over all annotation labels and execute add_annotation_projection
-        # TODO: Outsource this to a separate function add_annotation_projection in sam2_layer.py
         for label in self.object_organizer.get_current_labels():
-            collected_mask_data = []
-            for entry in self.object_organizer.get_entries_by_label(label):
-                mask_layer_data = entry.mask_layer.data
-                annotation_layer = entry.annotation_layer
-                # Get color and make map 
-                colors = label_colors[indices_max_diff_labels[entry.label_id]]
-                colors.insert(0, [0.,0.,0.,0.]) # Add transparent color for background
-                cm = Colormap(colors, name=label, display_name=label)
-                # Filter by prediction indices
-                predicted_indices = entry.predicted_frames
-                if predicted_indices:
-                    mask_layer_data = mask_layer_data[predicted_indices]
-                    collected_mask_data.append(mask_layer_data)
-                    annotation_layer.visible = False
-            collected_mask_data = np.vstack(collected_mask_data)
-            collected_mask_data_mean = np.mean(collected_mask_data, axis=0)
-            self._viewer.add_image(collected_mask_data_mean, 
-                                   rgb=False, 
-                                   blending='additive',
-                                   opacity=0.75, 
-                                   interpolation2d='cubic', 
-                                   colormap=cm, 
-                                   name=f'Projection for {label} (n={collected_mask_data.shape[0]})',
-                                   )            
+            add_annotation_projection(self._viewer,
+                                      self.object_organizer,
+                                      label,
+                                      f"⌖ {label} projection",
+                                      )
         
         self.create_projection_layer_btn.setEnabled(True) 
         
+            
+            
+            
             
                
     # Example key binding with Napari built-in viewer functions 
@@ -639,6 +617,15 @@ class octron_widget(QWidget):
     # def print_message(viewer):
     #    show_info('Test - pressed key m')
     
+    
+    
+    
+    
+    
+    
+###################################################################################################
+###################################################################################################
+###################################################################################################   
 
 def octron_gui():
     '''
