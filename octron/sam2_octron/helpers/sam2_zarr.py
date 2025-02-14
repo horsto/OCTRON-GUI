@@ -238,8 +238,6 @@ class OctoZarr:
         - Return the combined images as torch tensor
         
         '''
-        min_idx = np.min(indices)
-        
         # Initialize empty torch arrach of length indices
         imgs_torch = torch.empty(len(indices), self.num_chs, self.image_size, self.image_size)
         
@@ -262,15 +260,13 @@ class OctoZarr:
             else:
                 img = self._fetch_one(idx=idx)
                 self._save_to_zarr([img], [idx])
-            imgs_torch[idx-min_idx] = img
+            imgs_torch[np.where(indices == idx)[0][0]] = img
             
         elif len(indices) > 1:
             # Create indices
             not_in_store = np.array([idx for idx in indices if idx not in self.saved_indices]).astype(int)
             in_store = np.array([idx for idx in indices if idx in self.saved_indices]).astype(int)
-            zeroed_not_in_store = not_in_store - min_idx # for writing into `imgs_torch`
-            zeroed_in_store = in_store - min_idx # for writing into `imgs_torch`
-            
+
             if len(not_in_store):
                 imgs = self._fetch_many(indices=not_in_store)
                 imgs_torch[np.where(np.isin(indices, not_in_store))[0]] = imgs
