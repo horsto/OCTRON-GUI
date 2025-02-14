@@ -273,13 +273,13 @@ class OctoZarr:
             
             if len(not_in_store):
                 imgs = self._fetch_many(indices=not_in_store)
-                imgs_torch[zeroed_not_in_store] = imgs
+                imgs_torch[np.where(np.isin(indices, not_in_store))[0]] = imgs
                 # Save this batch to zarr 
                 self._save_to_zarr(imgs, not_in_store)
             if len(in_store):
                 #print(f'Found in store (multiple): {in_store}')
                 imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
-                imgs_torch[zeroed_in_store] = imgs_in_store    
+                imgs_torch[np.where(np.isin(indices, in_store))[0]] = imgs_in_store    
 
         return imgs_torch.squeeze()
     

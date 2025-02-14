@@ -276,7 +276,7 @@ class octron_widget(QWidget):
             
             folder = Path(folder)
             self.project_folder_path_label.setEnabled(False)
-            self.project_folder_path_label.setText(f'📁 {folder.as_posix()}')
+            self.project_folder_path_label.setText(f'→{folder.as_posix()}')
             
             # Check this folder TODO ... 
             self.project_path = folder
