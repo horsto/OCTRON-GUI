@@ -66,6 +66,9 @@ class ObjectOrganizer(BaseModel):
     defined each by a unique ID,
     that is also the one that SAM2 internally deals with, 
     and representing attributes such as label, a unique label ID, suffix, color. 
+    CAVE: label ID and object ID are not the same! Label IDs are 
+    unique for each label and are used to assign colors. The object ID is unique for each object and 
+    are used by the SAM2 tracking module.
     It also assigns a unique mask  (=prediction) layer and annotation layer to each object.
     This way, all information for objects flowing through OCTRON is saved in one place. 
     
@@ -120,7 +123,17 @@ class ObjectOrganizer(BaseModel):
             return max([e for e in self.entries])
         except ValueError:
             return 0
-
+        
+    def min_available_id(self) -> int:
+        '''
+        Find the minimum integer >= 0 that is not yet present as an ID in the object organizer.
+        '''
+        existing_ids = set(self.entries.keys())
+        min_id = 0
+        while min_id in existing_ids:
+            min_id += 1
+        return min_id
+    
     def exists_label(self, label: str) -> bool:
         return any(entry.label == label for entry in self.entries.values())
 
@@ -151,35 +164,42 @@ class ObjectOrganizer(BaseModel):
         '''
         return [entry.suffix for entry in self.entries.values() if entry.label == label]
 
-    def add_entry(self, id_: int, entry: Obj) -> None:
+    def get_entry_by_label_suffix(self, label: str, suffix: str) -> Optional[Obj]:
+        '''
+        Return the entry that matches the given label and suffix combination.
+        '''
+        for entry in self.entries.values():
+            if entry.label == label and entry.suffix == suffix:
+                return entry
+        return None
+
+    def add_entry(self, id_: int, entry: Obj) -> bool:
         if id_ in self.entries:
             raise ValueError(f"ID {id_} already exists.")
         if self.exists_combination(entry.label, entry.suffix):
-            raise ValueError(f"Combination ({entry.label}, {entry.suffix}) already exists.")
-        
+            if entry.annotation_layer is not None:
+                print(f"Combination ({entry.label}, {entry.suffix}) already exists.")
+                return False
         # Check if label already exists and assign label_id accordingly.
         if entry.label in self.label_id_map:
             entry.label_id = self.label_id_map[entry.label]
-            #print(f"Label {entry.label} already exists. Reusing label_id {entry.label_id}.")
         else:
             entry.label_id = self.next_label_id
             self.label_id_map[entry.label] = self.next_label_id
             self.next_label_id += 1
-            #print(f"New label {entry.label} found. Assigning label_id {entry.label_id}.")
-        
+
         # Find out which color to assign (if necessary)
         if entry.color is None:
             n_subcolors = len(self.get_suffixes_by_label(entry.label)) # These colors must exist
             label_colors, indices_max_diff_labels, indices_max_diff_subcolors = self.all_colors()
             if entry.label_id >= len(indices_max_diff_labels):
                 raise ValueError(f"Label_id {entry.label_id} exceeds the maximum number of labels.")
-            #print(f"Assigning color. Label ID: {entry.label_id} | Subcolor ID: {n_subcolors}")
             this_color = label_colors[indices_max_diff_labels[entry.label_id]][indices_max_diff_subcolors[n_subcolors]]
-            #print(f"Color assigned: {this_color}")
             entry.color = this_color
             
         self.entries[id_] = entry
-
+        return True
+    
     def update_entry(self, id_: int, entry: Obj) -> None:
         if id_ not in self.entries:
             raise ValueError(f"ID {id_} does not exist.")
@@ -188,7 +208,19 @@ class ObjectOrganizer(BaseModel):
                 raise ValueError(f"Combination ({entry.label}, {entry.suffix}) already exists in ID {eid}.")
         self.entries[id_] = entry
 
+    def get_entry_id(self, organizer_entry: Obj) -> Optional[int]:
+        '''
+        Return the ID of the given organizer entry.
+        '''
+        for id_, entry in self.entries.items():
+            if entry == organizer_entry:
+                return id_
+        return None
+
     def get_entry(self, id_: int) -> Obj:
+        '''
+        Return the entry for the given id.
+        '''
         if id_ not in self.entries:
             raise ValueError(f"ID {id_} does not exist.")
         return self.entries[id_]

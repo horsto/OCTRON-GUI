@@ -19,6 +19,7 @@ from qtpy.QtWidgets import (
     QApplication,
     QStyleFactory,
     QFileDialog,
+    QMessageBox,
 )
 import napari
 from napari.utils.notifications import (
@@ -96,6 +97,9 @@ class octron_widget(QWidget):
         self.prefetcher_worker = None
         self.predictor, self.device = None, None
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
+        self.remove_current_layer = False # Removal of layer yes/no
+        self.layer_to_remove_idx = None # Index of layer to remove
+        self.layer_to_remove = None # The actual layer to remove
         
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
@@ -134,6 +138,10 @@ class octron_widget(QWidget):
         '''
         # Global layer insertion callback
         self._viewer.layers.events.inserted.connect(self.consolidate_layers)
+        
+        # Global layer removal callback
+        self._viewer.layers.events.removing.connect(self.on_layer_removing)
+        self._viewer.layers.events.removed.connect(self._on_layer_removed)
         
         # Buttons 
         self.create_project_btn.clicked.connect(self.open_project_folder_dialog)
@@ -291,7 +299,90 @@ class octron_widget(QWidget):
             self._viewer.layers.select_all()
             self._viewer.layers.remove_selected()
             print("💀 Auto-deleted all old layers")
+
+
+    def _on_layer_removed(self, event):
+        """
+        Callback triggered from within the layer removal event.
+        (self.on_layer_removing() is called first)
+        This gives the user a chance to cancel the removal of the layer.
+        """
+        print(f'Calling on_layer_removed {self.layer_to_remove.name} {self.remove_current_layer}')
+        
+        if not self.remove_current_layer:
+            # TODO: This is a bit of a hack, seems ugly. Is there a better way?
+            new_old_layer = self._viewer.add_layer(self.layer_to_remove)
+            self._viewer.layers.selection.active = new_old_layer
+            self._viewer.layers.selection.active.mode = 'pan_zoom'
+        else:
+            print(f"❌ Removed layer {self.layer_to_remove.name}")
+            # What else do you need to remove? 
+            # Two cases:
+            # 1. The layer is a mask layer
+            # 2. The layer is an annotation layer
+            # 3. The layer is a video layer (not yet implemented)
             
+            # 1. Mask layer
+            if self.layer_to_remove._basename() == 'Labels' \
+                and 'mask' in self.layer_to_remove.metadata['_name']:
+                # Remove the memmap file
+                memmap_file_path = self.layer_to_remove.metadata['_memmap']
+                if Path(memmap_file_path).exists():
+                    Path(memmap_file_path).unlink()
+                    print(f'Removed memmap file {memmap_file_path}')
+                # Get the object entry from the object organizer
+                obj_id = self.layer_to_remove.metadata['_obj_id']
+                organizer_entry = self.object_organizer.get_entry(obj_id)
+                # Remove the annotation layer
+                annotation_layer = organizer_entry.annotation_layer
+                if annotation_layer is not None:
+                    self._viewer.layers.remove(annotation_layer)
+                # Finally, remove the object entry from the object organizer
+                self.object_organizer.remove_entry(obj_id)
+                # Remove obj_id from current SAM2 predictor
+                self.predictor.remove_object(obj_id, strict=True)
+                print(f"Removed object {obj_id} from viewer, organizer and predictor")
+            # 2. Annotation layer
+            elif self.layer_to_remove._basename() in ['Shapes', 'Points']:
+                # Get the object entry from the object organizer
+                obj_id = self.layer_to_remove.metadata['_obj_id']
+                organizer_entry = self.object_organizer.get_entry(obj_id)
+                organizer_entry.annotation_layer = None
+                print(f'Removed annotation layer {self.layer_to_remove.name}')
+            
+            
+    def on_layer_removing(self, event):
+        """ 
+        Callback triggered when a layer is about to be removed.
+        The call to on_layer_removed() is triggered after this, and gives 
+        the user a chance to cancel the removal of the layer.
+        """
+        self.layer_to_remove = event.source[event.index]
+        self.layer_to_remove_idx = event.index  
+        # Not sure if possible to delete more than one at once.
+        # If so, then take care of it ... event.sources is a list.
+        
+        if self.layer_to_remove._basename() in ['Shapes', 'Points']:
+            # Silent removal of annotation layers
+            self.remove_current_layer = True
+        elif self.layer_to_remove._basename() == 'Image' and 'VIDEO' not in self.layer_to_remove.name:
+            # Silent removal of image layers (visualizations)
+            self.remove_current_layer = True
+        else:
+            # Ask for confirmation for other layers, i.e. video and mask layers
+            reply = QMessageBox.question(
+                None, 
+                "Confirmation", 
+                f"Are you sure you want to delete layer\n'{self.layer_to_remove}'",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                self.remove_current_layer = False
+            else:
+                self.remove_current_layer = True
+        return
+          
     
     def consolidate_layers(self, event):
         """
@@ -516,38 +607,57 @@ class octron_widget(QWidget):
             show_warning("Please select a layer type and a label.")
             return
         
-        # Start creating the new layer
-        new_layer_name = f"{label} {label_suffix}".strip()
-                
-        # Optimistically find out what the next object ID should be and add to the object organizer
-        obj_id = self.object_organizer.max_id() + 1
-        self.object_organizer.add_entry(obj_id, Obj(label=label, suffix=label_suffix))
+        # Check if the object organizer already has an entry for this label and suffix 
+        organizer_entry = self.object_organizer.get_entry_by_label_suffix(label, label_suffix)
+        if organizer_entry is not None:
+            if organizer_entry.prediction_layer is None:
+                show_warning(f"Combination ({label}, {label_suffix}) exists. No mask layer found.") # Should not happen!
+                return
+            elif organizer_entry.annotation_layer is not None:
+                show_warning(f"Combination ({label}, {label_suffix}) already exists.")
+                return
+            else:
+                create_prediction_layer = False
+                obj_id = self.object_organizer.get_entry_id(organizer_entry)
+        else:
+            # No entry found, so create a new prediction and annotation layer from scratch
+            create_prediction_layer = True
+            obj_id = self.object_organizer.min_available_id()
+            status = self.object_organizer.add_entry(obj_id, Obj(label=label, suffix=label_suffix))
+            if not status: 
+                show_error("Error when adding new entry to object organizer.")
+                return
+            organizer_entry = self.object_organizer.entries[obj_id] # Re-fetch to add more later
         
-        new_organizer_entry = self.object_organizer.entries[obj_id] # Re-fetch to add more later
-        obj_color = new_organizer_entry.color
+        ######### Create new layers #############################################################################
+        
+        obj_color = organizer_entry.color
+        layer_name = f"{label} {label_suffix}".strip() # This is used in all layer names
         
         ######### Create a new prediction (mask) layer  ######################################################### 
         
-        prediction_layer_name = f"{new_layer_name} masks"
-        mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
-                                          use_selection=True, 
-                                          selection=1,
-                                          )
-        prediction_layer = add_sam2_mask_layer(viewer=self._viewer,
-                                         video_layer=self.video_layer,
-                                         name=prediction_layer_name,
-                                         project_path=self.project_path,
-                                         color=mask_colors,
-                                         )
-        # For each layer that we create, write the object ID and the name to the metadata
-        prediction_layer.metadata['_name']   = prediction_layer_name # Octron convention. Save a copy of the name
-        prediction_layer.metadata['_obj_id'] = obj_id # Save the object ID
-        new_organizer_entry.prediction_layer = prediction_layer
+        if create_prediction_layer:
+            prediction_layer_name = f"{layer_name} masks"
+            mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
+                                            use_selection=True, 
+                                            selection=1,
+                                            )
+            prediction_layer, memmap_file_path = add_sam2_mask_layer(viewer=self._viewer,
+                                                    video_layer=self.video_layer,
+                                                    name=prediction_layer_name,
+                                                    project_path=self.project_path,
+                                                    color=mask_colors,
+                                                    )
+            # For each layer that we create, write the object ID and the name to the metadata
+            prediction_layer.metadata['_name']   = prediction_layer_name # Octron convention. Save a copy of the name
+            prediction_layer.metadata['_obj_id'] = obj_id # Save the object ID
+            prediction_layer.metadata['_memmap'] = memmap_file_path # Save the memmap file path
+            organizer_entry.prediction_layer = prediction_layer
 
         ######### Create a new annotation layer ####################################################
         
         if layer_type == 'Shapes':
-            annotation_layer_name = f"⌖ {new_layer_name} shapes"
+            annotation_layer_name = f"⌖ {layer_name} shapes"
             # Create a shape layer
             annotation_layer = add_sam2_shapes_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
@@ -556,15 +666,15 @@ class octron_widget(QWidget):
             # For each layer that we create, write the object ID and the name to the metadata
             annotation_layer.metadata['_name']   = annotation_layer_name # Octron convention. Save a copy of the name
             annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
-            new_organizer_entry.annotation_layer = annotation_layer
+            organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
-            show_info(f"Created new mask + annotation layer '{new_layer_name}'")
+            show_info(f"Created new mask + annotation layer '{layer_name}'")
             
             
         elif layer_type == 'Points':
             # Create a point layer
-            annotation_layer_name = f"⌖ {new_layer_name} points"
+            annotation_layer_name = f"⌖ {layer_name} points"
             # Create a shape layer
             annotation_layer = add_sam2_points_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
@@ -572,11 +682,11 @@ class octron_widget(QWidget):
             # For each layer that we create, write the object ID and the name to the metadata
             annotation_layer.metadata['_name']   = annotation_layer_name # Octron convention. Save a copy of the name
             annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
-            new_organizer_entry.annotation_layer = annotation_layer
+            organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.mouse_drag_callbacks.append(self.octron_sam2_callbacks.on_mouse_press)
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_points_changed)
-            show_info(f"Created new mask + annotation layer '{new_layer_name}'")
+            show_info(f"Created new mask + annotation layer '{layer_name}'")
             
             
         else: 

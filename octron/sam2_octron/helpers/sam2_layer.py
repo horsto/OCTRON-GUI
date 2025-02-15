@@ -58,8 +58,9 @@ def add_sam2_mask_layer(viewer,
             prediction_layer_data.flush()
     else:
         show_error("Video layer metadata incomplete; dummy mask not created.")
-        return
+        return None, None
     
+    # Add the labels layer to the viewer
     labels_layer = viewer.add_labels(
         prediction_layer_data,
         name=name,  
@@ -81,7 +82,7 @@ def add_sam2_mask_layer(viewer,
     for btn in buttons_to_hide: 
         getattr(qctrl, btn).hide() 
         
-    return labels_layer
+    return labels_layer, memmap_file_path
 
 
 def add_sam2_shapes_layer(
@@ -104,6 +105,8 @@ def add_sam2_shapes_layer(
     base_color : str or list
         Color of the shapes layer.
     '''
+    
+    
     shapes_layer = viewer.add_shapes(None, 
                                  ndim=3,
                                  name=name, 
