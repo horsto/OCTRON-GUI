@@ -42,26 +42,26 @@ def add_sam2_mask_layer(viewer,
         data_shape = (num_frames, height, width)
         memmap_file_path = project_path / f"{name}.dat"
         if memmap_file_path.exists():
-            mask_layer_data = np.memmap(memmap_file_path, 
+            prediction_layer_data = np.memmap(memmap_file_path, 
                                         mode='r+', 
                                         dtype=np.uint8, 
                                         shape=data_shape
                                         )
-            show_info(f"Mask layer data found at {memmap_file_path.as_posix()}")
+            show_info(f"Prediction (mask) layer data found at {memmap_file_path.as_posix()}")
         else:
-            mask_layer_data = np.memmap(memmap_file_path, 
+            prediction_layer_data = np.memmap(memmap_file_path, 
                                         mode='w+', 
                                         dtype=np.uint8, 
                                         shape=data_shape
                                         )
-            mask_layer_data[:] = 0 # All zeros
-            mask_layer_data.flush()
+            prediction_layer_data[:] = 0 # All zeros
+            prediction_layer_data.flush()
     else:
         show_error("Video layer metadata incomplete; dummy mask not created.")
         return
     
     labels_layer = viewer.add_labels(
-        mask_layer_data,
+        prediction_layer_data,
         name=name,  
         opacity=0.4,  
         blending='additive',  
@@ -183,12 +183,12 @@ def add_annotation_projection(
     # since there they are used to assign unique colors to newly created label suffix combinations
     (label_colors, indices_max_diff_labels, _) = object_organizer.all_colors()
     
-    collected_mask_data = []
+    collected_mask_data = [] # Data from prediction layers
     for entry in object_organizer.get_entries_by_label(label):
         # There might be multiple entries (with suffixes) for the same label
         # This is why we loop here over all entries for that label ... 
         
-        mask_layer_data = entry.mask_layer.data
+        prediction_layer_data = entry.prediction_layer.data # Mask data
         annotation_layer = entry.annotation_layer
         # Get color and make map 
         colors = label_colors[indices_max_diff_labels[entry.label_id]]
@@ -197,8 +197,8 @@ def add_annotation_projection(
         # Filter by prediction indices
         predicted_indices = entry.predicted_frames
         if predicted_indices:
-            mask_layer_data = mask_layer_data[predicted_indices]
-            collected_mask_data.append(mask_layer_data)
+            prediction_layer_data = prediction_layer_data[predicted_indices]
+            collected_mask_data.append(prediction_layer_data)
             annotation_layer.visible = False
             
     if not collected_mask_data:

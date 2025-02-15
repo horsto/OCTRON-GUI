@@ -216,9 +216,9 @@ class octron_widget(QWidget):
         organizer_entry = self.object_organizer.get_entry(obj_id)
         organizer_entry.add_predicted_frame(frame_idx)
         # Extract current mask layer
-        mask_layer = organizer_entry.mask_layer
-        mask_layer.data[frame_idx,:,:] = mask
-        mask_layer.refresh()  
+        prediction_layer = organizer_entry.prediction_layer
+        prediction_layer.data[frame_idx,:,:] = mask
+        prediction_layer.refresh()  
         if self._viewer.dims.current_step[0] != frame_idx and not last_run:
             self._viewer.dims.set_point(0, frame_idx)
         self.batch_predict_progressbar.setValue(progress)
@@ -526,23 +526,23 @@ class octron_widget(QWidget):
         new_organizer_entry = self.object_organizer.entries[obj_id] # Re-fetch to add more later
         obj_color = new_organizer_entry.color
         
-        ######### Create a new mask layer  ######################################################### 
+        ######### Create a new prediction (mask) layer  ######################################################### 
         
-        mask_layer_name = f"{new_layer_name} masks"
+        prediction_layer_name = f"{new_layer_name} masks"
         mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
                                           use_selection=True, 
                                           selection=1,
                                           )
-        mask_layer = add_sam2_mask_layer(viewer=self._viewer,
+        prediction_layer = add_sam2_mask_layer(viewer=self._viewer,
                                          video_layer=self.video_layer,
-                                         name=mask_layer_name,
+                                         name=prediction_layer_name,
                                          project_path=self.project_path,
                                          color=mask_colors,
                                          )
         # For each layer that we create, write the object ID and the name to the metadata
-        mask_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
-        mask_layer.metadata['_obj_id'] = obj_id # Save the object ID
-        new_organizer_entry.mask_layer = mask_layer
+        prediction_layer.metadata['_name']   = prediction_layer_name # Octron convention. Save a copy of the name
+        prediction_layer.metadata['_obj_id'] = obj_id # Save the object ID
+        new_organizer_entry.prediction_layer = prediction_layer
 
         ######### Create a new annotation layer ####################################################
         
@@ -554,7 +554,7 @@ class octron_widget(QWidget):
                                                      color=obj_color,
                                                      )
             # For each layer that we create, write the object ID and the name to the metadata
-            annotation_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
+            annotation_layer.metadata['_name']   = annotation_layer_name # Octron convention. Save a copy of the name
             annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
             new_organizer_entry.annotation_layer = annotation_layer
             # Connect callback
@@ -570,7 +570,7 @@ class octron_widget(QWidget):
                                                      name=annotation_layer_name,
                                                      )
             # For each layer that we create, write the object ID and the name to the metadata
-            annotation_layer.metadata['_name']   = mask_layer_name # Octron convention. Save a copy of the name
+            annotation_layer.metadata['_name']   = annotation_layer_name # Octron convention. Save a copy of the name
             annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
             new_organizer_entry.annotation_layer = annotation_layer
             # Connect callback

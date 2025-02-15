@@ -12,7 +12,7 @@ class Obj(BaseModel):
     suffix: str
     label_id: Optional[int] = None
     color: Optional[list] = None
-    mask_layer: Optional[Any] = None
+    prediction_layer: Optional[Any] = None
     annotation_layer: Optional[Any] = None
     predicted_frames: List[Any] = Field(default_factory=list)
     
@@ -55,7 +55,7 @@ class Obj(BaseModel):
     def __repr__(self) -> str:
         return (
             f"Obj(label={self.label!r}, suffix={self.suffix!r}, label_id={self.label_id!r}, "
-            f"color={self.color!r}, mask_layer={self.mask_layer!r}, annotation_layer={self.annotation_layer!r})"
+            f"color={self.color!r}, prediction_layer={self.prediction_layer!r}, annotation_layer={self.annotation_layer!r})"
         )
 
 
@@ -66,7 +66,7 @@ class ObjectOrganizer(BaseModel):
     defined each by a unique ID,
     that is also the one that SAM2 internally deals with, 
     and representing attributes such as label, a unique label ID, suffix, color. 
-    It also assigns a unique mask layer and annotation layer to each object.
+    It also assigns a unique mask  (=prediction) layer and annotation layer to each object.
     This way, all information for objects flowing through OCTRON is saved in one place. 
     
     

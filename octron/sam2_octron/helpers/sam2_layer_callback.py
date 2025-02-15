@@ -51,10 +51,10 @@ class sam2_octron_callbacks():
             
             # Get the corresponding mask layer 
             organizer_entry = self.octron.object_organizer.entries[obj_id]
-            mask_layer = organizer_entry.mask_layer
-            if mask_layer is None:
+            prediction_layer = organizer_entry.prediction_layer
+            if prediction_layer is None:
                 # That should actually never happen 
-                self.octron.show_error('No corresponding mask layer found.')
+                self.octron.show_error('No corresponding prediction layer found.')
                 return   
             
             video_height = self.octron.video_layer.metadata['height']    
@@ -116,8 +116,8 @@ class sam2_octron_callbacks():
                                     masks=shape_mask,
                                     )
 
-            mask_layer.data[frame_idx] = mask
-            mask_layer.refresh()
+            prediction_layer.data[frame_idx] = mask
+            prediction_layer.refresh()
             organizer_entry.add_predicted_frame(frame_idx)
             # Prefetch next batch of images
             if not self.octron.prefetcher_worker.is_running:
@@ -143,12 +143,12 @@ class sam2_octron_callbacks():
         
         # Get the corresponding mask layer 
         organizer_entry = self.octron.object_organizer.entries[obj_id]
-        mask_layer = organizer_entry.mask_layer
+        prediction_layer = organizer_entry.prediction_layer
         color = organizer_entry.color
         
-        if mask_layer is None:
+        if prediction_layer is None:
             # That should actually never happen 
-            self.octron.show_error('No corresponding mask layer found.')
+            self.octron.show_error('No corresponding prediction (mask) layer found.')
             return    
         
         if action == 'added':
@@ -193,8 +193,8 @@ class sam2_octron_callbacks():
                                 labels=labels,
                                 points=point_data,
                                 )
-            mask_layer.data[frame_idx,:,:] = mask
-            mask_layer.refresh()  
+            prediction_layer.data[frame_idx,:,:] = mask
+            prediction_layer.refresh()  
             organizer_entry.add_predicted_frame(frame_idx)
         else:
             # Catching all above with ['added','removed','changed']
