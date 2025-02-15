@@ -53,7 +53,7 @@ def create_image_zarr(zip_path,
                                    shape=(num_frames, 3, image_height, image_width),  
                                    chunks=(chunk_size, 3, image_height, image_width), 
                                    fill_value=np.nan,
-                                   dtype='float32'
+                                   dtype='float16'
                                    )
     return image_zarr
 
@@ -117,10 +117,6 @@ def load_image_zarr(zip_path,
         print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
         return None, False
     
-    # Check dtype: expected float32
-    if image_zarr.dtype != 'float32':
-        print(f"dtype mismatch: expected float32, got {image_zarr.dtype}")
-        return None, False
     
     return image_zarr, True
 
@@ -165,7 +161,12 @@ class OctoZarr:
         # Store the napari data layer   
         self.video_data = video_data
         self.cached_indices = np.full((running_buffer_size), np.nan)
-        self.cached_images  = torch.empty(running_buffer_size, self.num_chs, self.image_size, self.image_size)
+        self.cached_images  = torch.empty(running_buffer_size, 
+                                          self.num_chs, 
+                                          self.image_size, 
+                                          self.image_size,
+                                          dtype=torch.bfloat16
+                                          )
         self.cur_cache_idx = 0 # Keep track of where you are in the cache currently
 
     @property
@@ -185,13 +186,14 @@ class OctoZarr:
             indices_ = indices[0]
         else:
             indices_ = indices
-        self.zarr_array[indices_,:,:,:] = batch.numpy()    
+        self.zarr_array[indices_,:,:,:] = batch.float().numpy().astype(np.float16)
+        # ... see https://github.com/pytorch/pytorch/issues/90574#issuecomment-1983794341 
         self.saved_indices.extend(indices)   
          
     @torch.inference_mode()
     def _fetch_one(self, idx):
         img = self.video_data[idx]
-        img = self._resize_img(torch.from_numpy(img).permute(2,0,1)).float()
+        img = self._resize_img(torch.from_numpy(img).permute(2,0,1)).to(torch.bfloat16)
         img /= 255.  
         img -= self.img_mean
         img /= self.img_std     
@@ -206,7 +208,7 @@ class OctoZarr:
     @torch.inference_mode()
     def _fetch_many(self, indices):
         imgs = self.video_data[indices]
-        imgs = self._resize_img(torch.from_numpy(imgs).permute(0,3,1,2)).float()
+        imgs = self._resize_img(torch.from_numpy(imgs).permute(0,3,1,2)).to(torch.bfloat16)
         imgs /= 255.  
         imgs -= self.img_mean
         imgs /= self.img_std
@@ -239,7 +241,12 @@ class OctoZarr:
         
         '''
         # Initialize empty torch arrach of length indices
-        imgs_torch = torch.empty(len(indices), self.num_chs, self.image_size, self.image_size)
+        imgs_torch = torch.empty(len(indices), 
+                                 self.num_chs, 
+                                 self.image_size, 
+                                 self.image_size,
+                                 dtype=torch.bfloat16
+                                 )
         
         # First check whether the indices are in the cache
         # If they are, return them immediately
@@ -256,7 +263,7 @@ class OctoZarr:
             # Single image
             idx = indices[0]
             if idx in self.saved_indices:
-                img = torch.from_numpy(self.zarr_array[idx])
+                img = torch.from_numpy(self.zarr_array[idx]).to(torch.bfloat16)
             else:
                 img = self._fetch_one(idx=idx)
                 self._save_to_zarr([img], [idx])
@@ -274,7 +281,7 @@ class OctoZarr:
                 self._save_to_zarr(imgs, not_in_store)
             if len(in_store):
                 #print(f'Found in store (multiple): {in_store}')
-                imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze()
+                imgs_in_store = torch.from_numpy(self.zarr_array[in_store]).squeeze().to(torch.bfloat16)
                 imgs_torch[np.where(np.isin(indices, in_store))[0]] = imgs_in_store    
 
         return imgs_torch.squeeze()
