@@ -2,8 +2,10 @@
 import os 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
+from pathlib import Path
 import torch
-from hydra import compose
+from hydra.core.global_hydra import GlobalHydra
+from hydra import compose, initialize
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from sam2.build_sam import _load_checkpoint
@@ -86,9 +88,17 @@ def build_sam2_octron(
     hydra_overrides.extend(hydra_overrides_extra)
 
     # Read config and init model
-    cfg = compose(config_name=config_file, overrides=hydra_overrides)
-    OmegaConf.resolve(cfg)
-    model = instantiate(cfg.model, _recursive_=True)
+    config_name = os.path.basename(config_file)
+    # Clear existing Hydra instance if it exists
+    if GlobalHydra.instance().is_initialized():
+        GlobalHydra.instance().clear()
+    # I am hardcoding the config path here because I don't want to use the hydra config path
+    with initialize(config_path='../configs/sam2.1'):
+        # Read config and init model
+        cfg = compose(config_name=config_name, overrides=hydra_overrides)
+        OmegaConf.resolve(cfg)
+        model = instantiate(cfg.model, _recursive_=True)
+
 
     _load_checkpoint(model, ckpt_path)
     model = model.to(device)
