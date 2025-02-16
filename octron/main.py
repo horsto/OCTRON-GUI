@@ -338,6 +338,9 @@ class octron_widget(QWidget):
                 # Remove the memmap file
                 memmap_file_path = self.layer_to_remove.metadata['_memmap']
                 if Path(memmap_file_path).exists():
+                    # Close the memory-mapped file before deleting it
+                    self.layer_to_remove.data.flush()
+                    self.layer_to_remove.data._mmap.close() 
                     Path(memmap_file_path).unlink()
                     print(f'Removed memmap file {memmap_file_path}')
                 # Get the object entry from the object organizer
