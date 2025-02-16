@@ -5,7 +5,7 @@ import requests
 import yaml
 
 def check_url_availability(url):
-    '''
+    """
     Quick check if a URL is available
     Parameters
     ----------
@@ -19,7 +19,7 @@ def check_url_availability(url):
         True if the URL is available, False otherwise  
     
     
-    '''
+    """
     try:
         response = requests.head(url)
         if response.status_code == 200:
@@ -37,7 +37,7 @@ def download_sam2_checkpoint(url,
                             fpath, 
                             overwrite=False
                             ):
-    '''
+    """
     Parameters
     ----------
     url : str
@@ -50,7 +50,7 @@ def download_sam2_checkpoint(url,
         If False, skip the download if the file already exists. Default is False.
         
     
-    '''
+    """
     fpath = Path(fpath)
     output_folder = fpath.parent
     assert output_folder.is_dir(), f"Destination folder '{output_folder}' does not exist"
@@ -77,7 +77,7 @@ def check_model_availability(SAM2p1_BASE_URL,
                              models_yaml_path,
                              force_download = False,
                              ):
-    '''
+    """
     Check the availability of the SAM2 model configurations and checkpoints.
     Optionally download the files if they are not available or if force_download is set to True.
     
@@ -109,7 +109,7 @@ def check_model_availability(SAM2p1_BASE_URL,
             
         ...
           
-    '''
+    """
     if not SAM2p1_BASE_URL:
         # Archiving the SAM2 URL here for now ...
         SAM2p1_BASE_URL="https://dl.fbaipublicfiles.com/segment_anything_2/092824" 

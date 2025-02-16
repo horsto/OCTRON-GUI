@@ -11,9 +11,9 @@ from octron.sam2_octron.helpers.sam2_octron import (
 )
 
 class sam2_octron_callbacks():
-    '''
+    """
     Callback for octron and SAM2.
-    '''
+    """
     def __init__(self, octron):
         # Store the reference to the main OCTRON widget
         self.octron = octron
@@ -21,9 +21,9 @@ class sam2_octron_callbacks():
         self.left_right_click = None
             
     def on_mouse_press(self, layer, event):
-        '''
+        """
         Generic function to catch left and right mouse clicks
-        '''
+        """
         if event.type == 'mouse_press':
             if event.button == 1:  # Left-click
                 self.left_right_click = 'left'
@@ -32,7 +32,7 @@ class sam2_octron_callbacks():
         
     
     def on_shapes_changed(self, event):
-        '''
+        """
         Callback function for napari annotation "Shapes" layer.
         This function is called whenever changes are made to annotation shapes.
         It extracts the mask from the shapes layer and runs the predictor on it.
@@ -40,7 +40,7 @@ class sam2_octron_callbacks():
         There is one special case for the "rectangle tool", which acts as "box input" 
         to SAM2 instead of creating an input mask.
         
-        '''
+        """
         
         
         action = event.action
@@ -130,11 +130,11 @@ class sam2_octron_callbacks():
     
     
     def on_points_changed(self, event):
-        '''
+        """
         Callback function for napari annotation "Points" layer.
         This function is called whenever changes are made to annotation points.
 
-        '''
+        """
         action = event.action
         predictor = self.octron.predictor
         frame_idx  = self.viewer.dims.current_step[0] 
@@ -203,9 +203,9 @@ class sam2_octron_callbacks():
     
     
     def prefetch_images(self):
-        '''
+        """
         Thread worker for prefetching images for fast processing in the viewer
-        '''
+        """
         predictor = self.octron.predictor
         assert predictor, "No model loaded."
         assert predictor.is_initialized, "Model not initialized."
@@ -231,11 +231,11 @@ class sam2_octron_callbacks():
 
     
     def next_predict(self):
-        '''
+        """
         Threaded function to run the predictor forward on exactly one frame.
         Uses SAM2 => propagate_in_video function.
         
-        '''    
+        """    
 
         # Necessary to have at least "some" input somewhere ... 
         # Loop over all entries in the object organizer and check 
@@ -295,11 +295,11 @@ class sam2_octron_callbacks():
     
     
     def batch_predict(self):
-        '''
+        """
         Threaded function to run the predictor forward on a batch of frames.
         Uses SAM2 => propagate_in_video function.
         
-        '''
+        """
         
         # Necessary to have at least "some" input somewhere ... 
         # Loop over all entries in the object organizer and check 

@@ -25,9 +25,9 @@ class Obj(BaseModel):
         return v
     
     def add_predicted_frame(self, frame_index: int) -> None:
-        '''
+        """
         Add a frame index to predicted_frames if it is not already present.
-        '''
+        """
         if frame_index not in self.predicted_frames:
             self.predicted_frames.append(frame_index)
 
@@ -36,9 +36,9 @@ class Obj(BaseModel):
             self.add_predicted_frame(index)
     
     def remove_predicted_frame(self, frame_index: int) -> None:
-        '''
+        """
         Remove a frame index from predicted_frames - only if it exists.
-        '''
+        """
         if frame_index in self.predicted_frames:
             self.predicted_frames.remove(frame_index)
             
@@ -47,9 +47,9 @@ class Obj(BaseModel):
             self.remove_predicted_frame(index)
 
     def reset_predicted_frames(self) -> None:
-        '''
+        """
         Reset the predicted_frames list.
-        '''
+        """
         self.predicted_frames = []
             
     def __repr__(self) -> str:
@@ -60,7 +60,7 @@ class Obj(BaseModel):
 
 
 class ObjectOrganizer(BaseModel):
-    '''
+    """
     This module provides pydantic-based classes for organizing and managing tracking entries in OCTRON. 
     It is designed to help maintain a dictionary of object entries (named Obj, see above), 
     defined each by a unique ID,
@@ -86,7 +86,7 @@ class ObjectOrganizer(BaseModel):
     >>> object_organizer.add_entry(1, Obj(label='worm', suffix='1')) # Color is picked automatically 
     
     
-    '''
+    """
     entries: Dict[int, Obj] = {}
     # Mapping from label to its assigned label_id.
     label_id_map: Dict[str, int] = {}
@@ -99,13 +99,13 @@ class ObjectOrganizer(BaseModel):
 
 
     def all_colors(self) -> tuple[list, list, list]:
-        '''
+        """
         Create a list of colors for all labels. This is currently capped at 10, 
         which I think is reasonable.
         Returns a list of lists:
             -> label
                 -> colors for each label
-        '''
+        """
         label_colors = create_label_colors(cmap='cmr.tropical', 
                                            n_labels=self.n_labels_max, 
                                            n_colors_submap=self.n_subcolors,
@@ -125,9 +125,9 @@ class ObjectOrganizer(BaseModel):
             return 0
         
     def min_available_id(self) -> int:
-        '''
+        """
         Find the minimum integer >= 0 that is not yet present as an ID in the object organizer.
-        '''
+        """
         existing_ids = set(self.entries.keys())
         min_id = 0
         while min_id in existing_ids:
@@ -141,15 +141,15 @@ class ObjectOrganizer(BaseModel):
         return any(entry.suffix == suffix for entry in self.entries.values())
 
     def exists_combination(self, label: str, suffix: str) -> bool:
-        '''
+        """
         Check if the combination of label and suffix is already present.
-        '''
+        """
         return any(entry.label == label and entry.suffix == suffix for entry in self.entries.values())
 
     def get_current_labels(self) -> List[str]:
-        '''
+        """
         Return a list of unique labels from all entries.
-        '''
+        """
         return list({entry.label for entry in self.entries.values()})
     
     def get_entries_by_label(self, label: str) -> List[Obj]:
@@ -159,15 +159,15 @@ class ObjectOrganizer(BaseModel):
         return [entry for entry in self.entries.values() if entry.label == label]
 
     def get_suffixes_by_label(self, label: str) -> List[str]:
-        '''
+        """
         For a given label, return a list of all suffixes from entries matching that label.
-        '''
+        """
         return [entry.suffix for entry in self.entries.values() if entry.label == label]
 
     def get_entry_by_label_suffix(self, label: str, suffix: str) -> Optional[Obj]:
-        '''
+        """
         Return the entry that matches the given label and suffix combination.
-        '''
+        """
         for entry in self.entries.values():
             if entry.label == label and entry.suffix == suffix:
                 return entry
@@ -209,27 +209,27 @@ class ObjectOrganizer(BaseModel):
         self.entries[id_] = entry
 
     def get_entry_id(self, organizer_entry: Obj) -> Optional[int]:
-        '''
+        """
         Return the ID of the given organizer entry.
-        '''
+        """
         for id_, entry in self.entries.items():
             if entry == organizer_entry:
                 return id_
         return None
 
     def get_entry(self, id_: int) -> Obj:
-        '''
+        """
         Return the entry for the given id.
-        '''
+        """
         if id_ not in self.entries:
             raise ValueError(f"ID {id_} does not exist.")
         return self.entries[id_]
 
     def remove_entry(self, id_: int) -> Obj:
-        '''
+        """
         Remove the entry for the given id and return it.
         Raises KeyError if id is not found.
-        '''
+        """
         if id_ not in self.entries:
             raise KeyError(f"ID {id_} does not exist.")
         return self.entries.pop(id_)

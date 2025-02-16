@@ -13,12 +13,12 @@ from qtpy.QtWidgets import (
 )
 
 class add_new_label_dialog(QDialog):
-    '''
+    """
     Allows user to add a new label name to the list 
     of labels in the octron GUI.
     
     
-    '''
+    """
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         self.setWindowTitle("Create new label")
@@ -51,7 +51,7 @@ class remove_label_dialog(QDialog):
     and allows the user to click on an entry to remove it.
     """
     def __init__(self, parent: QWidget, items: list):
-        '''
+        """
         Parameters
         ----------
         parent : QWidget
@@ -60,7 +60,7 @@ class remove_label_dialog(QDialog):
             A list of current label names
         
         
-        '''
+        """
         super().__init__(parent)
         self.setWindowTitle("Remove label")
         self.resize(300, 200)

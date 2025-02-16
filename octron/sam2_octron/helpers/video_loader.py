@@ -4,7 +4,7 @@ import av
 
 
 def probe_video(file_path):
-    '''
+    """
     Open video file with pyav and return some basic information about the video.
     
     Parameters
@@ -17,7 +17,7 @@ def probe_video(file_path):
     video_dict : dict
         Dictionary containing video information
 
-    '''
+    """
     file_path = Path(file_path)
     assert file_path.exists(), f"Video file {file_path} does not exist."
     file_path = file_path.as_posix()    
@@ -55,7 +55,7 @@ def probe_video(file_path):
 
 
 def get_vfile_hash(filepath, block_size=65536):
-    '''
+    """
     Get fast hash digest of video file using blake2b. 
     
     Parameters
@@ -69,7 +69,7 @@ def get_vfile_hash(filepath, block_size=65536):
     -------
     str : Hash digest.
     
-    '''
+    """
     filepath = Path(filepath)
     assert filepath.exists(), f'File does not exist: {filepath}'
     

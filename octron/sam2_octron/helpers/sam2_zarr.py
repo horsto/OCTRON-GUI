@@ -6,16 +6,24 @@ import numpy as np
 import zarr
 import torch
 from torchvision.transforms import Resize
+import warnings 
+# Suppress specific warnings
+warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
 
 def create_image_zarr(zip_path, 
                       num_frames, 
                       image_height,
                       image_width=None,
                       chunk_size=20,
+                      fill_value=np.nan,
+                      dtype='float16',
+                      num_ch=None,
                       ):
-    '''
+    """
     Creates a zarr archive for storing and retrieving image data.
-    This is meant for the resized images, resized to SAM2 predictor input size.
+    Depending on the number of channels, the zarr array will have shape
+    (num_frames, num_ch, image_height, image_width) or
+    (num_frames, image_height, image_width).
     
     Parameters
     ---------
@@ -30,13 +38,20 @@ def create_image_zarr(zip_path,
         If None, then image_width = image_height
     chunk_size : int, optional
         Size of the chunk to store in the zarr archive. 
+    fill_value : int, optional
+        Value to fill the zarr array with.
+    dtype : str, optional
+        Data type of the zarr array.
+    num_ch : int, optional
+        Number of channels in the image. Default is None.
+        If None, then the channel dimension will not be included.
         
     Returns
     -------
     image_zarr : zarr.core.Array
         The zarr array to store the image data in 
         
-    '''
+    """
     assert image_height > 0, f'image_height must be > 0, not {image_height}'
     if image_width is None:
         image_width = image_height
@@ -50,13 +65,28 @@ def create_image_zarr(zip_path,
 
     # Assuming local store on fast SSD, so no compression employed for now 
     store = zarr.storage.ZipStore(zip_path, mode='w')
-    root = zarr.create_group(store=store)
-    image_zarr = root.create_array(name='masks',
-                                   shape=(num_frames, 3, image_height, image_width),  
-                                   chunks=(chunk_size, 3, image_height, image_width), 
-                                   fill_value=np.nan,
-                                   dtype='float16'
-                                   )
+  
+    if num_ch is not None: 
+        image_zarr = zarr.create_array(store=store,
+                                    name='masks',
+                                    shape=(num_frames, num_ch, image_height, image_width),  
+                                    chunks=(chunk_size, num_ch, image_height, image_width), 
+                                    fill_value=fill_value,
+                                    dtype=dtype,
+                                    overwrite=True,
+                                    )
+    else:
+        image_zarr = zarr.create_array(store=store,
+                                    name='masks',
+                                    shape=(num_frames, image_height, image_width),  
+                                    chunks=(chunk_size, image_height, image_width), 
+                                    fill_value=fill_value,
+                                    dtype=dtype,
+                                    overwrite=True,
+                                    )
+    print('Zarr store info:')
+    print(image_zarr.info)
+
     return image_zarr
 
 def load_image_zarr(zip_path, 
@@ -65,7 +95,7 @@ def load_image_zarr(zip_path,
                     image_width=None,
                     chunk_size=20,
                     ):
-    '''
+    """
     Loads an existing zarr archive for storing and retrieving image data,
     and checks if the stored array has the expected parameters.
     
@@ -90,7 +120,7 @@ def load_image_zarr(zip_path,
     status : bool
         True if the array was loaded successfully, False otherwise.   
 
-    '''
+    """
     assert zip_path.exists(), f'Zip file {zip_path.as_posix()} does not exist.'
     assert image_height > 0, f'image_height must be > 0, not {image_height}'
     if image_width is None:
@@ -100,6 +130,7 @@ def load_image_zarr(zip_path,
 
     # Open the ZipStore in read mode and load the group.
     store = zarr.storage.ZipStore(zip_path, mode='a')
+   
     root = zarr.open_group(store=store, mode='a')
     print("Existing keys in zarr archive:", list(root.array_keys()))
     # Attempt to load the array named 'masks'
@@ -108,7 +139,8 @@ def load_image_zarr(zip_path,
         return None, False
     else:
         image_zarr = root['masks']
-
+    print('Zarr store info:')
+    print(image_zarr.info)
     # Check shape: expected (num_frames, 3, image_height, image_width)
     expected_shape = (num_frames, 3, image_height, image_width)
     if image_zarr.shape != expected_shape:
@@ -120,13 +152,17 @@ def load_image_zarr(zip_path,
     if image_zarr.chunks != expected_chunks:
         print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
         return None, False
-    
-    
+        
     return image_zarr, True
 
 
+
+
+
+
+
 class OctoZarr:
-    '''
+    """
     Flexible subclass of zarr array that allows for image data retrieval
     
     The idea here was to just replace the possibly very large 
@@ -138,7 +174,7 @@ class OctoZarr:
     This should be optimized...  This is a lot (!) of back and forth (torch->numpy and back)
     
     
-    '''
+    """
     def __init__(self, 
                  zarr_array, 
                  video_data,
@@ -175,9 +211,9 @@ class OctoZarr:
         return self.saved_indices        
 
     def _save_to_zarr(self, batch, indices):
-        ''' 
+        """ 
         Save a batch of images to  zarr array at index position indices
-        '''
+        """
         assert len(indices), 'No indices provided'
         assert len(batch) == len(indices), 'Batch and indices should have the same length'
         
@@ -224,7 +260,7 @@ class OctoZarr:
     
     def fetch(self, indices):   
         
-        '''
+        """
         Check if the images are already in the zarr store.
         
         The logic is the following: 
@@ -240,7 +276,7 @@ class OctoZarr:
         Combine those with images loaded from zarr store 
         - Return the combined images as torch tensor
         
-        '''
+        """
         # Initialize empty torch arrach of length indices
         imgs_torch = torch.empty(len(indices), 
                                  self.num_chs, 
@@ -288,10 +324,10 @@ class OctoZarr:
         return imgs_torch.squeeze()
     
     def __getitem__(self, frame_idx):
-        '''
+        """
         Normal "get" function 
 
-        '''
+        """
         if isinstance(frame_idx, slice):
             indices = np.arange(frame_idx.start, frame_idx.stop, frame_idx.step)
         elif isinstance(frame_idx, list):
@@ -306,3 +342,5 @@ class OctoZarr:
         
     def __repr__(self):
             return repr(self.zarr_array)
+
+

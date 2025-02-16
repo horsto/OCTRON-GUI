@@ -78,9 +78,9 @@ class Mp4DropWidget(QWidget):
             super().mousePressEvent(event)
 
 class octron_gui_elements(QWidget):
-    '''
+    """
     Callback for octron and SAM2.
-    '''
+    """
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         # Store the reference to the main OCTRON widget

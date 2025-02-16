@@ -18,7 +18,7 @@ def build_sam2_octron(
     apply_postprocessing=False,
     **kwargs,
 ):
-    '''
+    """
     Build the SAM2 model from config and checkpoint files.
     
     This is basically the original build_sam function.
@@ -43,7 +43,7 @@ def build_sam2_octron(
             binarize_mask_from_pts_for_mem_enc = True
             fill_hole_area = 8
     **kwargs : dict
-    '''
+    """
     
     # Find out which device to use
     # Will automatically select CUDA if available and MPS (on Mac)

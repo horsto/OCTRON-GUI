@@ -21,9 +21,9 @@ from .sam2_zarr import OctoZarr
 
 
 class SAM2_octron(SAM2VideoPredictor):
-    '''
+    """
     Subclass of SAM2VideoPredictor that adds some additional functionality for OCTRON.
-    '''
+    """
     def __init__(
         self,
         **kwargs,
@@ -53,12 +53,12 @@ class SAM2_octron(SAM2VideoPredictor):
         video_data,
         zarr_store,
     ):
-        '''
+        """
 
         
         
         
-        '''
+        """
         compute_device = self.device  
         
         # Sanity checks on video data
@@ -138,13 +138,13 @@ class SAM2_octron(SAM2VideoPredictor):
     ):
         
         
-        '''
+        """
         This function is called both when new points / masks are added,
         as well as for (batched) video prediction.
         
         
         Run tracking on a single frame based on current inputs and previous memory.
-        '''
+        """
 
 
         # Retrieve correct image features
@@ -216,11 +216,11 @@ class SAM2_octron(SAM2VideoPredictor):
         processing_order=None,
         reverse=False,
         ):
-        '''
+        """
         Propagate the tracking results in the video.
         
         
-        '''
+        """
         # TODO: More checks for correct inputs
         self.propagate_in_video_preflight(self.inference_state)
 
@@ -672,7 +672,7 @@ def run_new_pred(predictor,
                  box=None,
                  **kwargs,
                  ):
-    '''
+    """
     Run a new prediction on the SAM2 model in OCTRON.
     This is a wrapper around the SAM2_octron functions that allow 
     for adding new points or masks.
@@ -710,7 +710,7 @@ def run_new_pred(predictor,
     mask : np.array
         The mask image that can be re-added to the viewer.
     
-    '''
+    """
     clear_old_points = kwargs.get('clear_old_points', True)
     normalize_coords = kwargs.get('normalize_coords', True)
 

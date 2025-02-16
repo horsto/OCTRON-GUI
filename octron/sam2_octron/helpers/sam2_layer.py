@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from napari.utils import Colormap
 from napari.utils.notifications import show_info, show_error
+from octron.sam2_octron.helpers.sam2_zarr import create_image_zarr, load_image_zarr
 
 def add_sam2_mask_layer(viewer,
                         video_layer,
@@ -10,7 +11,7 @@ def add_sam2_mask_layer(viewer,
                         project_path,
                         color,
                         ):
-    '''
+    """
     Generic mask layer for napari and SAM2.
     Initiates the mask layer, a napari labels layer instance,
     and fixes it's color to "base_color'.
@@ -27,7 +28,18 @@ def add_sam2_mask_layer(viewer,
         Path to the project directory.
     base_color : str or list
         Color of the mask layer.
-    '''
+        
+        
+    Returns
+    -------
+    labels_layer : napari.layers.Labels
+        Labels layer object.
+    prediction_layer_data : zarr.core.Array
+
+    zarr_file_path : Path
+        Path to the zarr file.
+
+    """
     project_path = Path(project_path)
     
     assert project_path.exists(), f"Project path {project_path.as_posix()} does not exist."  
@@ -35,27 +47,32 @@ def add_sam2_mask_layer(viewer,
     # Check if required metadata exists before creating the dummy mask
     required_keys = ['num_frames', 'height', 'width']
     if all(k in video_layer.metadata for k in required_keys):        
-        # Create a numpy memmap file for the mask layer array
+        # Create a zarr array for the mask (prediction) data
         num_frames = video_layer.metadata['num_frames']
         height = video_layer.metadata['height']
         width = video_layer.metadata['width']
-        data_shape = (num_frames, height, width)
-        memmap_file_path = project_path / f"{name}.dat"
-        if memmap_file_path.exists():
-            prediction_layer_data = np.memmap(memmap_file_path, 
-                                        mode='r+', 
-                                        dtype=np.uint8, 
-                                        shape=data_shape
-                                        )
-            show_info(f"Prediction (mask) layer data found at {memmap_file_path.as_posix()}")
+        zarr_file_path = project_path / f"{name}.zip"
+        if zarr_file_path.exists():
+            prediction_layer_data, status = load_image_zarr(zarr_file_path, 
+                                                            num_frames=num_frames, 
+                                                            image_height=height, 
+                                                            image_width=width, 
+                                                            chunk_size=20,
+                                                            )
+            if status:
+                show_info(f"Prediction (mask) layer data found at {zarr_file_path.as_posix()}")
+            else:
+                show_error(f"Failed to load Zarr array from {zarr_file_path.as_posix()}")
+                return None, None
         else:
-            prediction_layer_data = np.memmap(memmap_file_path, 
-                                        mode='w+', 
-                                        dtype=np.uint8, 
-                                        shape=data_shape
-                                        )
-            prediction_layer_data[:] = 0 # All zeros
-            prediction_layer_data.flush()
+            prediction_layer_data = create_image_zarr(zarr_file_path, 
+                                                      num_frames=num_frames, 
+                                                      image_height=height, 
+                                                      image_width=width, 
+                                                      chunk_size=20,
+                                                      fill_value=0,
+                                                      dtype='uint8',
+                                                      )
     else:
         show_error("Video layer metadata incomplete; dummy mask not created.")
         return None, None
@@ -82,7 +99,7 @@ def add_sam2_mask_layer(viewer,
     for btn in buttons_to_hide: 
         getattr(qctrl, btn).hide() 
         
-    return labels_layer, memmap_file_path
+    return labels_layer, zarr_file_path
 
 
 def add_sam2_shapes_layer(
@@ -90,7 +107,7 @@ def add_sam2_shapes_layer(
     name,
     color,
     ):
-    '''
+    """
     Generic shapes layer for napari and SAM2.
     Initiates the shapes layer, a napari shapes layer instance,
     
@@ -104,7 +121,13 @@ def add_sam2_shapes_layer(
         Name of the new shapes layer.
     base_color : str or list
         Color of the shapes layer.
-    '''
+    
+    Returns
+    -------
+    shapes_layer : napari.layers.Shapes
+        Shapes layer object.    
+    
+    """
     
     
     shapes_layer = viewer.add_shapes(None, 
@@ -139,7 +162,7 @@ def add_sam2_points_layer(
     viewer,
     name,
     ):
-    '''
+    """
     Generic points layer for napari and SAM2.
     Initiates the points layer, a napari points layer instance,
     
@@ -151,7 +174,13 @@ def add_sam2_points_layer(
         Video layer = video layer object
     name : str
         Name of the new points layer.
-    '''
+        
+    Returns
+    -------
+    points_layer : napari.layers.Points
+        Points layer object.
+        
+    """
     points_layer = viewer.add_points(None, 
                                  ndim=3,
                                  name=name, 
@@ -172,15 +201,23 @@ def add_annotation_projection(
     viewer,
     object_organizer,
     label,
-    name,
     ):
-    '''
+    """
     Creates a average projection of all masks for a given label.
     This visualizes the current annotation state for a given label 
     and lets the user decide on the quality of the annotation.
     
-    
-    '''
+    Parameters
+    ----------
+    viewer : napari.Viewer
+        Napari viewer object.
+    object_organizer : octron.object_organizer.ObjectOrganizer
+        Object organizer instance.
+    label : str
+        Label for which to create the projection.
+    name : str
+
+    """
     
     # Retrieve colors which are saved as part of the object organizer
     # since there they are used to assign unique colors to newly created label suffix combinations

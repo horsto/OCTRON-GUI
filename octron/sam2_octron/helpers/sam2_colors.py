@@ -7,7 +7,7 @@ def create_label_colors(cmap='cmr.tropical',
                         n_labels=10, 
                         n_colors_submap=250
                         ):
-    '''
+    """
     Create label submaps from cmap. 
     Each submap is a list of colors that represent a label.
     For this, the cmap is being divided into n_labels submaps.
@@ -23,7 +23,7 @@ def create_label_colors(cmap='cmr.tropical',
     n_colors_submap : int
         Number of colors per submap.
         
-    '''
+    """
 
     slices = np.linspace(0, 1, n_labels+1)
     all_label_submaps = []
@@ -39,7 +39,7 @@ def create_label_colors(cmap='cmr.tropical',
 
 
 def sample_maximally_different(seq):
-    '''
+    """
     Given an ascending list of numbers, return a new ordering
     where each subsequent number is chosen such that its minimum
     absolute difference to all previously picked numbers is maximized.
@@ -50,7 +50,7 @@ def sample_maximally_different(seq):
     Example:
         Input:  [1, 2, 3, 4, 5]
         Possible Output: [1, 5, 2, 4, 3]
-    '''
+    """
     if not seq:
         return []
     # Start with the first element.

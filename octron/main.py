@@ -1,18 +1,23 @@
-'''
+"""
 OCTRON
 Main GUI file
 
-'''
+"""
 import os, sys
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import warnings
+# Suppress specific warnings
+warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 from pathlib import Path
 cur_path  = Path(os.path.abspath(__file__)).parent.parent
 base_path = Path(os.path.dirname(__file__)) # Important for example for .svg files
 sys.path.append(cur_path.as_posix()) 
 
+
+# Napari plugin QT components
 from qtpy.QtWidgets import (
     QWidget,
     QDialog,
@@ -77,12 +82,12 @@ if app is not None:
 
 
 
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 class octron_widget(QWidget):
-    '''
-    
-    '''
+    """
+    Main OCTRON widget class.
+    """
+
     def __init__(self, viewer: 'napari.viewer.Viewer', parent=None):
         super().__init__(parent)
         base_path_parent = base_path # TODO: Get rid of this path madness
@@ -133,9 +138,9 @@ class octron_widget(QWidget):
     ###################################################################################################
     
     def gui_callback_functions(self):
-        '''
+        """
         Connect all callback functions to buttons and lists in the main GUI
-        '''
+        """
         # Global layer insertion callback
         self._viewer.layers.events.inserted.connect(self.consolidate_layers)
         
@@ -160,16 +165,19 @@ class octron_widget(QWidget):
         self.toolBox.widget(1).setEnabled(False) 
         self.toolBox.widget(2).setEnabled(False) 
         self.toolBox.widget(3).setEnabled(False) 
+        
+        # Connect to the Napari viewer close event
+        #self._viewer.window.qt_viewer.closeEvent = self.closeEvent # THIS DOES NOT WORK
     
     
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     
     def load_model(self):
-        '''
+        """
         Load the selected SAM2 model and enable the batch prediction button, 
         setting the progress bar to the chunk size and the button text to predict next chunk size
         
-        '''
+        """
         index = self.sam2model_list.currentIndex()
         if index == 0:
             show_warning("Please select a valid model.")
@@ -209,17 +217,17 @@ class octron_widget(QWidget):
         self.init_zarr_prefetcher_threaded()
         
     def reset_predictor(self):
-        '''
+        """
         Reset the predictor and all layers.
-        '''
+        """
         self.predictor.reset_state()
         show_info("SAM2 predictor was reset.")
     
     def _batch_predict_yielded(self, value):
-        '''
+        """
         Called upon yielding from the batch prediction thread worker.
         Updates the progress bar and the mask layer with the predicted mask.
-        '''
+        """
         progress, frame_idx, obj_id, mask, last_run = value
         organizer_entry = self.object_organizer.get_entry(obj_id)
         organizer_entry.add_predicted_frame(frame_idx)
@@ -232,10 +240,10 @@ class octron_widget(QWidget):
         self.batch_predict_progressbar.setValue(progress)
           
     def _on_prediction_finished(self):
-        '''
+        """
         Callback for when worker within init_prediction_threaded() 
         has finished executing. 
-        '''
+        """
         # Enable the predcition button again
         self.predict_next_batch_btn.setEnabled(True)
         self.predict_next_oneframe_btn.setEnabled(True)
@@ -243,9 +251,9 @@ class octron_widget(QWidget):
         self.batch_predict_progressbar.setValue(0)
 
     def init_prediction_threaded(self):
-        '''
+        """
         Thread worker for predicting the next batch of images
-        '''
+        """
         # Before doing anything, make sure, some input has been provided
         valid = False
         try:
@@ -281,6 +289,26 @@ class octron_widget(QWidget):
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
+    # def closeEvent(self, event):
+    #     """
+    #     THIS DOES NOT WORK
+    #     Callback for the Napari viewer close event.
+    #     """
+
+    #     print('Closing viewer ...')
+    #     for zarr_store in self.all_zarrs:
+    #         if zarr_store is not None:
+    #             store = self.video_zarr.store
+    #             if hasattr(store, 'close'):
+    #                 store.close()
+    #                 print(f"Zarr {zarr_store} store closed.")
+    #     # Clean up the prefetcher worker
+    #     if self.prefetcher_worker is not None:
+    #         self.prefetcher_worker.quit()
+
+    #     event.accept()
+
+
     def open_project_folder_dialog(self):
         """
         Open a file dialog for the user to choose a base folder for the current OCTRON project.
@@ -304,9 +332,9 @@ class octron_widget(QWidget):
     
 
     def remove_all_layers(self):
-        '''
+        """
         Remove all layers from the napari viewer.
-        '''
+        """
         if len(self._viewer.layers):
             self._viewer.layers.select_all()
             self._viewer.layers.remove_selected()
@@ -335,14 +363,11 @@ class octron_widget(QWidget):
             # 1. Mask layer
             if self.layer_to_remove._basename() == 'Labels' \
                 and 'mask' in self.layer_to_remove.metadata['_name']:
-                # Remove the memmap file
-                memmap_file_path = self.layer_to_remove.metadata['_memmap']
-                if Path(memmap_file_path).exists():
-                    # Close the memory-mapped file before deleting it
-                    self.layer_to_remove.data.flush()
-                    self.layer_to_remove.data._mmap.close() 
-                    Path(memmap_file_path).unlink()
-                    print(f'Removed memmap file {memmap_file_path}')
+                # Remove the zarr zip file containing the layer data
+                zarr_file_path = self.layer_to_remove.metadata['_zarr']
+                if Path(zarr_file_path).exists():
+                    Path(zarr_file_path).unlink()
+                    print(f'Removed Zarr file {zarr_file_path}')
                 # Get the object entry from the object organizer
                 obj_id = self.layer_to_remove.metadata['_obj_id']
                 organizer_entry = self.object_organizer.get_entry(obj_id)
@@ -454,11 +479,11 @@ class octron_widget(QWidget):
         return
         
     def on_file_dropped_area(self, video_paths):
-        '''
+        """
         Adds video layer on freshly dropped mp4 file.
         Callback function for the file drop area. 
         The area itself (a widget) is already filtering for mp4 files.
-        '''
+        """
         if len(video_paths) > 1:
             show_warning("Please drop only one file at a time.")
             return
@@ -484,7 +509,7 @@ class octron_widget(QWidget):
         
         
     def init_zarr_prefetcher_threaded(self):
-        '''
+        """
         This function deals with storage (temporary and long term).
         Long term: Zarr store
         Short term: Threaded prefetcher worker
@@ -494,7 +519,7 @@ class octron_widget(QWidget):
         This will only work if a video layer is found and a model is loaded, 
         since both video and model information are required to create the zarr store.
         # TODO: Tie this into project management
-        '''
+        """
         if not self.project_path:
             return
         if self.video_zarr:
@@ -543,6 +568,7 @@ class octron_widget(QWidget):
                                                 image_height=resized_height,
                                                 image_width=resized_width,
                                                 chunk_size=self.chunk_size,
+                                                num_ch=3,
                                                 )
             print(f'💾 New video zarr archive created "{video_zarr_path.as_posix()}"')
         else:
@@ -554,11 +580,11 @@ class octron_widget(QWidget):
         
     
     def on_label_change(self):
-        '''
+        """
         Callback function for the label list combobox.
         Handles the selection of labels, adding new labels, and removing labels. 
         
-        '''
+        """
         index = self.label_list_combobox.currentIndex()
         current_text = self.label_list_combobox.currentText()
         all_list_entries = [self.label_list_combobox.itemText(i) for i in range(self.label_list_combobox.count())]
@@ -589,7 +615,10 @@ class octron_widget(QWidget):
                 self.label_list_combobox.setCurrentIndex(0)
                 return
             
-        elif index == 2: 
+        elif index == 2:
+            if len(all_list_entries) <= 3: 
+                self.label_list_combobox.setCurrentIndex(0)
+                return
              # User wants to remove a label
             dialog = remove_label_dialog(self, all_list_entries[3:])
             dialog.exec_()
@@ -606,12 +635,12 @@ class octron_widget(QWidget):
    
    
     def create_annotation_layers(self):
-        '''
+        """
         Callback function for the create annotation layer button.
         Creates a new annotation layer based on the selected label and layer type.
         TODO: Outsouce these routines to sam2_layers.py
         
-        '''
+        """
         # First check if a model has been loaded
         if not self.predictor:
             show_warning("Please load a SAM2 model first.")
@@ -648,7 +677,8 @@ class octron_widget(QWidget):
         organizer_entry = self.object_organizer.get_entry_by_label_suffix(label, label_suffix)
         if organizer_entry is not None:
             if organizer_entry.prediction_layer is None:
-                show_warning(f"Combination ({label}, {label_suffix}) exists. No mask layer found.") # Should not happen!
+                # Should never happen!
+                show_warning(f"Combination ({label}, {label_suffix}) exists. No mask layer found.")
                 return
             elif organizer_entry.annotation_layer is not None:
                 show_warning(f"Combination ({label}, {label_suffix}) already exists.")
@@ -679,19 +709,22 @@ class octron_widget(QWidget):
                                             use_selection=True, 
                                             selection=1,
                                             )
-            prediction_layer, memmap_file_path = add_sam2_mask_layer(viewer=self._viewer,
-                                                    video_layer=self.video_layer,
-                                                    name=prediction_layer_name,
-                                                    project_path=self.project_path,
-                                                    color=mask_colors,
-                                                    )
+            prediction_layer, zarr_file_path = add_sam2_mask_layer(viewer=self._viewer,
+                                                                 video_layer=self.video_layer,
+                                                                 name=prediction_layer_name,
+                                                                 project_path=self.project_path,
+                                                                 color=mask_colors,
+                                                                 )
+            if prediction_layer is None:
+                show_error("Error when creating mask layer.")
+                return
             # For each layer that we create, write the object ID and the name to the metadata
-            prediction_layer.metadata['_name']   = prediction_layer_name # Octron convention. Save a copy of the name
-            prediction_layer.metadata['_obj_id'] = obj_id # Save the object ID
-            prediction_layer.metadata['_memmap'] = memmap_file_path # Save the memmap file path
+            prediction_layer.metadata['_name']   = prediction_layer_name # Save a copy of the name
+            prediction_layer.metadata['_obj_id'] = obj_id # This corresponds to organizer entry id
+            prediction_layer.metadata['_zarr'] = zarr_file_path 
             organizer_entry.prediction_layer = prediction_layer
 
-        ######### Create a new annotation layer ####################################################
+        ######### Create a new annotation layer ###############################################################
         
         if layer_type == 'Shapes':
             annotation_layer_name = f"⌖ {layer_name} shapes"
@@ -700,9 +733,8 @@ class octron_widget(QWidget):
                                                      name=annotation_layer_name,
                                                      color=obj_color,
                                                      )
-            # For each layer that we create, write the object ID and the name to the metadata
-            annotation_layer.metadata['_name']   = annotation_layer_name # Octron convention. Save a copy of the name
-            annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
+            annotation_layer.metadata['_name']   = annotation_layer_name 
+            annotation_layer.metadata['_obj_id'] = obj_id 
             organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
@@ -716,9 +748,8 @@ class octron_widget(QWidget):
             annotation_layer = add_sam2_points_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
                                                      )
-            # For each layer that we create, write the object ID and the name to the metadata
-            annotation_layer.metadata['_name']   = annotation_layer_name # Octron convention. Save a copy of the name
-            annotation_layer.metadata['_obj_id'] = obj_id # Save the object ID
+            annotation_layer.metadata['_name']   = annotation_layer_name 
+            annotation_layer.metadata['_obj_id'] = obj_id 
             organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.mouse_drag_callbacks.append(self.octron_sam2_callbacks.on_mouse_press)
@@ -731,17 +762,16 @@ class octron_widget(QWidget):
             pass
         
         
-        ######## Start prefetching images ##########################################################
+        ######## Start prefetching images #####################################################################
         self.prefetcher_worker.start()
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
 
-
     def create_annotation_projections(self):
-        '''
+        """
         Create a projection layer for annotated label.
-        '''
+        """
         self.create_projection_layer_btn.setEnabled(False)  
 
         # Loop over all annotation labels and execute add_annotation_projection
@@ -749,7 +779,6 @@ class octron_widget(QWidget):
             add_annotation_projection(self._viewer,
                                       self.object_organizer,
                                       label,
-                                      f"⌖ {label} projection",
                                       )
         
         self.create_projection_layer_btn.setEnabled(True) 
@@ -770,18 +799,18 @@ class octron_widget(QWidget):
     
     
     
-###################################################################################################
-###################################################################################################
-###################################################################################################   
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
 
 def octron_gui():
-    '''
+    """
     This is the main entry point for the GUI call
     defined in the pyproject.toml file as 
     #      [project.gui-scripts]
     #      octron-gui = "octron.main:octron_gui"
 
-    '''
+    """
     viewer = napari.Viewer()
     
     # If there's already a QApplication instance (as may be the case when running as a napari plugin),
