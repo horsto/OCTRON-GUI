@@ -93,7 +93,7 @@ def build_sam2_octron(
     if GlobalHydra.instance().is_initialized():
         GlobalHydra.instance().clear()
     # I am hardcoding the config path here because I don't want to use the hydra config path
-    with initialize(config_path='../configs/sam2.1'):
+    with initialize(config_path='../configs/sam2.1', version_base=None):
         # Read config and init model
         cfg = compose(config_name=config_name, overrides=hydra_overrides)
         OmegaConf.resolve(cfg)
