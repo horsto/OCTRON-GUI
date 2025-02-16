@@ -9,6 +9,8 @@ from octron.sam2_octron.helpers.sam2_octron import (
     SAM2_octron,
     run_new_pred,
 )
+import warnings 
+warnings.simplefilter("ignore")
 
 class sam2_octron_callbacks():
     """

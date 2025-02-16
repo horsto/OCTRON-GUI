@@ -4,6 +4,8 @@ import numpy as np
 from napari.utils import Colormap
 from napari.utils.notifications import show_info, show_error
 from octron.sam2_octron.helpers.sam2_zarr import create_image_zarr, load_image_zarr
+import warnings 
+warnings.simplefilter("ignore")
 
 def add_sam2_mask_layer(viewer,
                         video_layer,

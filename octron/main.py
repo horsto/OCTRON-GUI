@@ -8,8 +8,9 @@ import os, sys
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import warnings
 # Suppress specific warnings
-warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
-warnings.filterwarnings("ignore", category=FutureWarning)
+# warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
+# warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.simplefilter("ignore")
 
 from pathlib import Path
 cur_path  = Path(os.path.abspath(__file__)).parent.parent

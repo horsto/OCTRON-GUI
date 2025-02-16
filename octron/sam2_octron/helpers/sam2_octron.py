@@ -19,6 +19,8 @@ from skimage.morphology import disk
 # Custom Zarr archive class
 from .sam2_zarr import OctoZarr
 
+import warnings
+warnings.simplefilter("ignore")
 
 class SAM2_octron(SAM2VideoPredictor):
     """

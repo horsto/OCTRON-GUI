@@ -7,8 +7,7 @@ import zarr
 import torch
 from torchvision.transforms import Resize
 import warnings 
-# Suppress specific warnings
-warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
+warnings.simplefilter("ignore")
 
 def create_image_zarr(zip_path, 
                       num_frames, 
@@ -64,7 +63,7 @@ def create_image_zarr(zip_path,
         os.remove(zip_path)
 
     # Assuming local store on fast SSD, so no compression employed for now 
-    store = zarr.storage.ZipStore(zip_path, mode='w')
+    store = zarr.storage.ZipStore(zip_path, mode='a')
   
     if num_ch is not None: 
         image_zarr = zarr.create_array(store=store,
