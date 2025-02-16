@@ -246,6 +246,18 @@ class octron_widget(QWidget):
         '''
         Thread worker for predicting the next batch of images
         '''
+        # Before doing anything, make sure, some input has been provided
+        valid = False
+        try:
+            for cached in self.predictor.inference_state['cached_features'].values():
+                if cached is not None:
+                    valid = True
+        except AttributeError:
+            valid = False
+        if not valid:
+            show_warning("Please annotate at least one object first.")
+            return
+
         # Identify the sender (button) that called this function
         sender = self.sender()
         
@@ -497,15 +509,19 @@ class octron_widget(QWidget):
         status = False
         
         # Collect some info about video layer before loading or creating zarr archive
-        num_frames = self.video_layer.metadata['num_frames']
-        video_height = self.video_layer.metadata['height']
-        video_width = self.video_layer.metadata['width']    
+        metadata =  self.video_layer.metadata
+        num_frames = metadata['num_frames']
+        video_height = metadata['height']
+        video_width = metadata['width']    
         predictor_image_size = self.predictor.image_size # SAM2 model image size
         largest_edge = max(video_height, video_width) 
+
         image_scaler = predictor_image_size / largest_edge
-        resized_height = int(np.floor(image_scaler * video_height))
-        resized_width = int(np.floor(image_scaler * video_width))
-        assert max(resized_height, resized_width) == predictor_image_size
+        # Resize both (!) edges to the same size 
+        # This is a hack since I did not get SAM2 to work for non-square videos
+        resized_height = int(np.floor(image_scaler * largest_edge)) 
+        resized_width = int(np.floor(image_scaler * largest_edge))
+        print(f'📐 Resized video dimensions: {resized_height}x{resized_width}')
         
         if video_zarr_path.exists():
             # Zarr store already exists. Check and load. 
