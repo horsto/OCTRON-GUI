@@ -40,6 +40,8 @@ def create_image_zarr(zip_path,
     assert image_height > 0, f'image_height must be > 0, not {image_height}'
     if image_width is None:
         image_width = image_height
+    else:
+        assert image_width > 0, f'image_width must be > 0, not {image_width}'
     assert isinstance(zip_path, Path), f'path must be a pathlib.Path object, not {type(zip_path)}'
     assert zip_path.suffix == '.zip', f'path must be a .zip file, not {zip_path.suffix}'  
     
@@ -93,6 +95,8 @@ def load_image_zarr(zip_path,
     assert image_height > 0, f'image_height must be > 0, not {image_height}'
     if image_width is None:
         image_width = image_height
+    else:
+        assert image_width > 0, f'image_width must be > 0, not {image_width}'
 
     # Open the ZipStore in read mode and load the group.
     store = zarr.storage.ZipStore(zip_path, mode='a')
@@ -144,11 +148,8 @@ class OctoZarr:
         self.saved_indices = []
         
         # Collect some basic info 
-        num_frames, num_chs, image_height, image_width = zarr_array.shape
-        assert image_height == image_width, f'Images in zarr store are not square'
-        self.num_frames = num_frames
-        self.num_chs = num_chs  
-        self.image_size = image_height = image_width
+        self.num_frames, self.num_chs, self.image_height, self.image_width = zarr_array.shape
+        
         # The original implementation uses a fixed mean and std 
         img_mean = (0.485, 0.456, 0.406)
         img_std  = (0.229, 0.224, 0.225)
@@ -156,15 +157,15 @@ class OctoZarr:
         self.img_std = torch.tensor(img_std, dtype=torch.float32)[:, None, None]
         
         # Initialize resizing function
-        self._resize_img = Resize(size=(self.image_size))
+        self._resize_img = Resize(size=(self.image_height, self.image_width))
 
         # Store the napari data layer   
         self.video_data = video_data
         self.cached_indices = np.full((running_buffer_size), np.nan)
         self.cached_images  = torch.empty(running_buffer_size, 
                                           self.num_chs, 
-                                          self.image_size, 
-                                          self.image_size,
+                                          self.image_height, 
+                                          self.image_width,
                                           dtype=torch.bfloat16
                                           )
         self.cur_cache_idx = 0 # Keep track of where you are in the cache currently
@@ -243,8 +244,8 @@ class OctoZarr:
         # Initialize empty torch arrach of length indices
         imgs_torch = torch.empty(len(indices), 
                                  self.num_chs, 
-                                 self.image_size, 
-                                 self.image_size,
+                                 self.image_height, 
+                                 self.image_width,
                                  dtype=torch.bfloat16
                                  )
         

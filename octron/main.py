@@ -306,9 +306,7 @@ class octron_widget(QWidget):
         Callback triggered from within the layer removal event.
         (self.on_layer_removing() is called first)
         This gives the user a chance to cancel the removal of the layer.
-        """
-        print(f'Calling on_layer_removed {self.layer_to_remove.name} {self.remove_current_layer}')
-        
+        """        
         if not self.remove_current_layer:
             # TODO: This is a bit of a hack, seems ugly. Is there a better way?
             new_old_layer = self._viewer.add_layer(self.layer_to_remove)
@@ -320,7 +318,7 @@ class octron_widget(QWidget):
             # Two cases:
             # 1. The layer is a mask layer
             # 2. The layer is an annotation layer
-            # 3. The layer is a video layer (not yet implemented)
+            # 3. The layer is a video layer (not yet implemented - just deletes)
             
             # 1. Mask layer
             if self.layer_to_remove._basename() == 'Labels' \
@@ -349,6 +347,12 @@ class octron_widget(QWidget):
                 organizer_entry = self.object_organizer.get_entry(obj_id)
                 organizer_entry.annotation_layer = None
                 print(f'Removed annotation layer {self.layer_to_remove.name}')
+            # 3. Video layer
+            # This should trigger a couple of thing ... 
+            
+            
+        return
+            
             
             
     def on_layer_removing(self, event):
@@ -491,20 +495,34 @@ class octron_widget(QWidget):
         zarr_video_dir = self.project_path
         video_zarr_path = zarr_video_dir / 'video_data.zip'
         status = False
+        
+        # Collect some info about video layer before loading or creating zarr archive
+        num_frames = self.video_layer.metadata['num_frames']
+        video_height = self.video_layer.metadata['height']
+        video_width = self.video_layer.metadata['width']    
+        predictor_image_size = self.predictor.image_size # SAM2 model image size
+        largest_edge = max(video_height, video_width) 
+        image_scaler = predictor_image_size / largest_edge
+        resized_height = int(np.floor(image_scaler * video_height))
+        resized_width = int(np.floor(image_scaler * video_width))
+        assert max(resized_height, resized_width) == predictor_image_size
+        
         if video_zarr_path.exists():
             # Zarr store already exists. Check and load. 
             # If the checks fail, the zarr store will be recreated.
             video_zarr, status = load_image_zarr(video_zarr_path,
-                                                 num_frames=self.video_layer.metadata['num_frames'],
-                                                 image_height=self.predictor.image_size,
+                                                 num_frames=num_frames,
+                                                 image_height=resized_height,
+                                                 image_width=resized_width,
                                                  chunk_size=self.chunk_size,
                                                 )
         if not status or not video_zarr_path.exists():
             if video_zarr_path.exists():
                 video_zarr_path.unlink()
             self.video_zarr = create_image_zarr(video_zarr_path,
-                                                num_frames=self.video_layer.metadata['num_frames'],
-                                                image_height=self.predictor.image_size,
+                                                num_frames=num_frames,
+                                                image_height=resized_height,
+                                                image_width=resized_width,
                                                 chunk_size=self.chunk_size,
                                                 )
             print(f'💾 New video zarr archive created "{video_zarr_path.as_posix()}"')
@@ -572,7 +590,7 @@ class octron_widget(QWidget):
         '''
         Callback function for the create annotation layer button.
         Creates a new annotation layer based on the selected label and layer type.
-        
+        TODO: Outsouce these routines to sam2_layers.py
         
         '''
         # First check if a model has been loaded
