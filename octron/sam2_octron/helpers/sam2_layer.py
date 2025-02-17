@@ -36,8 +36,8 @@ def add_sam2_mask_layer(viewer,
     -------
     labels_layer : napari.layers.Labels
         Labels layer object.
-    prediction_layer_data : zarr.core.Array
-
+    layer_data : zarr.core.Array
+        Zarr array object.
     zarr_file_path : Path
         Path to the zarr file.
 
@@ -54,34 +54,34 @@ def add_sam2_mask_layer(viewer,
         height = video_layer.metadata['height']
         width = video_layer.metadata['width']
         zarr_file_path = project_path / f"{name}.zip"
+        status = False
         if zarr_file_path.exists():
-            prediction_layer_data, status = load_image_zarr(zarr_file_path, 
-                                                            num_frames=num_frames, 
-                                                            image_height=height, 
-                                                            image_width=width, 
-                                                            chunk_size=20,
-                                                            )
+            layer_data, status = load_image_zarr(zarr_file_path, 
+                                                num_frames=num_frames, 
+                                                image_height=height, 
+                                                image_width=width, 
+                                                chunk_size=20,
+                                                )
             if status:
                 show_info(f"Prediction (mask) layer data found at {zarr_file_path.as_posix()}")
             else:
                 show_error(f"Failed to load Zarr array from {zarr_file_path.as_posix()}")
-                return None, None
-        else:
-            prediction_layer_data = create_image_zarr(zarr_file_path, 
-                                                      num_frames=num_frames, 
-                                                      image_height=height, 
-                                                      image_width=width, 
-                                                      chunk_size=20,
-                                                      fill_value=0,
-                                                      dtype='uint8',
-                                                      )
+        if not zarr_file_path.exists() or not status:
+            layer_data = create_image_zarr(zarr_file_path, 
+                                        num_frames=num_frames, 
+                                        image_height=height, 
+                                        image_width=width, 
+                                        chunk_size=20,
+                                        fill_value=0,
+                                        dtype='uint8',
+                                        )
     else:
         show_error("Video layer metadata incomplete; dummy mask not created.")
-        return None, None
+        return None, None, None
     
     # Add the labels layer to the viewer
     labels_layer = viewer.add_labels(
-        prediction_layer_data,
+        layer_data,
         name=name,  
         opacity=0.4,  
         blending='additive',  
@@ -101,7 +101,7 @@ def add_sam2_mask_layer(viewer,
     for btn in buttons_to_hide: 
         getattr(qctrl, btn).hide() 
         
-    return labels_layer, zarr_file_path
+    return labels_layer, layer_data, zarr_file_path
 
 
 def add_sam2_shapes_layer(

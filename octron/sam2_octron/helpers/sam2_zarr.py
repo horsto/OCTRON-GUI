@@ -1,5 +1,6 @@
-import os 
+import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -60,10 +61,10 @@ def create_image_zarr(zip_path,
     assert zip_path.suffix == '.zip', f'path must be a .zip file, not {zip_path.suffix}'  
     
     if zip_path.exists():
-        os.remove(zip_path)
+        shutil.rmtree(zip_path)
 
     # Assuming local store on fast SSD, so no compression employed for now 
-    store = zarr.storage.ZipStore(zip_path, mode='a')
+    store = zarr.storage.LocalStore(zip_path, read_only=False)  
   
     if num_ch is not None: 
         image_zarr = zarr.create_array(store=store,
@@ -93,6 +94,7 @@ def load_image_zarr(zip_path,
                     image_height,
                     image_width=None,
                     chunk_size=20,
+                    num_ch=None,
                     ):
     """
     Loads an existing zarr archive for storing and retrieving image data,
@@ -111,6 +113,8 @@ def load_image_zarr(zip_path,
         If None, then image_width = image_height.
     chunk_size : int, optional
         Size of a chunk stored in the zarr archive.
+    num_ch : int, optional
+        Number of channels in the image. Default is None.
         
     Returns
     -------
@@ -127,9 +131,8 @@ def load_image_zarr(zip_path,
     else:
         assert image_width > 0, f'image_width must be > 0, not {image_width}'
 
-    # Open the ZipStore in read mode and load the group.
-    store = zarr.storage.ZipStore(zip_path, mode='a')
-   
+    # Open the LocalStore and check if the group 'masks' exists
+    store = zarr.storage.LocalStore(zip_path, read_only=False)  
     root = zarr.open_group(store=store, mode='a')
     print("Existing keys in zarr archive:", list(root.array_keys()))
     # Attempt to load the array named 'masks'
@@ -138,20 +141,24 @@ def load_image_zarr(zip_path,
         return None, False
     else:
         image_zarr = root['masks']
-    print('Zarr store info:')
-    print(image_zarr.info)
-    # Check shape: expected (num_frames, 3, image_height, image_width)
-    expected_shape = (num_frames, 3, image_height, image_width)
+    
+    if num_ch is not None:
+        expected_shape = (num_frames, num_ch, image_height, image_width)
+    else:
+        expected_shape = (num_frames, image_height, image_width)
     if image_zarr.shape != expected_shape:
         print(f"Shape mismatch: expected {expected_shape}, got {image_zarr.shape}")
         return None, False
     
-    # Check chunks: expected (chunk_size, 3, image_height, image_width)
-    expected_chunks = (chunk_size, 3, image_height, image_width)
+    if num_ch is not None:
+        expected_chunks = (chunk_size, num_ch, image_height, image_width)
+    else:
+        expected_chunks = (chunk_size, image_height, image_width)
     if image_zarr.chunks != expected_chunks:
         print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
         return None, False
-        
+    print('Zarr store info:')
+    print(image_zarr.info) 
     return image_zarr, True
 
 

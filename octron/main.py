@@ -6,6 +6,7 @@ Main GUI file
 import os, sys
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+import shutil
 import warnings
 # Suppress specific warnings
 # warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
@@ -94,12 +95,14 @@ class octron_widget(QWidget):
         base_path_parent = base_path # TODO: Get rid of this path madness
         self.base_path = Path(os.path.abspath(__file__)).parent
         self._viewer = viewer
+        self.app = QApplication.instance()
         self.remove_all_layers() # Aggressively delete all pre-existing layers in the viewer ...🪦 muahaha
         
         # Initialize some variables
         self.project_path = None # Main project path that the user selects
         self.video_layer = None
         self.video_zarr = None
+        self.all_zarrs = [] # Collect zarrs in list so they can be cleaned up upon closing
         self.prefetcher_worker = None
         self.predictor, self.device = None, None
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
@@ -168,9 +171,9 @@ class octron_widget(QWidget):
         self.toolBox.widget(3).setEnabled(False) 
         
         # Connect to the Napari viewer close event
-        #self._viewer.window.qt_viewer.closeEvent = self.closeEvent # THIS DOES NOT WORK
+        self.app.lastWindowClosed.connect(self.closeEvent)
     
-    
+
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     
     def load_model(self):
@@ -235,7 +238,7 @@ class octron_widget(QWidget):
         # Extract current mask layer
         prediction_layer = organizer_entry.prediction_layer
         prediction_layer.data[frame_idx,:,:] = mask
-        prediction_layer.refresh()  
+        #prediction_layer.refresh()  
         if self._viewer.dims.current_step[0] != frame_idx and not last_run:
             self._viewer.dims.set_point(0, frame_idx)
         self.batch_predict_progressbar.setValue(progress)
@@ -290,24 +293,19 @@ class octron_widget(QWidget):
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
 
-    # def closeEvent(self, event):
-    #     """
-    #     THIS DOES NOT WORK
-    #     Callback for the Napari viewer close event.
-    #     """
-
-    #     print('Closing viewer ...')
-    #     for zarr_store in self.all_zarrs:
-    #         if zarr_store is not None:
-    #             store = self.video_zarr.store
-    #             if hasattr(store, 'close'):
-    #                 store.close()
-    #                 print(f"Zarr {zarr_store} store closed.")
-    #     # Clean up the prefetcher worker
-    #     if self.prefetcher_worker is not None:
-    #         self.prefetcher_worker.quit()
-
-    #     event.accept()
+    def closeEvent(self):
+        """
+        Callback for the Napari viewer close event.
+        """
+        for zarr_store in self.all_zarrs:
+            if zarr_store is not None:
+                store = self.video_zarr.store
+                if hasattr(store, 'close'):
+                    store.close()
+                    print(f"Zarr {zarr_store} store closed.")
+        # Clean up the prefetcher worker
+        if self.prefetcher_worker is not None:
+            self.prefetcher_worker.quit()
 
 
     def open_project_folder_dialog(self):
@@ -367,7 +365,7 @@ class octron_widget(QWidget):
                 # Remove the zarr zip file containing the layer data
                 zarr_file_path = self.layer_to_remove.metadata['_zarr']
                 if Path(zarr_file_path).exists():
-                    Path(zarr_file_path).unlink()
+                    shutil.rmtree(zarr_file_path)
                     print(f'Removed Zarr file {zarr_file_path}')
                 # Get the object entry from the object organizer
                 obj_id = self.layer_to_remove.metadata['_obj_id']
@@ -560,10 +558,11 @@ class octron_widget(QWidget):
                                                  image_height=resized_height,
                                                  image_width=resized_width,
                                                  chunk_size=self.chunk_size,
+                                                 num_ch=3,
                                                 )
         if not status or not video_zarr_path.exists():
             if video_zarr_path.exists():
-                video_zarr_path.unlink()
+                shutil.rmtree(video_zarr_path)
             self.video_zarr = create_image_zarr(video_zarr_path,
                                                 num_frames=num_frames,
                                                 image_height=resized_height,
@@ -575,6 +574,9 @@ class octron_widget(QWidget):
         else:
             self.video_zarr = video_zarr
             print(f'💾 Video zarr archive loaded "{video_zarr_path.as_posix()}"')
+        
+        # Add to list of zarrs for cleanup upon closing
+        self.all_zarrs.append(self.video_zarr)
         # Set up thread worker to deal with prefetching batches of images
         self.prefetcher_worker = create_worker(self.octron_sam2_callbacks.prefetch_images)
         self.prefetcher_worker.setAutoDelete(False)
@@ -710,12 +712,14 @@ class octron_widget(QWidget):
                                             use_selection=True, 
                                             selection=1,
                                             )
-            prediction_layer, zarr_file_path = add_sam2_mask_layer(viewer=self._viewer,
+            prediction_layer, zarr_data, zarr_file_path = add_sam2_mask_layer(viewer=self._viewer,
                                                                  video_layer=self.video_layer,
                                                                  name=prediction_layer_name,
                                                                  project_path=self.project_path,
                                                                  color=mask_colors,
                                                                  )
+            # Add zarr store to list for cleanup upon closing
+            self.all_zarrs.append(zarr_data)
             if prediction_layer is None:
                 show_error("Error when creating mask layer.")
                 return
