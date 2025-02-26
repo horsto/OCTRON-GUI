@@ -238,7 +238,7 @@ class octron_widget(QWidget):
         # Extract current mask layer
         prediction_layer = organizer_entry.prediction_layer
         prediction_layer.data[frame_idx,:,:] = mask
-        #prediction_layer.refresh()  
+        prediction_layer.refresh()  
         if self._viewer.dims.current_step[0] != frame_idx and not last_run:
             self._viewer.dims.set_point(0, frame_idx)
         self.batch_predict_progressbar.setValue(progress)
