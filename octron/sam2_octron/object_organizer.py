@@ -1,5 +1,7 @@
+from pathlib import Path
+import json
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing import Optional, Dict, List, Any
+from typing import Optional, Union, Dict, List, Any
 
 from octron.sam2_octron.helpers.sam2_colors import (
     create_label_colors,
@@ -16,7 +18,14 @@ class Obj(BaseModel):
     annotation_layer: Optional[Any] = None
     predicted_frames: List[Any] = Field(default_factory=list)
     
-    model_config = ConfigDict(validate_assignment=True)
+    # Exclude non-serializable fields
+    class Config:
+        validate_assignment = True
+        arbitrary_types_allowed = True
+        json_encoders = {
+            # Add custom encoders for non-serializable types
+            tuple: lambda v: list(v),  # Convert tuples to lists
+        }
 
     @field_validator("color")
     def check_color_length(cls, v):
@@ -233,6 +242,136 @@ class ObjectOrganizer(BaseModel):
         if id_ not in self.entries:
             raise KeyError(f"ID {id_} does not exist.")
         return self.entries.pop(id_)
+    
+    def save_to_disk(self, file_path: Union[str, Path]):
+        """
+        Save the object organizer to disk as JSON
+        """
+        file_path = Path(file_path)
+        # Create a copy of the data without non-serializable objects
+        serializable_data = {
+            "entries": {}
+        }
+        for obj_id, obj in self.entries.items():
+            # Create a serializable version without the layers
+            serializable_obj = obj.model_dump(exclude={"annotation_layer", "prediction_layer"})
+        
+            # Add metadata about the annotation layer
+            if obj.annotation_layer is not None:
+                serializable_obj["annotation_layer_metadata"] = {
+                    "name": obj.annotation_layer.name,
+                    "type": obj.annotation_layer._basename(),  # 'Shapes' or 'Points'
+                    "data_shape": [list(d) if isinstance(d, tuple) else d for d in obj.annotation_layer.data.shape] 
+                                if hasattr(obj.annotation_layer.data, 'shape') else None,
+                    "ndim": obj.annotation_layer.ndim,
+                    "visible": obj.annotation_layer.visible,
+                    "opacity": obj.annotation_layer.opacity
+                }
+                # Add shapes-specific metadata if applicable
+                if obj.annotation_layer._basename() == 'Shapes':
+                    serializable_obj["annotation_layer_metadata"].update({
+                        "edge_width": obj.annotation_layer.edge_width,
+                        "border_color": obj.annotation_layer.border_color.tolist() 
+                                    if hasattr(obj.annotation_layer.border_color, 'tolist') else obj.annotation_layer.border_color,
+                        "face_color": obj.annotation_layer.face_color.tolist() 
+                                    if hasattr(obj.annotation_layer.face_color, 'tolist') else obj.annotation_layer.face_color,
+                        "shape_type": obj.annotation_layer.shape_type
+                    })
+                    
+                # Add points-specific metadata if applicable
+                elif obj.annotation_layer._basename() == 'Points':
+                    serializable_obj["annotation_layer_metadata"].update({
+                        "size": obj.annotation_layer.size.tolist(),
+                        "face_color": obj.annotation_layer.face_color.tolist() 
+                                    if hasattr(obj.annotation_layer.face_color, 'tolist') else obj.annotation_layer.face_color,
+                        "border_color": obj.annotation_layer.border_color.tolist() 
+                                    if hasattr(obj.annotation_layer.border_color, 'tolist') else obj.annotation_layer.border_color,
+                        "symbol": str(obj.annotation_layer.symbol),
+                    })
+            
+            # Add metadata about the prediction layer
+            if obj.prediction_layer is not None:
+                serializable_obj["prediction_layer_metadata"] = {
+                    "name": obj.prediction_layer.name,
+                    "type": obj.prediction_layer._basename(),  # 'Labels'
+                    "data_shape": list(obj.prediction_layer.data.shape) 
+                                if hasattr(obj.prediction_layer.data, 'shape') else None,
+                    "ndim": obj.prediction_layer.ndim,
+                    "visible": obj.prediction_layer.visible,
+                    "opacity": obj.prediction_layer.opacity,
+                }
+                
+                # Handle colormap serialization based on its type
+                colormap = obj.prediction_layer.colormap
+                if colormap is not None:
+                    # For DirectLabelColormap (from napari utils), extract the colors
+                    if hasattr(colormap, "name"):
+                        serializable_obj["prediction_layer_metadata"]["colormap_name"] = colormap.name
+                    if hasattr(colormap, "colors") and colormap.colors is not None:
+                        # Convert numpy array colors to list of lists
+                        if hasattr(colormap.colors, "tolist"):
+                            serializable_obj["prediction_layer_metadata"]["colormap_colors"] = colormap.colors.tolist()
+                        else:
+                            # Try to convert each color individually
+                            try:
+                                colors_list = []
+                                for color in colormap.colors:
+                                    if hasattr(color, "tolist"):
+                                        colors_list.append(color.tolist())
+                                    else:
+                                        colors_list.append(list(color))
+                                serializable_obj["prediction_layer_metadata"]["colormap_colors"] = colors_list
+                            except Exception as e:
+                                print(f"Could not serialize colormap colors: {e}")
+                  
+                # Add zarr file path if it exists in metadata
+                if hasattr(obj.prediction_layer, 'metadata') and '_zarr' in obj.prediction_layer.metadata:
+                    serializable_obj["prediction_layer_metadata"]["zarr_path"] = obj.prediction_layer.metadata['_zarr'].as_posix()
+            
+            serializable_data["entries"][str(obj_id)] = serializable_obj  # Convert key to string for JSON compatibility
+            
+        # Write to file
+        if file_path.exists():
+            print(f"⚠️ Overwriting existing file at {file_path.as_posix()}")
+            file_path.unlink()
+        with open(file_path, 'w') as f:
+            json.dump(serializable_data, f, indent=2)
+        print(f"💾 Octron object organizer saved to {file_path.as_posix()}")
+        
+    # TODO: Implement load_from_disk
+    #       -> This needs more careful handling of the annotation / ... layers
+    # @classmethod
+    # def load_from_disk(cls, file_path: Union[str, Path]) -> "ObjectOrganizer":
+    #     """
+    #     Load object organizer from disk
+    #     """
+    #     file_path = Path(file_path)
+    #     if not file_path.exists():
+    #         print(f"No organizer file found at {file_path}")
+    #         return cls()
+        
+    #     try:
+    #         with open(file_path, 'r') as f:
+    #             data = json.load(f)
+    #         organizer = cls()
+    #         # Reconstruct objects from serialized data
+    #         for obj_id, obj_data in data.get("entries", {}).items():
+    #             # Convert lists back to tuples for color
+    #             if "color" in obj_data and isinstance(obj_data["color"], list):
+    #                 obj_data["color"] = tuple(obj_data["color"])
+                
+    #             # Create Obj instance
+    #             obj = Obj(**obj_data)
+    #             organizer.entries[obj_id] = obj
+                
+    #         print(f"Object organizer loaded from {file_path}")
+    #         return organizer
+            
+    #     except Exception as e:
+    #         print(f"Error loading object organizer: {e}")
+    #         return cls()    
+
+
 
     def __repr__(self) -> str:
         output_lines = ["OCTRON ObjectOrganizer with entries:"]
@@ -242,3 +381,37 @@ class ObjectOrganizer(BaseModel):
             )
         return "\n".join(output_lines)
  
+ 
+ 
+ 
+def load_object_organizer(file_path):
+    """
+    Load object organizer .json from disk and return
+    its content as dictionary.
+    
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the .json file.
+    
+    Returns
+    -------
+    dict
+        Dictionary containing all object organizer data.
+    
+    """
+    file_path = Path(file_path)
+    if not file_path.exists():
+        print(f"No organizer file found at {file_path}")
+        return
+    if not file_path.suffix == '.json': 
+        print(f"❌ File is not a json file: {file_path}")
+        return
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        print(f"📖 Octron object organizer loaded from {file_path.as_posix()}")
+        return data
+    except Exception as e:
+        print(f"❌ Error loading json: {e}")
+        return 

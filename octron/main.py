@@ -83,8 +83,6 @@ if app is not None:
     app.setStyle(QStyleFactory.create("Fusion")) 
 
 
-
-
 class octron_widget(QWidget):
     """
     Main OCTRON widget class.
@@ -292,11 +290,14 @@ class octron_widget(QWidget):
         
 
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
-
     def closeEvent(self):
         """
-        Callback for the Napari viewer close event.
+        Callback for the Napari viewer close event
         """
+        # Save object organizer to json before closing
+        if self.project_path:
+            self.save_object_organizer()
+        
         for zarr_store in self.all_zarrs:
             if zarr_store is not None:
                 store = self.video_zarr.store
@@ -306,6 +307,14 @@ class octron_widget(QWidget):
         # Clean up the prefetcher worker
         if self.prefetcher_worker is not None:
             self.prefetcher_worker.quit()
+            
+    def save_object_organizer(self):
+        """
+        Save the object organizer to the project directory
+        """
+        assert self.project_path is not None, "No project path set."
+        organizer_path = self.project_path  / "object_organizer.json"
+        self.object_organizer.save_to_disk(organizer_path)
 
 
     def open_project_folder_dialog(self):
