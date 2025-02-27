@@ -18,6 +18,7 @@ def create_image_zarr(zip_path,
                       fill_value=np.nan,
                       dtype='float16',
                       num_ch=None,
+                      verbose=False,
                       ):
     """
     Creates a zarr archive for storing and retrieving image data.
@@ -45,6 +46,8 @@ def create_image_zarr(zip_path,
     num_ch : int, optional
         Number of channels in the image. Default is None.
         If None, then the channel dimension will not be included.
+    verbose : bool, optional
+        If True, print the zarr store info.
         
     Returns
     -------
@@ -84,8 +87,9 @@ def create_image_zarr(zip_path,
                                     dtype=dtype,
                                     overwrite=True,
                                     )
-    print('Zarr store info:')
-    print(image_zarr.info)
+    if verbose:
+        print('Zarr store info:')
+        print(image_zarr.info)
 
     return image_zarr
 
@@ -95,6 +99,7 @@ def load_image_zarr(zip_path,
                     image_width=None,
                     chunk_size=20,
                     num_ch=None,
+                    verbose=False,
                     ):
     """
     Loads an existing zarr archive for storing and retrieving image data,
@@ -115,6 +120,8 @@ def load_image_zarr(zip_path,
         Size of a chunk stored in the zarr archive.
     num_ch : int, optional
         Number of channels in the image. Default is None.
+    verbose : bool, optional
+        If True, print the zarr store info.
         
     Returns
     -------
@@ -134,7 +141,8 @@ def load_image_zarr(zip_path,
     # Open the LocalStore and check if the group 'masks' exists
     store = zarr.storage.LocalStore(zip_path, read_only=False)  
     root = zarr.open_group(store=store, mode='a')
-    print("Existing keys in zarr archive:", list(root.array_keys()))
+    if verbose: 
+        print("Existing keys in zarr archive:", list(root.array_keys()))
     # Attempt to load the array named 'masks'
     if 'masks' not in root:
         print(f"Array 'masks' not found in {zip_path.as_posix()}")
@@ -157,11 +165,10 @@ def load_image_zarr(zip_path,
     if image_zarr.chunks != expected_chunks:
         print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
         return None, False
-    print('Zarr store info:')
-    print(image_zarr.info) 
+    if verbose:
+        print('Zarr store info:')
+        print(image_zarr.info) 
     return image_zarr, True
-
-
 
 
 
