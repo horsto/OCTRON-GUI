@@ -255,7 +255,7 @@ class ObjectOrganizer(BaseModel):
         for obj_id, obj in self.entries.items():
             # Create a serializable version without the layers
             serializable_obj = obj.model_dump(exclude={"annotation_layer", "prediction_layer"})
-        
+            # Then add metadata info back in 
             # Add metadata about the annotation layer
             if obj.annotation_layer is not None:
                 serializable_obj["annotation_layer_metadata"] = {
@@ -265,31 +265,9 @@ class ObjectOrganizer(BaseModel):
                                 if hasattr(obj.annotation_layer.data, 'shape') else None,
                     "ndim": obj.annotation_layer.ndim,
                     "visible": obj.annotation_layer.visible,
-                    "opacity": obj.annotation_layer.opacity
+                    "opacity": obj.annotation_layer.opacity,
                 }
-                # Add shapes-specific metadata if applicable
-                if obj.annotation_layer._basename() == 'Shapes':
-                    serializable_obj["annotation_layer_metadata"].update({
-                        "edge_width": obj.annotation_layer.edge_width,
-                        "border_color": obj.annotation_layer.border_color.tolist() 
-                                    if hasattr(obj.annotation_layer.border_color, 'tolist') else obj.annotation_layer.border_color,
-                        "face_color": obj.annotation_layer.face_color.tolist() 
-                                    if hasattr(obj.annotation_layer.face_color, 'tolist') else obj.annotation_layer.face_color,
-                        "shape_type": obj.annotation_layer.shape_type
-                    })
-                    
-                # Add points-specific metadata if applicable
-                elif obj.annotation_layer._basename() == 'Points':
-                    serializable_obj["annotation_layer_metadata"].update({
-                        "size": obj.annotation_layer.size.tolist(),
-                        "face_color": obj.annotation_layer.face_color.tolist() 
-                                    if hasattr(obj.annotation_layer.face_color, 'tolist') else obj.annotation_layer.face_color,
-                        "border_color": obj.annotation_layer.border_color.tolist() 
-                                    if hasattr(obj.annotation_layer.border_color, 'tolist') else obj.annotation_layer.border_color,
-                        "symbol": str(obj.annotation_layer.symbol),
-                    })
-            
-            # Add metadata about the prediction layer
+            # Add metadata about the prediction (mask, ... ) layer
             if obj.prediction_layer is not None:
                 serializable_obj["prediction_layer_metadata"] = {
                     "name": obj.prediction_layer.name,
@@ -307,23 +285,13 @@ class ObjectOrganizer(BaseModel):
                     # For DirectLabelColormap (from napari utils), extract the colors
                     if hasattr(colormap, "name"):
                         serializable_obj["prediction_layer_metadata"]["colormap_name"] = colormap.name
-                    if hasattr(colormap, "colors") and colormap.colors is not None:
-                        # Convert numpy array colors to list of lists
-                        if hasattr(colormap.colors, "tolist"):
-                            serializable_obj["prediction_layer_metadata"]["colormap_colors"] = colormap.colors.tolist()
-                        else:
-                            # Try to convert each color individually
-                            try:
-                                colors_list = []
-                                for color in colormap.colors:
-                                    if hasattr(color, "tolist"):
-                                        colors_list.append(color.tolist())
-                                    else:
-                                        colors_list.append(list(color))
-                                serializable_obj["prediction_layer_metadata"]["colormap_colors"] = colors_list
-                            except Exception as e:
-                                print(f"Could not serialize colormap colors: {e}")
-                  
+                    # Excluding saving the color dictionary for now since it is a duplicate of the existing color
+                    # if hasattr(colormap, "color_dict"):   
+                    #     color_dict = {}
+                    #     for k, color in colormap.color_dict.items():
+                    #         color_dict[k] = color.tolist()
+                    #     serializable_obj["prediction_layer_metadata"]["colormap_colors"] = color_dict
+                      
                 # Add zarr file path if it exists in metadata
                 if hasattr(obj.prediction_layer, 'metadata') and '_zarr' in obj.prediction_layer.metadata:
                     serializable_obj["prediction_layer_metadata"]["zarr_path"] = obj.prediction_layer.metadata['_zarr'].as_posix()
