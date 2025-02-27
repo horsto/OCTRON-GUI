@@ -16,7 +16,6 @@ class Obj(BaseModel):
     color: Optional[list] = None
     prediction_layer: Optional[Any] = None
     annotation_layer: Optional[Any] = None
-    predicted_frames: List[Any] = Field(default_factory=list)
     
     # Exclude non-serializable fields
     class Config:
@@ -33,33 +32,6 @@ class Obj(BaseModel):
             raise ValueError("Color must be a list of length 4")
         return v
     
-    def add_predicted_frame(self, frame_index: int) -> None:
-        """
-        Add a frame index to predicted_frames if it is not already present.
-        """
-        if frame_index not in self.predicted_frames:
-            self.predicted_frames.append(frame_index)
-
-    def add_predicted_frames(self, frame_indices: list) -> None:
-        for index in frame_indices:
-            self.add_predicted_frame(index)
-    
-    def remove_predicted_frame(self, frame_index: int) -> None:
-        """
-        Remove a frame index from predicted_frames - only if it exists.
-        """
-        if frame_index in self.predicted_frames:
-            self.predicted_frames.remove(frame_index)
-            
-    def remove_predicted_frames(self, frame_indices: list) -> None:
-        for index in frame_indices:
-            self.remove_predicted_frame(index)
-
-    def reset_predicted_frames(self) -> None:
-        """
-        Reset the predicted_frames list.
-        """
-        self.predicted_frames = []
             
     def __repr__(self) -> str:
         return (
@@ -261,9 +233,6 @@ class ObjectOrganizer(BaseModel):
                 serializable_obj["annotation_layer_metadata"] = {
                     "name": obj.annotation_layer.name,
                     "type": obj.annotation_layer._basename(),  # 'Shapes' or 'Points'
-                    "data_shape": [list(d) if isinstance(d, tuple) else d for d in obj.annotation_layer.data.shape] 
-                                if hasattr(obj.annotation_layer.data, 'shape') else None,
-                    "ndim": obj.annotation_layer.ndim,
                     "visible": obj.annotation_layer.visible,
                     "opacity": obj.annotation_layer.opacity,
                 }

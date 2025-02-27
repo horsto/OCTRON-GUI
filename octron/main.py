@@ -232,7 +232,6 @@ class octron_widget(QWidget):
         """
         progress, frame_idx, obj_id, mask, last_run = value
         organizer_entry = self.object_organizer.get_entry(obj_id)
-        organizer_entry.add_predicted_frame(frame_idx)
         # Extract current mask layer
         prediction_layer = organizer_entry.prediction_layer
         prediction_layer.data[frame_idx,:,:] = mask
@@ -258,12 +257,9 @@ class octron_widget(QWidget):
         """
         # Before doing anything, make sure, some input has been provided
         valid = False
-        try:
-            for cached in self.predictor.inference_state['cached_features'].values():
-                if cached is not None:
-                    valid = True
-        except AttributeError:
-            valid = False
+        if (self.predictor.inference_state['point_inputs_per_obj'] or 
+            self.predictor.inference_state['mask_inputs_per_obj']):
+            valid = True
         if not valid:
             show_warning("Please annotate at least one object first.")
             return

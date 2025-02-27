@@ -72,8 +72,8 @@ def add_sam2_mask_layer(viewer,
                                         image_height=height, 
                                         image_width=width, 
                                         chunk_size=20,
-                                        fill_value=0,
-                                        dtype='uint8',
+                                        fill_value=-1,
+                                        dtype='int8',
                                         )
     else:
         show_error("Video layer metadata incomplete; dummy mask not created.")
@@ -236,9 +236,9 @@ def add_annotation_projection(
         colors = label_colors[indices_max_diff_labels[entry.label_id]]
         colors.insert(0, [0.,0.,0.,0.]) # Add transparent color for background
         cm = Colormap(colors, name=label, display_name=label)
-        # Filter by prediction indices
-        predicted_indices = entry.predicted_frames
-        if predicted_indices:
+        # Filter by prediction indices. The fill value is -1, so we can filter by >= 0
+        predicted_indices = np.where(prediction_layer_data[:,0,0] >= 0)[0]
+        if len(predicted_indices):
             prediction_layer_data = prediction_layer_data[predicted_indices]
             collected_mask_data.append(prediction_layer_data)
             annotation_layer.visible = False

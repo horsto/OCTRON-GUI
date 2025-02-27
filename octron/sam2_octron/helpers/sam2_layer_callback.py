@@ -120,7 +120,6 @@ class sam2_octron_callbacks():
 
             prediction_layer.data[frame_idx] = mask
             prediction_layer.refresh()
-            organizer_entry.add_predicted_frame(frame_idx)
             # Prefetch next batch of images
             if not self.octron.prefetcher_worker.is_running:
                 self.octron.prefetcher_worker.run()
@@ -197,7 +196,6 @@ class sam2_octron_callbacks():
                                 )
             prediction_layer.data[frame_idx,:,:] = mask
             prediction_layer.refresh()  
-            organizer_entry.add_predicted_frame(frame_idx)
         else:
             # Catching all above with ['added','removed','changed']
             pass
@@ -238,18 +236,6 @@ class sam2_octron_callbacks():
         Uses SAM2 => propagate_in_video function.
         
         """    
-
-        # Necessary to have at least "some" input somewhere ... 
-        # Loop over all entries in the object organizer and check 
-        # if at least one predicted_frames entry exists.
-        has_predicted = False
-        for entry in self.octron.object_organizer.entries.values():
-            if entry.predicted_frames:
-                has_predicted = True
-                break
-        if not has_predicted:
-            show_error('No input data found. Please add annotations first.')
-            return
 
         # Prefetch images if they are not cached yet 
         # For this, reset the chunk_size to 1
@@ -303,17 +289,6 @@ class sam2_octron_callbacks():
         
         """
         
-        # Necessary to have at least "some" input somewhere ... 
-        # Loop over all entries in the object organizer and check 
-        # if at least one predicted_frames entry exists.
-        has_predicted = False
-        for entry in self.octron.object_organizer.entries.values():
-            if entry.predicted_frames:
-                has_predicted = True
-                break
-        if not has_predicted:
-            show_error('No input data found. Please add annotations first.')
-            return
 
         skip_frames = self.octron.skip_frames_spinbox.value()
         if skip_frames < 1:
