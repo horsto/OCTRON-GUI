@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, Union, Dict, List, Any
 
@@ -17,14 +18,15 @@ class Obj(BaseModel):
     prediction_layer: Optional[Any] = None
     annotation_layer: Optional[Any] = None
     
-    # Exclude non-serializable fields
-    class Config:
-        validate_assignment = True
-        arbitrary_types_allowed = True
-        json_encoders = {
+    # Replace the deprecated class Config with ConfigDict
+    model_config = ConfigDict(
+        validate_assignment=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             # Add custom encoders for non-serializable types
             tuple: lambda v: list(v),  # Convert tuples to lists
         }
+    )
 
     @field_validator("color")
     def check_color_length(cls, v):
@@ -238,9 +240,16 @@ class ObjectOrganizer(BaseModel):
                 }
             # Add metadata about the prediction (mask, ... ) layer
             if obj.prediction_layer is not None:
+                prediction_layer_data = obj.prediction_layer.data
+                predicted_indices = np.where(prediction_layer_data[:,0,0] >= 0)[0]
+                if len(predicted_indices):
+                    num_predicted_indices = len(predicted_indices)
+                else:
+                    num_predicted_indices = 0
                 serializable_obj["prediction_layer_metadata"] = {
                     "name": obj.prediction_layer.name,
                     "type": obj.prediction_layer._basename(),  # 'Labels'
+                    "num_predicted_indices": num_predicted_indices,
                     "data_shape": list(obj.prediction_layer.data.shape) 
                                 if hasattr(obj.prediction_layer.data, 'shape') else None,
                     "ndim": obj.prediction_layer.ndim,
@@ -254,12 +263,6 @@ class ObjectOrganizer(BaseModel):
                     # For DirectLabelColormap (from napari utils), extract the colors
                     if hasattr(colormap, "name"):
                         serializable_obj["prediction_layer_metadata"]["colormap_name"] = colormap.name
-                    # Excluding saving the color dictionary for now since it is a duplicate of the existing color
-                    # if hasattr(colormap, "color_dict"):   
-                    #     color_dict = {}
-                    #     for k, color in colormap.color_dict.items():
-                    #         color_dict[k] = color.tolist()
-                    #     serializable_obj["prediction_layer_metadata"]["colormap_colors"] = color_dict
                       
                 # Add zarr file path if it exists in metadata
                 if hasattr(obj.prediction_layer, 'metadata') and '_zarr' in obj.prediction_layer.metadata:
