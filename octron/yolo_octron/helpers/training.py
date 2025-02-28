@@ -42,11 +42,11 @@ def load_object_organizer(file_path):
         return 
 
 
-def create_label_dict(organizer_dict,
-                      expected_num_frames,
-                      expected_image_height,
-                      expected_image_width,
-                      ):
+def collect_labels(organizer_dict,
+                   expected_num_frames,
+                   expected_image_height,
+                   expected_image_width,
+                  ):
     """
     Create a dictionary of labels and their corresponding frames.   
     Extract polygons for all labels along the way.
@@ -67,45 +67,45 @@ def create_label_dict(organizer_dict,
 
     Returns
     -------
-    label_dict : dict : Dictionary containing labels and their corresponding frames
+    labels : dict : Dictionary containing labels and their corresponding frames
             keys: label_id
             values: dict
-                keys: label, frames, masks, polygons
+                keys: label, frames, masks, polygons, color
                 values: label (str), # Name of the label
                          frames (np.array), # Annotated frame indices for the label
                          masks (list of zarr arrays), # Mask zarr arrays
                          polygons (list of np.arrays) # Polygons for each frame
-
+                         color (list) # Color of the label (RGBA, [0,1])   
+                                
     """
-    label_dict = {}
+    labels = {}
     for entry in organizer_dict['entries'].values():
         label_id = int(entry['label_id'] )
         label    = entry['label'] 
         color    = entry['color']
-        if label_id in label_dict:
-            assert label_dict[label_id]['label'] == label
+        if label_id in labels:
+            assert labels[label_id]['label'] == label, 'Label name vs. id do not match'
         else:
-            label_dict[label_id] = {'label':label, 
-                                    'frames': [],
-                                    'masks': [], 
-                                    }   
-        label_dict[label_id]['color'] = color
-        
-        
+            # First time we see this label
+            labels[label_id] = {'label':label, 
+                                'frames': [],
+                                'masks': [], 
+                                'color': color, # Only save the first color
+                                }   
+
         # Find out which frames were annotated
         zarr_path = Path(entry['prediction_layer_metadata']['zarr_path'])
-        assert zarr_path.exists()
-
+        assert zarr_path.exists(), f'Zarr file not found at {zarr_path}'
         num_frames, image_height, image_width = entry['prediction_layer_metadata']['data_shape']
         loaded_masks, status = load_image_zarr(zarr_path, 
                                     num_frames,
                                     image_height, 
                                     image_width, 
-                                    num_ch=None
+                                    num_ch=None,
                                     )
         assert status == True
         assert loaded_masks is not None
-        assert isinstance(loaded_masks, array.Array), 'Expected zarr array for masks. Check.'
+        assert isinstance(loaded_masks, array.Array), f'Expected zarr array for masks, got {type(loaded_masks)}'
         
         # Comparisons
         # Make sure information is consistent across object organizer (json),
@@ -115,27 +115,27 @@ def create_label_dict(organizer_dict,
         assert image_height == expected_image_height == loaded_masks.shape[1]
         assert image_width == expected_image_width == loaded_masks.shape[2]
         
-        label_dict[label_id]['masks'].append(loaded_masks) # This is the zarr array
+        labels[label_id]['masks'].append(loaded_masks) # This is the zarr array
         # Extract annotated frame indices
         # The fill value of the zarr array is -1, so we can use this to find annotated frames
         annotated_indices = np.where(loaded_masks[:,0,0] >= 0)[0]
-        label_dict[label_id]['frames'].extend(annotated_indices) 
+        labels[label_id]['frames'].extend(annotated_indices) 
         
     # Maintain only unique entries in 'frames' lists
-    for label_id in label_dict:
-        _, i = np.unique(label_dict[label_id]['frames'], return_index=True)
-        label_dict[label_id]['frames'] = np.array(label_dict[label_id]['frames'])[np.sort(i)]
-        print(f'Label {label_dict[label_id]["label"]} has {len(label_dict[label_id]["frames"])} annotated frames')
+    for label_id in labels:
+        _, i = np.unique(labels[label_id]['frames'], return_index=True)
+        labels[label_id]['frames'] = np.array(labels[label_id]['frames'])[np.sort(i)]
+        print(f'Label {labels[label_id]["label"]} has {len(labels[label_id]["frames"])} annotated frames')
     
     # Extract polygon points for each label
-    for label_id in label_dict:
-        label = label_dict[label_id]['label']
-        frames = label_dict[label_id]['frames']
+    for label_id in labels:
+        label = labels[label_id]['label']
+        frames = labels[label_id]['frames']
 
         polys = [] # Collected polygons over frames
         for frame in tqdm(frames, desc=f'Polygons for label {label}'):    
             mask_polys_ = [] # List of polygons for the current frame
-            for mask_zarr in label_dict[label_id]['masks']:
+            for mask_zarr in labels[label_id]['masks']:
                 mask_ = mask_zarr[frame]
                 try:
                     mask_polys_.append(get_polygons(mask_)) 
@@ -146,12 +146,12 @@ def create_label_dict(organizer_dict,
                     # and the current label is not present in the current mask array.
                     pass    
             polys.append(mask_polys_) 
-        label_dict[label_id]['polygons'] = polys  
+        labels[label_id]['polygons'] = polys  
 
-    return label_dict
+    return labels
 
 
-def draw_polygons(label_dict, video_data, max_to_plot=2):   
+def draw_polygons(labels, video_data, max_to_plot=2):   
     # Check if cv2 is installed correctly
     try:
         import cv2 
@@ -170,28 +170,33 @@ def draw_polygons(label_dict, video_data, max_to_plot=2):
 
     Parameters
     ----------
-    label_dict : dict : Dictionary containing labels and their corresponding frames
+    labels : dict : Dictionary containing labels and their corresponding frames
             keys: label_id
             values: dict
-                keys: label, frames, masks, polygons
+                keys: label, frames, masks, polygons, color
                 values: label (str), # Name of the label
                          frames (np.array), # Annotated frame indices for the label
                          masks (list of zarr arrays), # Masks for each frame
                          polygons (list of np.arrays) # Polygons for each frame
+                         color (list) # Color of the label (RGBA, [0,1])   
     video_data : np.array : Video data array
+    max_to_plot : int : Maximum number of frames to plot per label
+    
     
     """
-    print(f'Drawing polygons for {len(label_dict)} labels.')
+    if max_to_plot < 1:
+        max_to_plot = 1
+    print(f'Drawing polygons for {len(labels)} labels.')
     print(f'{max_to_plot} frame(s) per label max. will be plotted.')
     # Draw the polygons on the video frames
-    for label_id in label_dict:
-        label = label_dict[label_id]['label']
-        frames = label_dict[label_id]['frames']
-        color = np.array(label_dict[label_id]['color'])[:-1]*255
+    for label_id in labels:
+        label = labels[label_id]['label']
+        frames = labels[label_id]['frames']
+        color = np.array(labels[label_id]['color'])[:-1]*255
         for no, frame in enumerate(frames):
             
             current_frame = video_data[frame].copy()
-            polys = label_dict[label_id]['polygons'][no]  
+            polys = labels[label_id]['polygons'][no]  
             frame_and_polys = cv2.polylines(img=current_frame, 
                                             pts=polys, 
                                             isClosed=True, 
@@ -199,7 +204,7 @@ def draw_polygons(label_dict, video_data, max_to_plot=2):
                                             thickness=5,
                                             )
             
-            
+            # Draw
             _, ax = plt.subplots(1,1)    
             ax.imshow(frame_and_polys)
             ax.set_xticks([])   
