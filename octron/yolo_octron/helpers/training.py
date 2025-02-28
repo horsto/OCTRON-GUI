@@ -12,7 +12,8 @@ def load_object_organizer(file_path):
     """
     Load object organizer .json from disk and return
     its content as dictionary.
-    The .json file has been created via the save_to_disk method.
+    The .json file itself has been created via the save_to_disk method in 
+    the object_organizer class (octron.sam2_octron.object_organizer.py).
     
     Parameters
     ----------
@@ -152,21 +153,10 @@ def collect_labels(organizer_dict,
 
 
 def draw_polygons(labels, video_data, max_to_plot=2):   
-    # Check if cv2 is installed correctly
-    try:
-        import cv2 
-    except ModuleNotFoundError:
-        print('Please install cv2 first, via pip install opencv-python')
-        return
-
-    try:
-        import matplotlib.pyplot as plt
-    except ModuleNotFoundError:
-        print('Please install matplotlib first, via pip install matplotlib')
-        return
-
     """
-    Draw the polygons on the video frames.
+    Helper.
+    Draw the polygons on the video frames, after having created the labels
+    dictionary via the collect_labels() function.
 
     Parameters
     ----------
@@ -184,6 +174,19 @@ def draw_polygons(labels, video_data, max_to_plot=2):
     
     
     """
+    # Check if cv2 is installed correctly
+    try:
+        import cv2 
+    except ModuleNotFoundError:
+        print('Please install cv2 first, via pip install opencv-python')
+        return
+
+    try:
+        import matplotlib.pyplot as plt
+    except ModuleNotFoundError:
+        print('Please install matplotlib first, via pip install matplotlib')
+        return
+
     if max_to_plot < 1:
         max_to_plot = 1
     print(f'Drawing polygons for {len(labels)} labels.')
@@ -213,3 +216,75 @@ def draw_polygons(labels, video_data, max_to_plot=2):
             plt.show()   
             if no >= max_to_plot-1:
                 break   
+            
+            
+def train_test_val(frame_indices,
+                   training_fraction=0.8,
+                   validation_fraction=0.1,
+                   random_seed=88,
+                   verbose=False,
+                   ):
+    """
+    Perform a train-test-validation split on the frame indices.
+    
+    Parameters
+    ----------
+    frame_indices : np.array : Array of frame indices
+    training_fraction : float : Fraction of training data
+    validation_fraction : float : Fraction of validation data
+    random_seed : int : Random seed for reproducibility
+    verbose : bool : Whether to print sizes of the splits
+    
+    Returns
+    -------
+    split_dict : dict : Dictionary containing the splits
+        keys: 'train', 'val', 'test'
+        values: np.array : Frame indices for each split
+    
+    """
+    assert training_fraction + validation_fraction < 1, 'Fractions should sum to less than 1'
+    assert training_fraction > validation_fraction, 'Training fraction should be greater than validation fraction'
+    assert len(frame_indices) > 0, 'No frame indices provided'
+    
+    # Shuffle the indices
+    np.random.seed(random_seed)
+    shuffled_indices = np.random.permutation(len(frame_indices))
+
+    # Calculate split points
+    train_size = int(training_fraction * len(frame_indices))
+    val_size = int(validation_fraction * len(frame_indices))
+    # test_size = len(frames) - train_size - val_size (remaining frames)
+
+    # Split the shuffled indices
+    train_indices = shuffled_indices[:train_size]
+    val_indices = shuffled_indices[train_size:train_size+val_size]
+    test_indices = shuffled_indices[train_size+val_size:]
+
+    # Get the actual frame numbers for each split
+    train_frames = frame_indices[train_indices]
+    val_frames = frame_indices[val_indices]
+    test_frames = frame_indices[test_indices]
+
+    if verbose:
+        # Print sizes
+        print(f"Total frames: {len(frame_indices)}")
+        print(f"Training set: {len(train_frames)} frames")
+        print(f"Validation set: {len(val_frames)} frames")
+        print(f"Test set: {len(test_frames)} frames")
+        
+    split_dict = {
+        'train': train_frames,
+        'val': val_frames,
+        'test': test_frames
+    }
+
+    # Sanity check 
+    collected_frames = []
+    for frames in split_dict.values():
+        assert len(frames) > 0, 'Empty split found'
+        collected_frames.extend(frames)
+    assert len(collected_frames) == len(frame_indices), 'Not all frames were collected in the splits'
+    assert set(collected_frames) == set(frame_indices), 'Some frames are missing in the splits'
+
+    return split_dict
+    
