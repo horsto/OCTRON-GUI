@@ -2,6 +2,7 @@
 from pathlib import Path
 from tqdm import tqdm  
 import json
+from datetime import datetime
 import numpy as np  
 from zarr.core import array # For type checking 
 from octron.sam2_octron.helpers.sam2_zarr import load_image_zarr   
@@ -75,7 +76,7 @@ def collect_labels(organizer_dict,
                 values: label (str), # Name of the label
                          frames (np.array), # Annotated frame indices for the label
                          masks (list of zarr arrays), # Mask zarr arrays
-                         polygons (list of np.arrays) # Polygons for each frame
+                         polygons (dict) # Polygons for each frame index
                          color (list) # Color of the label (RGBA, [0,1])   
                                 
     """
@@ -133,7 +134,7 @@ def collect_labels(organizer_dict,
         label = labels[label_id]['label']
         frames = labels[label_id]['frames']
 
-        polys = [] # Collected polygons over frames
+        polys = {} # Collected polygons over frames
         for frame in tqdm(frames, desc=f'Polygons for label {label}'):    
             mask_polys_ = [] # List of polygons for the current frame
             for mask_zarr in labels[label_id]['masks']:
@@ -146,13 +147,16 @@ def collect_labels(organizer_dict,
                     # zarr array (because there are multiple instances of a label), 
                     # and the current label is not present in the current mask array.
                     pass    
-            polys.append(mask_polys_) 
+            polys[frame] = mask_polys_
         labels[label_id]['polygons'] = polys  
 
     return labels
 
 
-def draw_polygons(labels, video_data, max_to_plot=2):   
+def draw_polygons(labels, 
+                  video_data,
+                  max_to_plot=2
+                  ):   
     """
     Helper.
     Draw the polygons on the video frames, after having created the labels
@@ -167,7 +171,7 @@ def draw_polygons(labels, video_data, max_to_plot=2):
                 values: label (str), # Name of the label
                          frames (np.array), # Annotated frame indices for the label
                          masks (list of zarr arrays), # Masks for each frame
-                         polygons (list of np.arrays) # Polygons for each frame
+                         polygons (dict) # Polygons for each frame index
                          color (list) # Color of the label (RGBA, [0,1])   
     video_data : np.array : Video data array
     max_to_plot : int : Maximum number of frames to plot per label
@@ -180,7 +184,7 @@ def draw_polygons(labels, video_data, max_to_plot=2):
     except ModuleNotFoundError:
         print('Please install cv2 first, via pip install opencv-python')
         return
-
+    # ... and matplotlib
     try:
         import matplotlib.pyplot as plt
     except ModuleNotFoundError:
@@ -196,10 +200,11 @@ def draw_polygons(labels, video_data, max_to_plot=2):
         label = labels[label_id]['label']
         frames = labels[label_id]['frames']
         color = np.array(labels[label_id]['color'])[:-1]*255
-        for no, frame in enumerate(frames):
+        counter = 1
+        for frame in frames:
             
             current_frame = video_data[frame].copy()
-            polys = labels[label_id]['polygons'][no]  
+            polys = labels[label_id]['polygons'][frame]  
             frame_and_polys = cv2.polylines(img=current_frame, 
                                             pts=polys, 
                                             isClosed=True, 
@@ -214,8 +219,9 @@ def draw_polygons(labels, video_data, max_to_plot=2):
             ax.set_yticks([])
             ax.set_title(f'Label: "{label}" - frame {frame}')
             plt.show()   
-            if no >= max_to_plot-1:
+            if counter >= max_to_plot:
                 break   
+            counter += 1
             
             
 def train_test_val(frame_indices,
@@ -287,4 +293,115 @@ def train_test_val(frame_indices,
     assert set(collected_frames) == set(frame_indices), 'Some frames are missing in the splits'
 
     return split_dict
+
+
+def write_training_data(labels,
+                        path_to_training_root,
+                        video_data,
+                        ):
     
+    try:
+        from PIL import Image
+    except ModuleNotFoundError:
+        print('Please install PIL first, via pip install pillow')
+        return
+    
+    for label_id, label_dict in tqdm(labels.items(), desc=f'Exporting {len(labels)} labels'):
+        # Extract the size of the masks for normalization later on 
+        for m in label_dict['masks']:
+            assert m.shape == label_dict['masks'][0].shape, f'All masks should have the same shape'
+        _, mask_height, mask_width = label_dict['masks'][0].shape
+        
+        for split in ['train', 'val', 'test']:
+            for frame_id in tqdm(label_dict['frames_split'][split], 
+                                 desc=f'Exporting {split} frames', 
+                                 leave=False
+                                 ):
+                frame = video_data[frame_id]
+                image_output_path = path_to_training_root / split / f'frame_{frame_id}.png'
+                if not image_output_path.exists():
+                    # Convert to uint8 if needed
+                    if frame.dtype != np.uint8:
+                        if frame.max() <= 1.0:
+                            frame_uint8 = (frame * 255).astype(np.uint8)
+                        else:
+                            frame_uint8 = frame.astype(np.uint8)
+                    else:
+                        frame_uint8 = frame
+                    # Convert to PIL Image
+                    img = Image.fromarray(frame_uint8)
+                    # Save with specific options for higher quality
+                    img.save(
+                        image_output_path,
+                        format="PNG",
+                        compress_level=0,  # 0-9, lower means higher quality
+                        optimize=True,
+                    )
+                
+                # Create the label text file with the correct format
+                with open(path_to_training_root / split / f'frame_{frame_id}.txt', 'a') as f:
+                    for polygon in label_dict['polygons'][frame_id]:
+                        f.write(f'{label_id}')
+                        # Write each coordinate pair as normalized coordinate to txt
+                        for point in polygon:
+                            f.write(f' {point[0]/mask_height} {point[1]/mask_width}')
+                        f.write('\n')
+    print(f"Training data exported to {path_to_training_root}")
+
+def write_yolo_config_yaml(
+    output_path: Path,
+    dataset_path: Path,
+    train_path: str,
+    val_path: str,
+    test_path: str,
+    label_dict: dict
+    ):
+    """
+    Write a YOLO configuration YAML file to disk.
+    
+    Parameters
+    ----------
+    output_path : Path, str
+        Path where to save the YAML file
+    dataset_path : Path, str
+        Path to the dataset root directory
+    train_path : str
+        Folder name of the training images (relative to dataset_path)
+    val_path : str
+        Folder name of the validation images (relative to dataset_path)
+    test_path : str, optional
+        Folder name of the images (relative to dataset_path)
+    label_dict : dict, optional
+        Dictionary mapping label IDs to label names
+    """
+    import yaml
+    assert output_path.suffix == '.yaml', 'Output file should have a .yaml extension'
+    assert dataset_path.exists(), f'Dataset path not found at {dataset_path}'
+    assert dataset_path.is_dir(), f'Dataset path should be a directory, but found a file at {dataset_path}' 
+    
+    # Create the config dictionary
+    config = {
+        "path": str(dataset_path),
+        "train": train_path,
+        "val": val_path,
+    }
+    
+    if test_path:
+        config["test"] = test_path
+    
+    # Add class names if provided
+    if label_dict:
+        config["names"] = label_dict
+    
+    # Write header comments
+    header = "# OCTRON training dataset\n# Exported on {}\n\n".format(datetime.now())
+    
+    # Write to file
+    with open(output_path, 'w') as f:
+        f.write(header)
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    
+    print(f"YOLO config saved to {output_path}")
+    return output_path
+
+
