@@ -3,8 +3,6 @@
 import numpy as np  
 from imantics import Mask
 
-
-
 def get_polygons(mask):
     """
     Given a mask image, extract outlines as polygon 
@@ -22,7 +20,7 @@ def get_polygons(mask):
         return None 
     
     assert mask.ndim == 2, f'Image should be 2D, but got ndim={mask.ndim}'
-    assert not np.isnan(mask).any(), 'There are NaNs in input image'
+    assert not np.isnan(mask).any(), 'There are NaNs in input image' # If this happens, it can be solved!
     assert set(np.unique(mask)) == set([1,0]), 'Image should be composed of 0s and 1s'   
     
     polygons = Mask(mask).polygons()
@@ -34,29 +32,3 @@ def get_polygons(mask):
         polygon_points = polygons.points[0]
         
     return polygon_points
-
-
-def draw_polygons(polygons, ax, color='r', lw=2):
-    """
-    Simple plotting function to visualize polygons.
-    
-    Parameters
-    ----------
-    polygons : np.array : 2D array of polygon points
-    ax : matplotlib.axes : Axes object for plotting
-    color : str : Color of the polygon
-    lw : int : Line width of the polygon
-        
-
-    """
-    
-    assert len(polygons) > 1, 'Need at least two points to draw a polygon'
-    assert polygons.shape[1] == 2, 'Polygons should be 2D'
-    
-    for p in range(len(polygons)-1):
-        ax.plot([polygons[p][0], polygons[p+1][0]],
-                [polygons[p][1], polygons[p+1][1]],
-                c=color, 
-                lw=lw,
-                alpha=1,
-                )

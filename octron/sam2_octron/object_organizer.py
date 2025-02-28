@@ -323,35 +323,3 @@ class ObjectOrganizer(BaseModel):
  
  
  
- 
-def load_object_organizer(file_path):
-    """
-    Load object organizer .json from disk and return
-    its content as dictionary.
-    
-    Parameters
-    ----------
-    file_path : str or Path
-        Path to the .json file.
-    
-    Returns
-    -------
-    dict
-        Dictionary containing all object organizer data.
-    
-    """
-    file_path = Path(file_path)
-    if not file_path.exists():
-        print(f"No organizer file found at {file_path}")
-        return
-    if not file_path.suffix == '.json': 
-        print(f"❌ File is not a json file: {file_path}")
-        return
-    try:
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-        print(f"📖 Octron object organizer loaded from {file_path.as_posix()}")
-        return data
-    except Exception as e:
-        print(f"❌ Error loading json: {e}")
-        return 
