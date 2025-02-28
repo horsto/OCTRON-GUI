@@ -30,7 +30,7 @@ dependencies = [
     "PyQt5>=5.15.0",
     "qtpy>=2.4.2",
     "torch==2.3.1",
-    "torchvision==0.18.1",
+    "torchvision==0.18.1", # https://pytorch.org/get-started/previous-versions/
     "av>=14.1.0",
     "tqdm>=4.67.1",
     "scikit-image>=0.25.0",

@@ -1,6 +1,6 @@
 # YOLO training related helpers
 from pathlib import Path
-from tqdm import tqdm  
+from tqdm.auto import tqdm  
 import json
 from datetime import datetime
 import numpy as np  
@@ -306,16 +306,23 @@ def write_training_data(labels,
         print('Please install PIL first, via pip install pillow')
         return
     
-    for label_id, label_dict in tqdm(labels.items(), desc=f'Exporting {len(labels)} labels'):
+    for label_id, label_dict in tqdm(labels.items(), 
+                                     total=len(labels),
+                                     position=0,
+                                     leave=True,
+                                     desc=f'Exporting {len(labels)} labels'):
         # Extract the size of the masks for normalization later on 
         for m in label_dict['masks']:
             assert m.shape == label_dict['masks'][0].shape, f'All masks should have the same shape'
         _, mask_height, mask_width = label_dict['masks'][0].shape
         
         for split in ['train', 'val', 'test']:
-            for frame_id in tqdm(label_dict['frames_split'][split], 
+            current_indices = label_dict['frames_split'][split]
+            for frame_id in tqdm(current_indices,
+                                 total=len(current_indices), 
                                  desc=f'Exporting {split} frames', 
-                                 leave=False
+                                 position=1,    
+                                 leave=False,
                                  ):
                 frame = video_data[frame_id]
                 image_output_path = path_to_training_root / split / f'frame_{frame_id}.png'
