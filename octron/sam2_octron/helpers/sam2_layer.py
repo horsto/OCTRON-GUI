@@ -42,7 +42,7 @@ def add_sam2_mask_layer(viewer,
     layer_data : zarr.core.Array
         Zarr array object.
     zarr_file_path : Path
-        Path to the zarr file/folder.
+        Absolute path to the zarr file/folder.
 
     """
     project_path = Path(project_path)

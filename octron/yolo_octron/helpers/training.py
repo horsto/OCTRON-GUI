@@ -45,16 +45,13 @@ def load_object_organizer(file_path):
 
 
 def collect_labels(organizer_dict,
-                   expected_num_frames,
-                   expected_image_height,
-                   expected_image_width,
                   ):
     """
     Create a dictionary of labels and their corresponding frames.   
     Extract polygons for all labels along the way.
     
     Performs sanity checks on the data and ensures that the data is consistent
-    across the object organizer, zarr data and video data in terms of 
+    across the object organizer and zarr array data in terms of 
     number of frames, image height and image width.
     
     Parameters
@@ -63,9 +60,7 @@ def collect_labels(organizer_dict,
         This is the json data loaded via load_object_organizer() function.
         It contains label ID and names as well as paths to the zarr files that 
         contain the mask data.
-    expected_num_frames : int : Expected number of frames in the video
-    expected_image_height : int : Expected height of the image (video data)
-    expected_image_width : int : Expected width of the image (video data)
+
 
     Returns
     -------
@@ -104,18 +99,18 @@ def collect_labels(organizer_dict,
                                     image_height, 
                                     image_width, 
                                     num_ch=None,
-                                    )
+                                    verbose=True,
+                                    ) # Not doing hash comparison here! 
         assert status == True
         assert loaded_masks is not None
         assert isinstance(loaded_masks, array.Array), f'Expected zarr array for masks, got {type(loaded_masks)}'
         
         # Comparisons
-        # Make sure information is consistent across object organizer (json),
-        # zarr data and video data
-        # assert data organizer == data video data == data zarr array
-        assert num_frames == expected_num_frames == loaded_masks.shape[0]
-        assert image_height == expected_image_height == loaded_masks.shape[1]
-        assert image_width == expected_image_width == loaded_masks.shape[2]
+        # Make sure information is consistent across object organizer (json)
+        # and zarr array data 
+        assert num_frames == loaded_masks.shape[0]
+        assert image_height == loaded_masks.shape[1]
+        assert image_width == loaded_masks.shape[2]
         
         labels[label_id]['masks'].append(loaded_masks) # This is the zarr array
         # Extract annotated frame indices

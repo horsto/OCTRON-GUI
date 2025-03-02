@@ -371,7 +371,7 @@ class octron_widget(QWidget):
             if self.layer_to_remove._basename() == 'Labels' \
                 and 'mask' in self.layer_to_remove.metadata['_name']:
                 # Remove the zarr zip file containing the layer data
-                zarr_file_path = self.layer_to_remove.metadata['_zarr']
+                zarr_file_path = self.project_path / self.layer_to_remove.metadata['_zarr']
                 if Path(zarr_file_path).exists():
                     shutil.rmtree(zarr_file_path)
                     print(f'Removed Zarr file {zarr_file_path}')
@@ -754,7 +754,7 @@ class octron_widget(QWidget):
             # For each layer that we create, write the object ID and the name to the metadata
             prediction_layer.metadata['_name']   = prediction_layer_name # Save a copy of the name
             prediction_layer.metadata['_obj_id'] = obj_id # This corresponds to organizer entry id
-            prediction_layer.metadata['_zarr'] = zarr_file_path 
+            prediction_layer.metadata['_zarr'] = zarr_file_path.relative_to(self.project_path)
             prediction_layer.metadata['_hash'] = self.current_video_hash
             organizer_entry.prediction_layer = prediction_layer
 
