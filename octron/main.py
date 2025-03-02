@@ -492,6 +492,11 @@ class octron_widget(QWidget):
         Callback function for the file drop area. 
         The area itself (a widget) is already filtering for mp4 files.
         """
+        # Check if project path is set
+        if not self.project_path:
+            show_error("Please select a project directory first.")
+            return
+    
         if len(video_paths) > 1:
             show_warning("Please drop only one file at a time.")
             return
@@ -500,6 +505,44 @@ class octron_widget(QWidget):
         # Load video file and meta info
         if not video_path.exists():
             show_error("File does not exist.")
+            return
+        # Check if the video is within the project directory or a subdirectory
+        try:
+            # Resolve to absolute paths to handle symlinks
+            video_absolute = video_path.resolve()
+            project_absolute = self.project_path.resolve()
+            
+            # Check if video path is within project path
+            if not str(video_absolute).startswith(str(project_absolute)):
+                # Video is not in project path, ask if user wants to copy it
+                reply = QMessageBox.question(
+                    None,
+                    "Video Location",
+                    f"The video file is outside the project directory.\n\n"
+                    f"Video: {video_path}\n"
+                    f"Project: {self.project_path}\n\n"
+                    f"Would you like to copy the video to the project directory?",
+                    QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                    QMessageBox.Yes
+                )
+                if reply == QMessageBox.Cancel:
+                    return
+                if reply == QMessageBox.Yes:
+                    # Create videos directory if it doesn't exist
+                    videos_dir = self.project_path / "videos"
+                    videos_dir.mkdir(exist_ok=True)
+                    # Copy video to project directory
+                    new_video_path = videos_dir / video_path.name
+                    # Show progress dialog for large files
+                    if video_path.stat().st_size > 50_000_000:  # 50 MB
+                        show_info(f"Copying large video file to project directory... Please wait.")
+                    # Copy the file
+                    shutil.copy2(video_path, new_video_path)
+                    video_path = new_video_path
+                    show_info(f"Video copied to {new_video_path}")
+        
+        except Exception as e:
+            show_error(f"Error checking video path: {str(e)}")
             return
         
         video_dict = probe_video(video_path)
@@ -756,6 +799,7 @@ class octron_widget(QWidget):
             prediction_layer.metadata['_obj_id'] = obj_id # This corresponds to organizer entry id
             prediction_layer.metadata['_zarr'] = zarr_file_path.relative_to(self.project_path)
             prediction_layer.metadata['_hash'] = self.current_video_hash
+            prediction_layer.metadata['_video_file_path'] = Path(self.video_layer.metadata['video_file_path']).relative_to(self.project_path)
             organizer_entry.prediction_layer = prediction_layer
 
         ######### Create a new annotation layer ###############################################################
