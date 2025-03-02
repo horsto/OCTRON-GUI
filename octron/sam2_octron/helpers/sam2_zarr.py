@@ -1,16 +1,18 @@
 import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import zarr
 import torch
 from torchvision.transforms import Resize
+
 import warnings 
 warnings.simplefilter("ignore")
 
-def create_image_zarr(zip_path, 
+def create_image_zarr(zarr_path, 
                       num_frames, 
                       image_height,
                       image_width=None,
@@ -18,6 +20,7 @@ def create_image_zarr(zip_path,
                       fill_value=np.nan,
                       dtype='float16',
                       num_ch=None,
+                      video_hash_abbrev=None,
                       verbose=False,
                       ):
     """
@@ -28,8 +31,8 @@ def create_image_zarr(zip_path,
     
     Parameters
     ---------
-    zip_path : pathlib.Path
-        Path to the zarr archive. Must end in .zip
+    zarr_path : pathlib.Path
+        Path to the zarr archive. Must end in .zarr
     num_frames : int
         Number of frames in the video
     image_height : int
@@ -46,8 +49,12 @@ def create_image_zarr(zip_path,
     num_ch : int, optional
         Number of channels in the image. Default is None.
         If None, then the channel dimension will not be included.
+    video_hash_abbrev : str, optional
+        Abbreviated hash of the video file. This is used as 
+        a unique identifier for the corresponding video file throughout.
     verbose : bool, optional
         If True, print the zarr store info.
+        
         
     Returns
     -------
@@ -60,14 +67,14 @@ def create_image_zarr(zip_path,
         image_width = image_height
     else:
         assert image_width > 0, f'image_width must be > 0, not {image_width}'
-    assert isinstance(zip_path, Path), f'path must be a pathlib.Path object, not {type(zip_path)}'
-    assert zip_path.suffix == '.zip', f'path must be a .zip file, not {zip_path.suffix}'  
+    assert isinstance(zarr_path, Path), f'zarr_path must be a pathlib.Path object, not {type(zarr_path)}'
+    assert zarr_path.suffix == '.zarr', f'zarr_path must end in .zarr, not {zarr_path.suffix}'  
     
-    if zip_path.exists():
-        shutil.rmtree(zip_path)
+    if zarr_path.exists():
+        shutil.rmtree(zarr_path)
 
     # Assuming local store on fast SSD, so no compression employed for now 
-    store = zarr.storage.LocalStore(zip_path, read_only=False)  
+    store = zarr.storage.LocalStore(zarr_path, read_only=False)  
   
     if num_ch is not None: 
         image_zarr = zarr.create_array(store=store,
@@ -87,19 +94,22 @@ def create_image_zarr(zip_path,
                                     dtype=dtype,
                                     overwrite=True,
                                     )
+    image_zarr.attrs['created_at'] = str(datetime.now())
+    image_zarr.attrs['video_hash'] = video_hash_abbrev
     if verbose:
         print('Zarr store info:')
         print(image_zarr.info)
 
     return image_zarr
 
-def load_image_zarr(zip_path, 
+def load_image_zarr(zarr_path, 
                     num_frames, 
                     image_height,
                     image_width=None,
                     chunk_size=20,
                     num_ch=None,
-                    verbose=False,
+                    video_hash_abrrev=None,
+                    verbose=True,
                     ):
     """
     Loads an existing zarr archive for storing and retrieving image data,
@@ -107,8 +117,8 @@ def load_image_zarr(zip_path,
     
     Parameters
     ---------
-    zip_path : pathlib.Path
-        Path to the zarr archive. Must end in .zip and exist.
+    zarr_path : pathlib.Path
+        Path to the zarr archive. Must end in .zarr.
     num_frames : int
         Expected number of frames in the video.
     image_height : int
@@ -120,6 +130,9 @@ def load_image_zarr(zip_path,
         Size of a chunk stored in the zarr archive.
     num_ch : int, optional
         Number of channels in the image. Default is None.
+    video_hash_abrrev : str, optional
+        Abbreviated hash of the video file. This is used as
+        a unique identifier for the corresponding video file throughout.
     verbose : bool, optional
         If True, print the zarr store info.
         
@@ -131,7 +144,7 @@ def load_image_zarr(zip_path,
         True if the array was loaded successfully, False otherwise.   
 
     """
-    assert zip_path.exists(), f'Zip file {zip_path.as_posix()} does not exist.'
+    assert zarr_path.exists(), f'Zarr folder {zarr_path.as_posix()} does not exist.'
     assert image_height > 0, f'image_height must be > 0, not {image_height}'
     if image_width is None:
         image_width = image_height
@@ -139,13 +152,13 @@ def load_image_zarr(zip_path,
         assert image_width > 0, f'image_width must be > 0, not {image_width}'
 
     # Open the LocalStore and check if the group 'masks' exists
-    store = zarr.storage.LocalStore(zip_path, read_only=False)  
+    store = zarr.storage.LocalStore(zarr_path, read_only=False)  
     root = zarr.open_group(store=store, mode='a')
     if verbose: 
         print("Existing keys in zarr archive:", list(root.array_keys()))
     # Attempt to load the array named 'masks'
     if 'masks' not in root:
-        print(f"Array 'masks' not found in {zip_path.as_posix()}")
+        print(f"Array 'masks' not found in {zarr_path.as_posix()}")
         return None, False
     else:
         image_zarr = root['masks']
@@ -165,12 +178,20 @@ def load_image_zarr(zip_path,
     if image_zarr.chunks != expected_chunks:
         print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
         return None, False
+    
+    # Check video hash if provided
+    if video_hash_abrrev is not None:
+        stored_hash = image_zarr.attrs.get('video_hash', None)
+        if stored_hash != video_hash_abrrev:
+            print(f"❌ Video hash mismatch: expected {video_hash_abrrev}, got {stored_hash}")
+            return None, False
+        elif verbose:
+            print(f"🔒 Video hash verified: {video_hash_abrrev}")
+    
     if verbose:
         print('Zarr store info:')
         print(image_zarr.info) 
     return image_zarr, True
-
-
 
 
 

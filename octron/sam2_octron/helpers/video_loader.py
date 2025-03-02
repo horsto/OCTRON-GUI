@@ -32,9 +32,12 @@ def probe_video(file_path):
     width = video_stream.width
     height = video_stream.height
     fps = video_stream.average_rate
-    num_frames = video_stream.frames
+    assert hasattr(fps, '_numerator') and hasattr(fps, '_denominator'), f"Invalid frame rate: {fps}"
+    fps = fps._numerator / fps._denominator # Convert to float
+    num_frames = int(video_stream.frames)
     # Calculate video duration in seconds.
-    duration = float(num_frames / fps)
+    assert fps > 0, f"Invalid frame rate: {fps}"
+    duration = float(num_frames) / fps
 
     print(f'File: {file_path}')
     print(f"Codec: {codec}")
@@ -45,6 +48,7 @@ def probe_video(file_path):
     container.close()
     
     video_dict = {'codec': codec,
+                  'video_file_path': file_path,
                   'height': height,
                   'width': width,
                   'fps': fps,

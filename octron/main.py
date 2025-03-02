@@ -7,6 +7,7 @@ import os, sys
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import shutil
+from datetime import datetime
 import warnings
 # Suppress specific warnings
 # warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
@@ -98,7 +99,9 @@ class octron_widget(QWidget):
         
         # Initialize some variables
         self.project_path = None # Main project path that the user selects
+        self.project_path_video = None # Video path that the user selects
         self.video_layer = None
+        self.current_video_hash = None # Hashed video file
         self.video_zarr = None
         self.all_zarrs = [] # Collect zarrs in list so they can be cleaned up upon closing
         self.prefetcher_worker = None
@@ -308,8 +311,8 @@ class octron_widget(QWidget):
         """
         Save the object organizer to the project directory
         """
-        assert self.project_path is not None, "No project path set."
-        organizer_path = self.project_path  / "object_organizer.json"
+        assert self.project_path_video is not None, "No project video path set."
+        organizer_path = self.project_path_video  / "object_organizer.json"
         self.object_organizer.save_to_disk(organizer_path)
 
 
@@ -437,7 +440,6 @@ class octron_widget(QWidget):
         Callback triggered when a layers are changed in the viewer.
         Currently triggered only on INSERTION events (layers are added).
         
-        
         Takes care of defining video layers.
         Searches for video layers with a basename of "Image" and "VIDEO" in
         the name. If more than one is found, it removes the most recently added one.
@@ -471,7 +473,9 @@ class octron_widget(QWidget):
             # Remove the most recently added video layer (or adjust as desired)
             #self._viewer.layers.remove(video_layers[-1])
         elif len(video_layers) == 1:
-            video_layer = video_layers[0]
+            video_layer = video_layers[0]     
+            video_metadata = video_layer.metadata
+            self.current_video_hash = video_metadata['hash'][-8:] # Save it globally for quick access       
             self.video_layer = video_layer
             self._viewer.dims.set_point(0,0)
             # Check if you can create a zarr store for video
@@ -501,7 +505,7 @@ class octron_widget(QWidget):
         video_dict = probe_video(video_path)
         # Create hash and save it in the metadata
         video_file_hash = get_vfile_hash(video_path)
-        video_dict['hash'] = video_file_hash
+        video_dict['hash'] = video_file_hash # Save it locally as metadata
         # Layer name 
         layer_name = f'VIDEO [name: {video_path.stem}]'
         video_dict['_name'] = layer_name # Octron convention. Save the name in metadata.
@@ -529,16 +533,12 @@ class octron_widget(QWidget):
         if self.video_zarr:
             # Zarr store already exists
             return
-        if not self.video_layer:
-            # only when a video layer is found
+        if not self.video_layer or not self.current_video_hash:
+            # only when a video layer and corresponding hash are found
             return
         if not self.predictor:
             # only when a model is loaded
             return
-        
-        zarr_video_dir = self.project_path
-        video_zarr_path = zarr_video_dir / 'video_data.zip'
-        status = False
         
         # Collect some info about video layer before loading or creating zarr archive
         metadata =  self.video_layer.metadata
@@ -555,6 +555,11 @@ class octron_widget(QWidget):
         resized_width = int(np.floor(image_scaler * largest_edge))
         print(f'📐 Resized video dimensions: {resized_height}x{resized_width}')
         
+        # Create zarr store for video layer
+        self.project_path_video = self.project_path / self.current_video_hash
+        video_zarr_path = self.project_path_video / 'video data.zarr'
+        status = False
+        
         if video_zarr_path.exists():
             # Zarr store already exists. Check and load. 
             # If the checks fail, the zarr store will be recreated.
@@ -564,7 +569,9 @@ class octron_widget(QWidget):
                                                  image_width=resized_width,
                                                  chunk_size=self.chunk_size,
                                                  num_ch=3,
-                                                )
+                                                 video_hash_abrrev=self.current_video_hash,
+                                                 )
+                                            
         if not status or not video_zarr_path.exists():
             if video_zarr_path.exists():
                 shutil.rmtree(video_zarr_path)
@@ -574,11 +581,26 @@ class octron_widget(QWidget):
                                                 image_width=resized_width,
                                                 chunk_size=self.chunk_size,
                                                 num_ch=3,
+                                                video_hash_abbrev=self.current_video_hash,
                                                 )
+            # Write video information to a text file
+            video_info_path = self.project_path_video / "video_info.txt"
+            with open(video_info_path, 'w') as f:
+                f.write("# This info here is just for information purposes.\n")    
+                f.write("# It is not actually used anywhere in OCTRON and can be deleted\n")   
+                f.write("# or edited without consequences.\n") 
+                f.write("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n") 
+                f.write(f"Video path: {metadata['video_file_path']}\n")
+                f.write(f"Video hash: {metadata['hash']}\n")
+                f.write(f"Video abbreviated hash: {self.current_video_hash}\n") # Used throughout as identifier
+                f.write(f"Number of frames: {num_frames}\n")
+                f.write(f"Original resolution (hxw): {video_height}x{video_width}\n")
+                f.write(f"Info file created on: {datetime.now()}\n")
             print(f'💾 New video zarr archive created "{video_zarr_path.as_posix()}"')
+            print(f'📝 Video info saved to "{video_info_path.as_posix()}"')
         else:
             self.video_zarr = video_zarr
-            print(f'💾 Video zarr archive loaded "{video_zarr_path.as_posix()}"')
+            print(f'📖 Video zarr archive loaded "{video_zarr_path.as_posix()}"')
         
         # Add to list of zarrs for cleanup upon closing
         self.all_zarrs.append(self.video_zarr)
@@ -714,14 +736,15 @@ class octron_widget(QWidget):
         if create_prediction_layer:
             prediction_layer_name = f"{layer_name} masks"
             mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
-                                            use_selection=True, 
-                                            selection=1,
-                                            )
+                                              use_selection=True, 
+                                              selection=1,
+                                              )
             prediction_layer, zarr_data, zarr_file_path = add_sam2_mask_layer(viewer=self._viewer,
                                                                  video_layer=self.video_layer,
                                                                  name=prediction_layer_name,
-                                                                 project_path=self.project_path,
+                                                                 project_path=self.project_path_video,
                                                                  color=mask_colors,
+                                                                 video_hash_abrrev=self.current_video_hash,
                                                                  )
             # Add zarr store to list for cleanup upon closing
             self.all_zarrs.append(zarr_data)
@@ -732,12 +755,13 @@ class octron_widget(QWidget):
             prediction_layer.metadata['_name']   = prediction_layer_name # Save a copy of the name
             prediction_layer.metadata['_obj_id'] = obj_id # This corresponds to organizer entry id
             prediction_layer.metadata['_zarr'] = zarr_file_path 
+            prediction_layer.metadata['_hash'] = self.current_video_hash
             organizer_entry.prediction_layer = prediction_layer
 
         ######### Create a new annotation layer ###############################################################
         
         if layer_type == 'Shapes':
-            annotation_layer_name = f"⌖ {layer_name} shapes"
+            annotation_layer_name = f"{layer_name} shapes"
             # Create a shape layer
             annotation_layer = add_sam2_shapes_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
@@ -745,6 +769,7 @@ class octron_widget(QWidget):
                                                      )
             annotation_layer.metadata['_name']   = annotation_layer_name 
             annotation_layer.metadata['_obj_id'] = obj_id 
+            annotation_layer.metadata['_hash'] = self.current_video_hash
             organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
@@ -753,13 +778,14 @@ class octron_widget(QWidget):
             
         elif layer_type == 'Points':
             # Create a point layer
-            annotation_layer_name = f"⌖ {layer_name} points"
+            annotation_layer_name = f"{layer_name} points"
             # Create a shape layer
             annotation_layer = add_sam2_points_layer(viewer=self._viewer,
                                                      name=annotation_layer_name,
                                                      )
             annotation_layer.metadata['_name']   = annotation_layer_name 
             annotation_layer.metadata['_obj_id'] = obj_id 
+            annotation_layer.metadata['_hash'] = self.current_video_hash
             organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.mouse_drag_callbacks.append(self.octron_sam2_callbacks.on_mouse_press)

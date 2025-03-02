@@ -12,6 +12,7 @@ def add_sam2_mask_layer(viewer,
                         name,
                         project_path,
                         color,
+                        video_hash_abrrev=None,
                         ):
     """
     Generic mask layer for napari and SAM2.
@@ -28,9 +29,11 @@ def add_sam2_mask_layer(viewer,
         Name of the new mask layer.
     project_path : str or Path
         Path to the project directory.
-    base_color : str or list
+    color : str or list
         Color of the mask layer.
-        
+    video_hash_abbrev : str, optional
+        Abbreviated hash of the video file. This is used as 
+        a unique identifier for the corresponding video file throughout.
         
     Returns
     -------
@@ -39,7 +42,7 @@ def add_sam2_mask_layer(viewer,
     layer_data : zarr.core.Array
         Zarr array object.
     zarr_file_path : Path
-        Path to the zarr file.
+        Path to the zarr file/folder.
 
     """
     project_path = Path(project_path)
@@ -53,7 +56,7 @@ def add_sam2_mask_layer(viewer,
         num_frames = video_layer.metadata['num_frames']
         height = video_layer.metadata['height']
         width = video_layer.metadata['width']
-        zarr_file_path = project_path / f"{name}.zip"
+        zarr_file_path = project_path / f"{name}.zarr"
         status = False
         if zarr_file_path.exists():
             layer_data, status = load_image_zarr(zarr_file_path, 
@@ -61,6 +64,7 @@ def add_sam2_mask_layer(viewer,
                                                 image_height=height, 
                                                 image_width=width, 
                                                 chunk_size=20,
+                                                video_hash_abrrev=video_hash_abrrev,
                                                 )
             if status:
                 show_info(f"Prediction (mask) layer data found at {zarr_file_path.as_posix()}")
@@ -74,6 +78,7 @@ def add_sam2_mask_layer(viewer,
                                         chunk_size=20,
                                         fill_value=-1,
                                         dtype='int8',
+                                        video_hash_abbrev=video_hash_abrrev,
                                         )
     else:
         show_error("Video layer metadata incomplete; dummy mask not created.")

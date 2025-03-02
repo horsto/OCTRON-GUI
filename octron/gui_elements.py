@@ -1,7 +1,7 @@
 # All main GUI elements
 
 from qtpy.QtCore import QSize, QRect, Qt, QCoreApplication, Signal
-from qtpy.QtGui import QCursor, QPixmap, QIcon, QPalette, QColor, QDragEnterEvent, QDropEvent
+from qtpy.QtGui import QCursor, QPixmap, QIcon, QDragEnterEvent, QDropEvent
 from qtpy.QtWidgets import (
     QWidget,
     QFrame,
