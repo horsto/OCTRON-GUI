@@ -241,6 +241,7 @@ class ObjectOrganizer(BaseModel):
             # Add metadata about the prediction (mask, ... ) layer
             if obj.prediction_layer is not None:
                 prediction_layer_data = obj.prediction_layer.data
+                prediction_layer_meta = obj.prediction_layer.metadata
                 predicted_indices = np.where(prediction_layer_data[:,0,0] >= 0)[0]
                 if len(predicted_indices):
                     num_predicted_indices = len(predicted_indices)
@@ -255,6 +256,10 @@ class ObjectOrganizer(BaseModel):
                     "ndim": obj.prediction_layer.ndim,
                     "visible": obj.prediction_layer.visible,
                     "opacity": obj.prediction_layer.opacity,
+                    "zarr_path" : prediction_layer_meta['_zarr'].as_posix(),
+                    "video_file_path": prediction_layer_meta['_video_file_path'].as_posix(),
+                    "video_hash": prediction_layer_meta['_hash'],
+                    
                 }
                 
                 # Handle colormap serialization based on its type
