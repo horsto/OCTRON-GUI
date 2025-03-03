@@ -33,6 +33,7 @@ dependencies = [
     "torchvision>=0.20.1",
     "av>=14.1.0",
     "tqdm>=4.67.1",
+    "scipy>=1.15.1",
     "scikit-image>=0.25.0",
     "zarr>=3.0.4",
     "kornia>=0.8.0",
