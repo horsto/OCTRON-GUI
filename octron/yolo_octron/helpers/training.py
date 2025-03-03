@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 import numpy as np  
 from zarr.core import array # For type checking 
-from octron.sam2_octron.helpers.sam2_zarr import load_image_zarr   
+
 from octron.yolo_octron.helpers.polygons import get_polygons
 
 
@@ -44,108 +44,221 @@ def load_object_organizer(file_path):
         return 
 
 
-def collect_labels(organizer_dict,
-                  ):
+def find_common_frames(frame_arrays):
     """
-    Create a dictionary of labels and their corresponding frames.   
-    Extract polygons for all labels along the way.
+    Find frame indices that are present in all provided arrays.
     
-    Performs sanity checks on the data and ensures that the data is consistent
-    across the object organizer and zarr array data in terms of 
-    number of frames, image height and image width.
+    Parameters:
+    -----------
+    frame_arrays : list of numpy.ndarrays
+        Numpy arrays containing frame indices
+        
+    Returns:
+    --------
+    numpy.ndarray
+        Array containing only the frame indices present in all input arrays
+    """
+    if not frame_arrays:
+        return np.array([], dtype=int)
     
+    if len(frame_arrays) == 1:
+        return frame_arrays[0]
+    
+    # Start with the first array
+    common = frame_arrays[0]
+    
+    # Sequentially intersect with each additional array
+    for frames in frame_arrays[1:]:
+        common = np.intersect1d(common, frames)
+        # Early exit if no common frames are found
+        if len(common) == 0:
+            break    
+    return common
+
+
+def collect_labels(project_path, 
+                   prune_empty_labels=True, 
+                   verbose=False,
+                   ):
+    """
+    Extract info from project path.
+    Find all the object organizer json files and load them.
+    The object organizer json files contain the information about the annotations 
+    (the zarr arrays) as well as the associated video files.
+    Both object organizer as well as zarr arrays (as attribute) contain the video hash.
+    This hash is used to check if the correct video file is associated with the zarr array.
+
+    Sanity checks:
+    1. Data shape info in the zarr array and 
+       the object organizer json file match the actual video file shape 
+    2. The video hash in the zarr array and 
+       the object organizer json file match the actual video file hash
+
+
     Parameters
     ----------
-    organizer_dict : dict : Dictionary containing OCTRON organizer data.
-        This is the json data loaded via load_object_organizer() function.
-        It contains label ID and names as well as paths to the zarr files that 
-        contain the mask data.
-
-
+    project_path : str or Path : Path to the project root directory.
+        The jsons are saved in subfolders.
+    prune_empty_labels : bool : Whether to prune frames that 
+                                do not have annotation across all labels.
+    verbose : bool : Whether to print debug info.
+    
     Returns
     -------
-    labels : dict : Dictionary containing labels and their corresponding frames
-            keys: label_id
+    label_dict : dict : Dictionary containing project subfolders,
+                        and their corresponding labels, 
+                        annotated frames, masks and video data.
+            keys: project_subfolder
             values: dict
-                keys: label, frames, masks, polygons, color
-                values: label (str), # Name of the label
-                         frames (np.array), # Annotated frame indices for the label
-                         masks (list of zarr arrays), # Mask zarr arrays
-                         polygons (dict) # Polygons for each frame index
-                         color (list) # Color of the label (RGBA, [0,1])   
-                                
+                keys: label_id
+                values: dict
+                    keys: label, frames, masks, video
+                    values: label (str), # Name of the label corresponding to current ID
+                            frames (np.array), # Annotated frame indices for the label
+                            masks (list of zarr arrays), # Mask zarr arrays
+                            video (list of FastVideoReader) # Video data for each label
     """
-    labels = {}
-    for entry in organizer_dict['entries'].values():
-        label_id = int(entry['label_id'] )
-        label    = entry['label'] 
-        color    = entry['color']
-        if label_id in labels:
-            assert labels[label_id]['label'] == label, 'Label name vs. id do not match'
-        else:
-            # First time we see this label
-            labels[label_id] = {'label':label, 
-                                'frames': [],
-                                'masks': [], 
-                                'color': color, # Only save the first color
-                                }   
+    # Hiding some imports here to reduce initial loading time
+    from napari_pyav._reader import FastVideoReader
+    from octron.sam2_octron.helpers.video_loader import get_vfile_hash
+    from octron.sam2_octron.helpers.sam2_zarr import load_image_zarr   
 
-        # Find out which frames were annotated
-        zarr_path = Path(entry['prediction_layer_metadata']['zarr_path'])
-        assert zarr_path.exists(), f'Zarr file not found at {zarr_path}'
-        num_frames, image_height, image_width = entry['prediction_layer_metadata']['data_shape']
-        loaded_masks, status = load_image_zarr(zarr_path, 
-                                    num_frames,
-                                    image_height, 
-                                    image_width, 
-                                    num_ch=None,
-                                    verbose=True,
-                                    ) # Not doing hash comparison here! 
-        assert status == True
-        assert loaded_masks is not None
-        assert isinstance(loaded_masks, array.Array), f'Expected zarr array for masks, got {type(loaded_masks)}'
+    project_path = Path(project_path)
+    assert project_path.exists(), f'Project path not found at {project_path.as_posix()}'
+    assert project_path.is_dir(), f'Project path should be a directory, not file'
+
+    label_dict = {}
+    video_hash_dict = {}    
+    for object_organizer in project_path.rglob('object_organizer.json'):
+        if verbose: print(object_organizer.parent)
+        organizer_dict = load_object_organizer(object_organizer)  
+        labels = {}
+        for entry in organizer_dict['entries'].values():
+            label_id = int(entry['label_id'] )
+            label    = entry['label'] 
+            if verbose: print(f'Found label {label} with id {label_id}')   
+            if label_id in labels:
+                assert labels[label_id]['label'] == label, 'Label name vs. id do not match'
+            else:
+                # First time we see this label
+                labels[label_id] = {'label':  label, 
+                                    'frames': [],
+                                    'masks':  [], 
+                                    'video': [],
+                                    } 
+            # Find out which frames were annotated
+            zarr_path_relative = Path(entry['prediction_layer_metadata']['zarr_path'])
+            zarr_path = project_path / zarr_path_relative
+            assert zarr_path.exists(), f'Zarr file not found at {zarr_path}'
+            num_frames, image_height, image_width = entry['prediction_layer_metadata']['data_shape']
+            # Feed the expected shape to the loader.
+            loaded_masks, status = load_image_zarr(zarr_path, 
+                                        num_frames,
+                                        image_height, 
+                                        image_width, 
+                                        num_ch=None,
+                                        verbose=False,
+                                        ) # Not doing hash comparison here! 
+            assert status == True
+            assert loaded_masks is not None
+            # Do some sanity checks
+            assert num_frames   == loaded_masks.shape[0]
+            assert image_height == loaded_masks.shape[1]
+            assert image_width  == loaded_masks.shape[2]
+            labels[label_id]['masks'].append(loaded_masks) # This is the zarr array
+            # Extract annotated frame indices
+            # The fill value of the zarr array is -1, so we can use this to find annotated frames
+            annotated_indices = np.where(loaded_masks[:,0,0] >= 0)[0]
+            labels[label_id]['frames'].extend(annotated_indices) 
+            
+            expected_video_hash_zarr = loaded_masks.attrs.get('video_hash', None)
+            expected_video_hash_organizer = entry['prediction_layer_metadata']['video_hash']    
+            
+            video_file_path = project_path / Path(entry['prediction_layer_metadata']['video_file_path'])
+            if not video_file_path in video_hash_dict:
+                assert video_file_path.exists(), f'Video file not found at "{video_file_path.as_posix()}"' 
+                actual_video_hash = get_vfile_hash(video_file_path)[-8:] # By default this is shortened to 8 characters
+                video_hash_dict[video_file_path] = actual_video_hash 
+            assert expected_video_hash_zarr == expected_video_hash_organizer == video_hash_dict[video_file_path], 'Video hash mismatch'
+            # Load video so data can be extracted
+            video = FastVideoReader(video_file_path)
+            # Do some sanity checks
+            assert num_frames   == video.shape[0]
+            assert image_height == video.shape[1]
+            assert image_width  == video.shape[2]
+            
+            labels[label_id]['video'].append(video)
+            
+        # Maintain only unique entries in 'frames' lists
+        for label_id in labels:
+            _, i = np.unique(labels[label_id]['frames'], return_index=True)
+            labels[label_id]['frames'] = np.array(labels[label_id]['frames'])[np.sort(i)]
+            if verbose: print(f'Label {labels[label_id]["label"]} has {len(labels[label_id]["frames"])} annotated frames')
         
-        # Comparisons
-        # Make sure information is consistent across object organizer (json)
-        # and zarr array data 
-        assert num_frames == loaded_masks.shape[0]
-        assert image_height == loaded_masks.shape[1]
-        assert image_width == loaded_masks.shape[2]
+        # Prune frames that do not have annotation across all labels
+        if prune_empty_labels:
+            common_frames = find_common_frames([f['frames'] for f in labels.values()])
+            for label_id in labels:
+                labels[label_id]['frames'] = common_frames
+                
+        label_dict[object_organizer.parent.as_posix()] = labels
         
-        labels[label_id]['masks'].append(loaded_masks) # This is the zarr array
-        # Extract annotated frame indices
-        # The fill value of the zarr array is -1, so we can use this to find annotated frames
-        annotated_indices = np.where(loaded_masks[:,0,0] >= 0)[0]
-        labels[label_id]['frames'].extend(annotated_indices) 
-        
-    # Maintain only unique entries in 'frames' lists
-    for label_id in labels:
-        _, i = np.unique(labels[label_id]['frames'], return_index=True)
-        labels[label_id]['frames'] = np.array(labels[label_id]['frames'])[np.sort(i)]
-        print(f'Label {labels[label_id]["label"]} has {len(labels[label_id]["frames"])} annotated frames')
+    return label_dict   
+
+# def collect_polygons(labels_dict,
+#                      ):
+#     """
+#     Create a dictionary of labels and their corresponding frames.   
+#     Extract polygons for all labels along the way.
     
-    # Extract polygon points for each label
-    for label_id in labels:
-        label = labels[label_id]['label']
-        frames = labels[label_id]['frames']
+#     Performs sanity checks on the data and ensures that the data is consistent
+#     across the object organizer and zarr array data in terms of 
+#     number of frames, image height and image width.
+    
+#     Parameters
+#     ----------
+#     organizer_dict : dict : Dictionary containing OCTRON organizer data.
+#         This is the json data loaded via load_object_organizer() function.
+#         It contains label ID and names as well as paths to the zarr files that 
+#         contain the mask data.
 
-        polys = {} # Collected polygons over frames
-        for frame in tqdm(frames, desc=f'Polygons for label {label}'):    
-            mask_polys_ = [] # List of polygons for the current frame
-            for mask_zarr in labels[label_id]['masks']:
-                mask_ = mask_zarr[frame]
-                try:
-                    mask_polys_.append(get_polygons(mask_)) 
-                except AssertionError:
-                    # The mask is empty at this frame.
-                    # This happens if there is more than one mask 
-                    # zarr array (because there are multiple instances of a label), 
-                    # and the current label is not present in the current mask array.
-                    pass    
-            polys[frame] = mask_polys_
-        labels[label_id]['polygons'] = polys  
 
-    return labels
+#     Returns
+#     -------
+#     labels : dict : Dictionary containing labels and their corresponding frames
+#             keys: label_id
+#             values: dict
+#                 keys: label, frames, masks, polygons, color
+#                 values: label (str), # Name of the label
+#                          frames (np.array), # Annotated frame indices for the label
+#                          masks (list of zarr arrays), # Mask zarr arrays
+#                          polygons (dict) # Polygons for each frame index
+#                          color (list) # Color of the label (RGBA, [0,1])   
+                                
+#     """
+    
+#     # Extract polygon points for each label
+#     for label_id in labels:
+#         label = labels[label_id]['label']
+#         frames = labels[label_id]['frames']
+
+#         polys = {} # Collected polygons over frames
+#         for frame in tqdm(frames, desc=f'Polygons for label {label}'):    
+#             mask_polys_ = [] # List of polygons for the current frame
+#             for mask_zarr in labels[label_id]['masks']:
+#                 mask_ = mask_zarr[frame]
+#                 try:
+#                     mask_polys_.append(get_polygons(mask_)) 
+#                 except AssertionError:
+#                     # The mask is empty at this frame.
+#                     # This happens if there is more than one mask 
+#                     # zarr array (because there are multiple instances of a label), 
+#                     # and the current label is not present in the current mask array.
+#                     pass    
+#             polys[frame] = mask_polys_
+#         labels[label_id]['polygons'] = polys  
+
+#     return labels
 
 
 def draw_polygons(labels, 
