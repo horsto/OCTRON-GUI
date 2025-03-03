@@ -1,7 +1,122 @@
 # Polygon helpers for training data extraction
 
 import numpy as np  
-from imantics import Mask
+
+def find_objects_in_mask(mask, min_area=10):
+    """
+    Find all objects in a binary mask using connected component labeling.
+    This is run initially to gain an understanding of the objects in the masks,
+    i.e. know their median area, etc.
+    See also:
+    https://scikit-image.org/docs/0.23.x/api/skimage.feature.html#
+    
+    
+    Parameters:
+    -----------
+    mask : numpy.ndarray
+        Binary mask where objects have value 1 
+        and background has value 0
+    min_area : int
+        Minimum area (in pixels) for an object to be considered
+        
+    Returns:
+    --------
+    labels : numpy.ndarray
+        Labeled image where each object has a unique integer value
+    regions : list
+        List of region properties for each object
+    """
+    try:
+        from skimage import measure
+    except ImportError:
+        raise ImportError('find_objects_in_mask() requires scikit-image')
+    
+    # Ensure the mask is binary
+    binary_mask = mask > 0
+    
+    # Label connected components
+    labels = measure.label(binary_mask, background=0, connectivity=2)
+    
+    # Get region properties
+    regions = measure.regionprops(labels)
+    
+    # Filter regions by size if needed
+    if min_area > 0:
+        for region in regions[:]:
+            if region.area < min_area:
+                # Remove small objects
+                labels[labels == region.label] = 0
+                regions.remove(region)
+    
+    # Relabel the image to ensure consecutive labels
+    if any(region.label != i+1 for i, region in enumerate(regions)):
+        new_labels = np.zeros_like(labels)
+        for i, region in enumerate(regions):
+            new_labels[labels == region.label] = i + 1
+        labels = new_labels
+        regions = measure.regionprops(labels)
+    
+    return labels, regions
+
+
+
+def watershed_mask(mask,
+                   footprint_diameter,
+                   ):
+    """
+    Watershed segmentation of a mask image
+    
+    Parameters
+    ----------
+    mask : np.array : Binary mask where objects have value 1 
+                      and background has value 0
+    footprint_diameter : float : Diameter of the footprint for peak_local_max()
+    
+    Returns
+    -------
+    labels : np.array : Segmented mask, where 0 is background 
+                        and each object has a unique integer value
+    
+    """
+    try:
+        from scipy import ndimage as ndi
+    except ImportError:
+        raise ImportError('watershed_mask() requires scipy')
+    try:
+        from skimage.segmentation import watershed
+        from skimage.feature import peak_local_max
+    except ImportError:
+        raise ImportError('watershed_mask() requires scikit-image')
+    
+    assert mask.ndim == 2, f'Mask should be 2D, but got ndim={mask.ndim}'
+    assert not np.isnan(mask).any(), 'There are NaNs in input mask' # If this happens, it can be solved!
+    assert set(np.unique(mask)) == set([1,0]), 'Mask should be composed of 0s and 1s'
+    
+    diam = int(np.round(footprint_diameter))
+    assert diam > 0, 'Footprint diameter should be a positive integer'
+    
+    # Watershed segmentation
+    # See https://scikit-image.org/docs/0.24.x/auto_examples/segmentation/plot_watershed.html
+    distance = ndi.distance_transform_edt(mask)
+    diam = int(np.round(diam))
+    coords = peak_local_max(distance, footprint=np.ones((diam,diam)), labels=mask)
+    mask_ = np.zeros(distance.shape, dtype=bool)
+    mask_[tuple(coords.T)] = True
+    markers, _ = ndi.label(mask_)
+    labels = watershed(-distance, markers, mask=mask)
+            
+    masks = []
+    for l in np.unique(labels):
+        if l == 0:  
+            # That's background
+            continue
+        mask = np.zeros_like(labels)
+        mask[labels == l] = 1
+        masks.append(mask)       
+            
+    return labels, masks
+        
+
 
 def get_polygons(mask):
     """
@@ -16,6 +131,11 @@ def get_polygons(mask):
     polygon_points : np.array : Polygon points for the extracted binary mask(s)
     
     """
+    try:
+        from imantics import Mask
+    except ImportError:
+        raise ImportError('get_polygons() requires imantics')
+    
     if mask is None:
         return None 
     
