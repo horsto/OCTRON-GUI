@@ -62,6 +62,7 @@ def find_objects_in_mask(mask, min_area=10):
 
 def watershed_mask(mask,
                    footprint_diameter,
+                   plot=False,
                    ):
     """
     Watershed segmentation of a mask image
@@ -110,12 +111,28 @@ def watershed_mask(mask,
         if l == 0:  
             # That's background
             continue
-        mask = np.zeros_like(labels)
-        mask[labels == l] = 1
-        masks.append(mask)       
-            
+        labelmask = np.zeros_like(labels)
+        labelmask[labels == l] = 1
+        masks.append(labelmask)    
+           
+    if plot:
+        import matplotlib.pyplot as plt
+        plt.rcParams['xtick.major.size'] = 10
+        plt.rcParams['xtick.major.width'] = 1
+        plt.rcParams['ytick.major.size'] = 10
+        plt.rcParams['ytick.major.width'] = 1
+        plt.rcParams['xtick.bottom'] = True
+        plt.rcParams['ytick.left'] = True
+
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        ax[0].imshow(mask, cmap='gray')
+        ax[0].set_title('Original mask')
+        ax[1].imshow(labels, cmap='nipy_spectral')
+        ax[1].set_title(f'Watershed segmentation, n masks: {len(masks)}')
+        plt.show()
     return labels, masks
-        
+
+
 
 
 def get_polygons(mask):

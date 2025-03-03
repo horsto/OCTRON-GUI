@@ -76,6 +76,35 @@ def find_common_frames(frame_arrays):
     return common
 
 
+def pick_random_frames(frames, n=20):
+    """
+    Pick n random frames from a frames array without replacement
+    
+    Parameters
+    ----------
+    frames : numpy.ndarray
+        Array of frame indices
+    n : int
+        Number of frames to pick
+    
+    Returns
+    -------
+    numpy.ndarray
+        Array of randomly selected frame indices
+    """
+    # Determine the number of frames to pick (min of n and array length)
+    num_to_pick = min(n, len(frames))
+    
+    # Pick random frames without replacement
+    if num_to_pick > 0:
+        random_frames = np.random.choice(frames, size=num_to_pick, replace=False)
+        # Sort the frames to maintain chronological order if needed
+        random_frames.sort()
+        return random_frames
+    else:
+        return np.array([], dtype=frames.dtype)
+
+
 def collect_labels(project_path, 
                    prune_empty_labels=True, 
                    verbose=False,
@@ -110,13 +139,16 @@ def collect_labels(project_path,
                         annotated frames, masks and video data.
             keys: project_subfolder
             values: dict
-                keys: label_id
-                values: dict
-                    keys: label, frames, masks, video
-                    values: label (str), # Name of the label corresponding to current ID
-                            frames (np.array), # Annotated frame indices for the label
-                            masks (list of zarr arrays), # Mask zarr arrays
-                            video (list of FastVideoReader) # Video data for each label
+                keys: label_id, video
+                values: dict, video
+                    dict:
+                        keys: label, frames, masks, color
+                        values: label (str), # Name of the label corresponding to current ID
+                                frames (np.array), # Annotated frame indices for the label
+                                masks (list of zarr arrays), # Mask zarr arrays
+                                color (list) # Color of the label (RGBA, [0,1])
+                    video: FastVideoReader object   
+
     """
     # Hiding some imports here to reduce initial loading time
     from napari_pyav._reader import FastVideoReader
@@ -128,14 +160,15 @@ def collect_labels(project_path,
     assert project_path.is_dir(), f'Project path should be a directory, not file'
 
     label_dict = {}
-    video_hash_dict = {}    
     for object_organizer in project_path.rglob('object_organizer.json'):
         if verbose: print(object_organizer.parent)
         organizer_dict = load_object_organizer(object_organizer)  
         labels = {}
+        video_hash_dict = {}   
         for entry in organizer_dict['entries'].values():
             label_id = int(entry['label_id'] )
             label    = entry['label'] 
+            color    = entry['color']
             if verbose: print(f'Found label {label} with id {label_id}')   
             if label_id in labels:
                 assert labels[label_id]['label'] == label, 'Label name vs. id do not match'
@@ -144,7 +177,7 @@ def collect_labels(project_path,
                 labels[label_id] = {'label':  label, 
                                     'frames': [],
                                     'masks':  [], 
-                                    'video': [],
+                                    'color': color,
                                     } 
             # Find out which frames were annotated
             zarr_path_relative = Path(entry['prediction_layer_metadata']['zarr_path'])
@@ -179,15 +212,8 @@ def collect_labels(project_path,
                 assert video_file_path.exists(), f'Video file not found at "{video_file_path.as_posix()}"' 
                 actual_video_hash = get_vfile_hash(video_file_path)[-8:] # By default this is shortened to 8 characters
                 video_hash_dict[video_file_path] = actual_video_hash 
+            assert len(video_hash_dict) == 1, 'Different video files found for one object organizer json.'
             assert expected_video_hash_zarr == expected_video_hash_organizer == video_hash_dict[video_file_path], 'Video hash mismatch'
-            # Load video so data can be extracted
-            video = FastVideoReader(video_file_path)
-            # Do some sanity checks
-            assert num_frames   == video.shape[0]
-            assert image_height == video.shape[1]
-            assert image_width  == video.shape[2]
-            
-            labels[label_id]['video'].append(video)
             
         # Maintain only unique entries in 'frames' lists
         for label_id in labels:
@@ -201,8 +227,13 @@ def collect_labels(project_path,
             for label_id in labels:
                 labels[label_id]['frames'] = common_frames
                 
+        # Add the video data to the dictionary      
+        # video_file_path is generated anew for every object, however, 
+        # we are making sure above that all videos are the same.
+        video = FastVideoReader(video_file_path)
+        labels['video'] = video
         label_dict[object_organizer.parent.as_posix()] = labels
-        
+            
     return label_dict   
 
 # def collect_polygons(labels_dict,
@@ -304,15 +335,18 @@ def draw_polygons(labels,
     print(f'Drawing polygons for {len(labels)} labels.')
     print(f'{max_to_plot} frame(s) per label max. will be plotted.')
     # Draw the polygons on the video frames
-    for label_id in labels:
-        label = labels[label_id]['label']
-        frames = labels[label_id]['frames']
-        color = np.array(labels[label_id]['color'])[:-1]*255
+    for entry in labels:
+        if entry == 'video':
+            continue
+        
+        label = labels[entry]['label']
+        frames = labels[entry]['frames']
+        color = np.array(labels[entry]['color'])[:-1]*255
         counter = 1
         for frame in frames:
             
             current_frame = video_data[frame].copy()
-            polys = labels[label_id]['polygons'][frame]  
+            polys = labels[entry]['polygons'][frame]  
             frame_and_polys = cv2.polylines(img=current_frame, 
                                             pts=polys, 
                                             isClosed=True, 
