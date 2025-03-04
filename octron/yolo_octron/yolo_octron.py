@@ -92,6 +92,7 @@ class YOLO_octron:
         """ 
         Using collect_labels(), this function finds all object organizer 
         .json files from OCTRON and parses them to extract labels.
+        Check collect_labels() function for input arguments.
         """
         
         self.label_dict = collect_labels(self.project_path, 
@@ -118,8 +119,8 @@ class YOLO_octron:
                       verbose=False,
                      ):
         """
-        Using train_test_val(), this function splits the data into training,
-        testing, and validation sets.   
+        Using train_test_val(), this function splits the frame indices 
+        into training, testing, and validation sets, based on the fractions provided.
         """
         if self.label_dict is None:
             raise ValueError("No labels found. Please run prepare_labels() first.")
@@ -330,8 +331,10 @@ class YOLO_octron:
                       crop_fraction=1.0,
                       )
         
-        print("Training complete!")
+        print("🏆 Segmentation training complete!")
         return results
+    
+    
     
     def validate(self, data=None, device='auto', plots=True):
         """
@@ -352,6 +355,7 @@ class YOLO_octron:
             Validation metrics
         """
         # TODO: Which model to validate
+        # Should be able to choose checkpoint, like best, last, etc.
         
         # if self.model is None:
         #     self.load_model()
@@ -365,7 +369,9 @@ class YOLO_octron:
         # print(f"Mean Average Precision for boxes: {metrics.box.map}")
         # print(f"Mean Average Precision for masks: {metrics.seg.map}")
         
-        return metrics
+        # return metrics
+        pass
+    
     
     def predict(self):
         # # Run inference on 'bus.jpg' with arguments
