@@ -73,10 +73,10 @@ def download_sam2_checkpoint(url,
             
             
             
-def check_model_availability(SAM2p1_BASE_URL, 
-                             models_yaml_path,
-                             force_download = False,
-                             ):
+def check_sam2_models(SAM2p1_BASE_URL, 
+                      models_yaml_path,
+                      force_download = False,
+                      ):
     """
     Check the availability of the SAM2 model configurations and checkpoints.
     Optionally download the files if they are not available or if force_download is set to True.

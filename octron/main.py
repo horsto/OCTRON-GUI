@@ -49,7 +49,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 from octron.sam2_octron.helpers.video_loader import probe_video, get_vfile_hash
 from octron.sam2_octron.helpers.build_sam2_octron import build_sam2_octron  
-from octron.sam2_octron.helpers.sam2_checks import check_model_availability
+from octron.sam2_octron.helpers.sam2_checks import check_sam2_models
 from octron.sam2_octron.helpers.sam2_zarr import (
     create_image_zarr,
     load_image_zarr,
@@ -116,10 +116,10 @@ class octron_widget(QWidget):
         self.skip_frames = 1 # Skip frames for prefetching images
         # Model yaml for SAM2
         models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
-        self.models_dict = check_model_availability(SAM2p1_BASE_URL='',
-                                                    models_yaml_path=models_yaml_path,
-                                                    force_download=False,
-                                                    )
+        self.models_dict = check_sam2_models(SAM2p1_BASE_URL='',
+                                             models_yaml_path=models_yaml_path,
+                                             force_download=False,
+                                             )
         
         # Initialize all UI components
         octron_gui = octron_gui_elements(self)
