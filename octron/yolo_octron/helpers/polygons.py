@@ -63,6 +63,7 @@ def find_objects_in_mask(mask, min_area=10):
 def watershed_mask(mask,
                    footprint_diameter,
                    min_size_ratio=0.1,
+                   p_norm=2,
                    plot=False,
                    ):
     """
@@ -73,7 +74,9 @@ def watershed_mask(mask,
     mask : np.array : Binary mask where objects have value 1 
                       and background has value 0
     footprint_diameter : float : Diameter of the footprint for peak_local_max()
-    min_size_ratio : float : Minimum size ratio of the largest mask to keep a mask
+    min_size_ratio : float : Minimum size ratio of a mask towards
+                            the largest mask to keep a mask
+    p_norm : int : Norm to use for peak_local_max(). Deafault is 2 (Euclidean)
     plot : bool : Whether to plot the results
     
     
@@ -106,18 +109,17 @@ def watershed_mask(mask,
     # See https://scikit-image.org/docs/0.24.x/auto_examples/segmentation/plot_watershed.html
     distance = ndi.distance_transform_edt(mask)
     diam = int(np.round(diam))
-    peak_dist = int(np.round(diam/2))
+    peak_dist = int(np.round(diam/4))
     coords = peak_local_max(distance, 
                             footprint=np.ones((diam,diam)), 
                             labels=mask,
                             min_distance=peak_dist,
-                            p_norm=2, # Euclidean distance
+                            p_norm=p_norm, 
                             )
     mask_ = np.zeros(distance.shape, dtype=bool)
     mask_[tuple(coords.T)] = True
     markers, _ = ndi.label(mask_)
     labels = watershed(-distance, markers, mask=mask) # this is the segmentation
-            
     masks = []
     areas = []
     for l in np.unique(labels):
@@ -143,7 +145,7 @@ def watershed_mask(mask,
     # Create a new labels image
     labels = np.zeros_like(mask)
     for i, m in enumerate(masks):
-        labels[m] = i + 1
+        labels[m == 1] = i + 1
 
     if plot:
         import matplotlib.pyplot as plt

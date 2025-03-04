@@ -6,7 +6,13 @@ from datetime import datetime
 import numpy as np  
 from zarr.core import array # For type checking 
 
-from octron.yolo_octron.helpers.polygons import get_polygons
+from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
+                                                 watershed_mask,
+                                                 get_polygons,
+)
+                                                 
+                                                 
+                                                 
 
 
 def load_object_organizer(file_path):
@@ -237,10 +243,126 @@ def collect_labels(project_path,
     return label_dict   
 
 
+def collect_polygons(label_dict,    
+                     ):
+    """
+    Calculate polygons for each mask in each frame and label in the label_dict.
+    The watershedding is performed on the masks,
+    and the polygons are extracted from the resulting labels.
+    
+    I am doing some kind of "optimal" watershedding here,
+    by determining the median object diameter from a subset of masks.
+    This is then used to determine the footprint diameter for the watershedding.
+    
+    Parameters
+    ----------
+    label_dict : dict : output from collect_labels()
+        Dictionary containing project subfolders,
+        and their corresponding labels, annotated frames, masks and video data.
+        keys: project_subfolder
+        values: dict
+            keys: label_id, video
+            values: dict, video
+                dict:
+                    keys: label, frames, masks, color
+                    values: label (str), # Name of the label corresponding to current ID
+                            frames (np.array), # Annotated frame indices for the label
+                            masks (list of zarr arrays), # Mask zarr arrays
+                            color (list) # Color of the label (RGBA, [0,1])
+                video: FastVideoReader object
+                
+    Returns
+    -------
+    label_dict : dict : Dictionary containing project subfolders,
+                        and their corresponding labels, annotated frames, masks, polygons and video data.
+        keys: project_subfolder
+        values: dict
+            keys: label_id, video
+            values: dict, video
+                dict:
+                    keys: label, frames, masks, polygons, color
+                    values: label (str), # Name of the label corresponding to current ID
+                            frames (np.array), # Annotated frame indices for the label
+                            masks (list of zarr arrays), # Mask zarr arrays
+                            polygons (dict) # Polygons for each frame index
+                            color (list) # Color of the label (RGBA, [0,1])
+                video: FastVideoReader object
+    
+    """ 
+
+
+    for labels in label_dict.values():  
+        min_area = None
+
+        for entry in labels:
+            if entry == 'video':
+                continue
+            label = labels[entry]['label']
+            frames = labels[entry]['frames']
+            mask_arrays = labels[entry]['masks'] # zarr array
+            
+            # On a subset of masks, determine object properties
+            random_frames = pick_random_frames(frames, n=10)
+            obj_diameters = []
+            for f in random_frames:
+                for mask_array in mask_arrays:
+                    sample_mask = mask_array[f]
+                    if sample_mask.sum() == 0:
+                        continue
+                    else:
+                        if min_area is None:
+                            # Determine area threshold once
+                            # threshold at 0.1 percent of the image area
+                            min_area = 0.001*sample_mask.shape[0]*sample_mask.shape[1]
+                        l, r = find_objects_in_mask(sample_mask, 
+                                                min_area=min_area
+                                                ) 
+                        for r_ in r:
+                            # Choosing feret diameter as a measure of object size
+                            # See https://en.wikipedia.org/wiki/Feret_diameter
+                            # and https://scikit-image.org/docs/stable/api/skimage.measure.html
+                            # "Maximum Feret’s diameter computed as the longest distance between 
+                            # points around a region’s convex hull contour
+                            # as determined by find_contours."
+                            obj_diameters.append(r_.feret_diameter_max)
+                            
+            # Now we can make assumptions about the median diameter of the objects
+            # I use this for "optimal" watershed parameters 
+            median_obj_diameter = np.nanmedian(obj_diameters)
+
+            ##################################################################################
+            
+            polys = {} # Collected polygons over frame indices
+            for f in tqdm(frames, desc=f'Polygons for label {label}'):    
+                mask_polys = [] # List of polygons for the current frame
+                for mask_array in mask_arrays:
+                    mask_current_array = mask_array[f]
+                    # Watershed
+                    _, water_masks = watershed_mask(mask_current_array,
+                                                    footprint_diameter=median_obj_diameter,
+                                                    min_size_ratio=0.1,    
+                                                    plot=False
+                                                )
+                    # Loop over watershedded masks
+                    for mask in water_masks:
+                        try:
+                            mask_polys.append(get_polygons(mask)) 
+                        except AssertionError:
+                            # The mask is empty at this frame.
+                            # This happens if there is more than one mask 
+                            # zarr array (because there are multiple instances of a label), 
+                            # and the current label is not present in the current mask array.
+                            pass    
+                polys[f] = mask_polys
+            labels[entry]['polygons'] = polys  
+    
+    return label_dict
+
 
 def draw_polygons(labels, 
                   video_data,
-                  max_to_plot=2
+                  max_to_plot=2,
+                  randomize=False,
                   ):   
     """
     Helper.
@@ -260,6 +382,7 @@ def draw_polygons(labels,
                          color (list) # Color of the label (RGBA, [0,1])   
     video_data : np.array : Video data array
     max_to_plot : int : Maximum number of frames to plot per label
+    randomize : bool : Whether to plot random frames
     
     
     """
@@ -279,7 +402,7 @@ def draw_polygons(labels,
     if max_to_plot < 1:
         max_to_plot = 1
     print(f'Drawing polygons for {len(labels)} labels.')
-    print(f'{max_to_plot} frame(s) per label max. will be plotted.')
+    print(f'Max {max_to_plot} frame(s) per label will be plotted.')
     # Draw the polygons on the video frames
     for entry in labels:
         if entry == 'video':
@@ -287,6 +410,8 @@ def draw_polygons(labels,
         
         label = labels[entry]['label']
         frames = labels[entry]['frames']
+        if randomize:
+            frames = pick_random_frames(frames, n=max_to_plot)
         color = np.array(labels[entry]['color'])[:-1]*255
         counter = 1
         for frame in frames:
