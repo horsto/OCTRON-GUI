@@ -113,6 +113,7 @@ def pick_random_frames(frames, n=20):
 
 def collect_labels(project_path, 
                    prune_empty_labels=True, 
+                   min_num_frames=10,
                    verbose=False,
                    ):
     """
@@ -232,7 +233,16 @@ def collect_labels(project_path,
             common_frames = find_common_frames([f['frames'] for f in labels.values()])
             for label_id in labels:
                 labels[label_id]['frames'] = common_frames
-                
+        
+        # Assert that there is a minimum number of frames available for training data generation
+        if min_num_frames > 0: 
+            for label_id in labels:
+                no_frames_label = len(labels[label_id]['frames'])    
+                label = labels[label_id]["label"]
+                path = object_organizer.parent.as_posix()
+                assert no_frames_label >= min_num_frames,\
+                    f'Not enough frames for label "{label}" in "{path}": {no_frames_label} < {min_num_frames}'
+        
         # Add the video data to the dictionary      
         # video_file_path is generated anew for every object, however, 
         # we are making sure above that all videos are the same.
