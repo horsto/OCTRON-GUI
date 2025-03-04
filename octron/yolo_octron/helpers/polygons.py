@@ -62,6 +62,7 @@ def find_objects_in_mask(mask, min_area=10):
 
 def watershed_mask(mask,
                    footprint_diameter,
+                   min_size_ratio=0.1,
                    plot=False,
                    ):
     """
@@ -72,11 +73,16 @@ def watershed_mask(mask,
     mask : np.array : Binary mask where objects have value 1 
                       and background has value 0
     footprint_diameter : float : Diameter of the footprint for peak_local_max()
+    min_size_ratio : float : Minimum size ratio of the largest mask to keep a mask
+    plot : bool : Whether to plot the results
+    
     
     Returns
     -------
     labels : np.array : Segmented mask, where 0 is background 
                         and each object has a unique integer value
+    masks : list : List of binary masks for each object
+    
     
     """
     try:
@@ -100,13 +106,20 @@ def watershed_mask(mask,
     # See https://scikit-image.org/docs/0.24.x/auto_examples/segmentation/plot_watershed.html
     distance = ndi.distance_transform_edt(mask)
     diam = int(np.round(diam))
-    coords = peak_local_max(distance, footprint=np.ones((diam,diam)), labels=mask)
+    peak_dist = int(np.round(diam/2))
+    coords = peak_local_max(distance, 
+                            footprint=np.ones((diam,diam)), 
+                            labels=mask,
+                            min_distance=peak_dist,
+                            p_norm=2, # Euclidean distance
+                            )
     mask_ = np.zeros(distance.shape, dtype=bool)
     mask_[tuple(coords.T)] = True
     markers, _ = ndi.label(mask_)
-    labels = watershed(-distance, markers, mask=mask)
+    labels = watershed(-distance, markers, mask=mask) # this is the segmentation
             
     masks = []
+    areas = []
     for l in np.unique(labels):
         if l == 0:  
             # That's background
@@ -114,7 +127,24 @@ def watershed_mask(mask,
         labelmask = np.zeros_like(labels)
         labelmask[labels == l] = 1
         masks.append(labelmask)    
-           
+        areas.append(np.sum(labelmask))
+        
+    # If we have more than one mask, check for size disparities
+    # Filter out masks that are too small
+    if len(masks) > 1:
+        max_area = max(areas)
+        filtered_masks = []
+        for mask_idx, area in enumerate(areas):
+            # Keep the mask if it's at least min_size_ratio of the largest mask
+            if area >= min_size_ratio * max_area:
+                filtered_masks.append(masks[mask_idx])
+        masks = filtered_masks
+        
+    # Create a new labels image
+    labels = np.zeros_like(mask)
+    for i, m in enumerate(masks):
+        labels[m] = i + 1
+
     if plot:
         import matplotlib.pyplot as plt
         plt.rcParams['xtick.major.size'] = 10
@@ -124,15 +154,14 @@ def watershed_mask(mask,
         plt.rcParams['xtick.bottom'] = True
         plt.rcParams['ytick.left'] = True
 
-        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        _, ax = plt.subplots(1, 2, figsize=(10, 5))
         ax[0].imshow(mask, cmap='gray')
         ax[0].set_title('Original mask')
         ax[1].imshow(labels, cmap='nipy_spectral')
-        ax[1].set_title(f'Watershed segmentation, n masks: {len(masks)}')
+        ax[1].set_title(f'Watershed, remaining masks: {len(masks)}')
         plt.show()
+        
     return labels, masks
-
-
 
 
 def get_polygons(mask):

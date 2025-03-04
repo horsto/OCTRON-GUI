@@ -236,60 +236,6 @@ def collect_labels(project_path,
             
     return label_dict   
 
-# def collect_polygons(labels_dict,
-#                      ):
-#     """
-#     Create a dictionary of labels and their corresponding frames.   
-#     Extract polygons for all labels along the way.
-    
-#     Performs sanity checks on the data and ensures that the data is consistent
-#     across the object organizer and zarr array data in terms of 
-#     number of frames, image height and image width.
-    
-#     Parameters
-#     ----------
-#     organizer_dict : dict : Dictionary containing OCTRON organizer data.
-#         This is the json data loaded via load_object_organizer() function.
-#         It contains label ID and names as well as paths to the zarr files that 
-#         contain the mask data.
-
-
-#     Returns
-#     -------
-#     labels : dict : Dictionary containing labels and their corresponding frames
-#             keys: label_id
-#             values: dict
-#                 keys: label, frames, masks, polygons, color
-#                 values: label (str), # Name of the label
-#                          frames (np.array), # Annotated frame indices for the label
-#                          masks (list of zarr arrays), # Mask zarr arrays
-#                          polygons (dict) # Polygons for each frame index
-#                          color (list) # Color of the label (RGBA, [0,1])   
-                                
-#     """
-    
-#     # Extract polygon points for each label
-#     for label_id in labels:
-#         label = labels[label_id]['label']
-#         frames = labels[label_id]['frames']
-
-#         polys = {} # Collected polygons over frames
-#         for frame in tqdm(frames, desc=f'Polygons for label {label}'):    
-#             mask_polys_ = [] # List of polygons for the current frame
-#             for mask_zarr in labels[label_id]['masks']:
-#                 mask_ = mask_zarr[frame]
-#                 try:
-#                     mask_polys_.append(get_polygons(mask_)) 
-#                 except AssertionError:
-#                     # The mask is empty at this frame.
-#                     # This happens if there is more than one mask 
-#                     # zarr array (because there are multiple instances of a label), 
-#                     # and the current label is not present in the current mask array.
-#                     pass    
-#             polys[frame] = mask_polys_
-#         labels[label_id]['polygons'] = polys  
-
-#     return labels
 
 
 def draw_polygons(labels, 
@@ -359,7 +305,7 @@ def draw_polygons(labels,
             ax.imshow(frame_and_polys)
             ax.set_xticks([])   
             ax.set_yticks([])
-            ax.set_title(f'Label: "{label}" - frame {frame}')
+            ax.set_title(f'Label: "{label}" - frame {frame} {len(polys)}')
             plt.show()   
             if counter >= max_to_plot:
                 break   
