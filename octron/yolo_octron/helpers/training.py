@@ -2,6 +2,7 @@
 from pathlib import Path
 from tqdm.auto import tqdm  
 import json
+import shutil
 from datetime import datetime
 import numpy as np  
 from zarr.core import array # For type checking 
@@ -129,6 +130,7 @@ def collect_labels(project_path,
        the object organizer json file match the actual video file shape 
     2. The video hash in the zarr array and 
        the object organizer json file match the actual video file hash
+    3. The label id to label name association is congruent across all entries
 
 
     Parameters
@@ -249,7 +251,20 @@ def collect_labels(project_path,
         video = FastVideoReader(video_file_path)
         labels['video'] = video
         label_dict[object_organizer.parent.as_posix()] = labels
-            
+    
+    # Assert that label_id to label associations are congruent across label_dict
+    # i.e. the numerical label_id is always associated with the same label name across all entries
+    label_ids = []
+    label_idnames = []    
+    for labels in label_dict.values():
+        for label_id in labels:
+            if label_id == 'video':
+                continue
+            label_ids.append(label_id)
+            label_idnames.append(f'{label_id}-{labels[label_id]["label"]}')    
+    assert len(set(label_ids)) == len(set(label_idnames)), \
+        'A label id to label name association is not congruent across label_dict'
+    
     return label_dict   
 
 
@@ -518,9 +533,9 @@ def train_test_val(frame_indices,
     return split_dict
 
 
-def write_training_data(labels,
+def write_training_data(label_dict,
                         path_to_training_root,
-                        video_data,
+                        verbose=False,
                         ):
     
     try:
@@ -529,54 +544,84 @@ def write_training_data(labels,
         print('Please install PIL first, via pip install pillow')
         return
     
-    for label_id, label_dict in tqdm(labels.items(), 
-                                     total=len(labels),
-                                     position=0,
-                                     leave=True,
-                                     desc=f'Exporting {len(labels)} labels'):
-        # Extract the size of the masks for normalization later on 
-        for m in label_dict['masks']:
-            assert m.shape == label_dict['masks'][0].shape, f'All masks should have the same shape'
-        _, mask_height, mask_width = label_dict['masks'][0].shape
+    # Create the training root directory
+    # If it already exists, delete it and create a new one
+    try:
+        path_to_training_root.mkdir(exist_ok=False)
+    except FileExistsError:
+        shutil.rmtree(path_to_training_root)    
+        path_to_training_root.mkdir()
+
+    # Create subdirectories for train, val, and test
+    # If they already exist, delete them and create new ones
+    for split in ['train', 'val', 'test']:
+        path_to_split = path_to_training_root / split
+        try:
+            path_to_split.mkdir(exist_ok=False)
+        except FileExistsError:
+            shutil.rmtree(path_to_split)    
+            path_to_split.mkdir()
+
         
-        for split in ['train', 'val', 'test']:
-            current_indices = label_dict['frames_split'][split]
-            for frame_id in tqdm(current_indices,
-                                 total=len(current_indices), 
-                                 desc=f'Exporting {split} frames', 
-                                 position=1,    
-                                 leave=False,
-                                 ):
-                frame = video_data[frame_id]
-                image_output_path = path_to_training_root / split / f'frame_{frame_id}.png'
-                if not image_output_path.exists():
-                    # Convert to uint8 if needed
-                    if frame.dtype != np.uint8:
-                        if frame.max() <= 1.0:
-                            frame_uint8 = (frame * 255).astype(np.uint8)
+    #######################################################################################################
+    # Export the training data
+    
+    for path, labels in label_dict.items():  
+        path_prefix = Path(path).name   
+        video_data = labels.pop('video')
+        
+        for entry in tqdm(labels,
+                          total=len(labels),
+                          position=0,
+                          leave=True,
+                          desc=f'Exporting {len(labels)} labels'
+                          ):
+            current_label_id = entry
+            # Extract the size of the masks for normalization later on 
+            for m in labels[entry]['masks']:
+                assert m.shape == labels[entry]['masks'][0].shape, f'All masks should have the same shape'
+            _, mask_height, mask_width = labels[entry]['masks'][0].shape
+            
+            for split in ['train', 'val', 'test']:
+                current_indices = labels[entry]['frames_split'][split]
+                for frame_id in tqdm(current_indices,
+                                    total=len(current_indices), 
+                                    desc=f'Exporting {split} frames', 
+                                    position=1,    
+                                    leave=False,
+                                    ):
+                    frame = video_data[frame_id]
+                    image_output_path = path_to_training_root / split / f'{path_prefix}_{frame_id}.png'
+                    if not image_output_path.exists():
+                        # Convert to uint8 if needed
+                        if frame.dtype != np.uint8:
+                            if frame.max() <= 1.0:
+                                frame_uint8 = (frame * 255).astype(np.uint8)
+                            else:
+                                frame_uint8 = frame.astype(np.uint8)
                         else:
-                            frame_uint8 = frame.astype(np.uint8)
-                    else:
-                        frame_uint8 = frame
-                    # Convert to PIL Image
-                    img = Image.fromarray(frame_uint8)
-                    # Save with specific options for higher quality
-                    img.save(
-                        image_output_path,
-                        format="PNG",
-                        compress_level=0,  # 0-9, lower means higher quality
-                        optimize=True,
-                    )
-                
-                # Create the label text file with the correct format
-                with open(path_to_training_root / split / f'frame_{frame_id}.txt', 'a') as f:
-                    for polygon in label_dict['polygons'][frame_id]:
-                        f.write(f'{label_id}')
-                        # Write each coordinate pair as normalized coordinate to txt
-                        for point in polygon:
-                            f.write(f' {point[0]/mask_height} {point[1]/mask_width}')
-                        f.write('\n')
-    print(f"Training data exported to {path_to_training_root}")
+                            frame_uint8 = frame
+                        # Convert to PIL Image
+                        img = Image.fromarray(frame_uint8)
+                        # Save with specific options for higher quality
+                        img.save(
+                            image_output_path,
+                            format="PNG",
+                            compress_level=0, # 0-9, lower means higher quality
+                            optimize=True,
+                        )
+                    
+                    # Create the label text file with the correct format
+                    with open(path_to_training_root / split / f'{path_prefix}_{frame_id}.txt', 'a') as f:
+                        for polygon in labels[entry]['polygons'][frame_id]:
+                            f.write(f'{current_label_id}')
+                            # Write each coordinate pair as normalized coordinate to txt
+                            for point in polygon:
+                                f.write(f' {point[0]/mask_height} {point[1]/mask_width}')
+                            f.write('\n')
+    if verbose: print(f"Training data exported to {path_to_training_root}")
+
+
 
 def write_yolo_config_yaml(
     output_path: Path,
