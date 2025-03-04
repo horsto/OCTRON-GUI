@@ -139,6 +139,8 @@ def collect_labels(project_path,
         The jsons are saved in subfolders.
     prune_empty_labels : bool : Whether to prune frames that 
                                 do not have annotation across all labels.
+    min_num_frames : int : Minimum number of frames required 
+                           for training data generation.
     verbose : bool : Whether to print debug info.
     
     Returns
@@ -358,7 +360,10 @@ def collect_polygons(label_dict,
             ##################################################################################
             
             polys = {} # Collected polygons over frame indices
-            for f in tqdm(frames, desc=f'Polygons for label {label}'):    
+            for f in tqdm(frames, 
+                          desc=f'Polygons for label {label}', 
+                          leave=True
+                          ):    
                 mask_polys = [] # List of polygons for the current frame
                 for mask_array in mask_arrays:
                     mask_current_array = mask_array[f]
