@@ -115,7 +115,7 @@ class octron_widget(QWidget):
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
         # Model yaml for SAM2
-        models_yaml_path = self.base_path / 'sam2_octron/models.yaml'
+        models_yaml_path = self.base_path / 'sam2_octron/sam2_models.yaml'
         self.models_dict = check_sam2_models(SAM2p1_BASE_URL='',
                                              models_yaml_path=models_yaml_path,
                                              force_download=False,

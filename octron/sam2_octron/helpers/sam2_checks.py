@@ -3,35 +3,8 @@ import os
 from pathlib import Path
 import requests
 import yaml
+from octron.url_check import check_url_availability
 
-def check_url_availability(url):
-    """
-    Quick check if a URL is available
-    Parameters
-    ----------
-    url : str
-        URL to check. 
-        For example "https://dl.fbaipublicfiles.com/segment_anything_2/092824" 
-    
-    Returns
-    -------
-    available : bool
-        True if the URL is available, False otherwise  
-    
-    
-    """
-    try:
-        response = requests.head(url)
-        if response.status_code == 200:
-            print(f"URL {url} is available.")
-            available = True
-        else:
-            print(f"URL {url} returned status code {response.status_code}.")
-            available = False
-    except requests.exceptions.RequestException as e:
-        print(f"URL {url} is not available. Exception: {e}")
-        available = False
-    return available
 
 def download_sam2_checkpoint(url, 
                             fpath, 
@@ -87,10 +60,10 @@ def check_sam2_models(SAM2p1_BASE_URL,
     SAM2p1_BASE_URL : str
         Base URL to download the models from. 
         For example "https://dl.fbaipublicfiles.com/segment_anything_2/092824"
-        If empty, take the default value (see URL above) for now.
+        If not provided, the default URL will be used.
     models_yaml_path : str or Path
         Path to the models yaml file. 
-        For example "sam2_octron/models.yaml"
+        For example "sam2_octron/sam2_models.yaml"
     force_download : bool
         If True, download the model even if it already exists. 
         Default is False.
@@ -124,6 +97,7 @@ def check_sam2_models(SAM2p1_BASE_URL,
     
     for model in models_dict:
         # Perform some sanity checks on the dictionary 
+        assert 'name' in models_dict[model], f"Name not found for model {model} in yaml file"
         assert 'config_path' in models_dict[model], f"Config path not found for model {model} in yaml file"
         assert 'checkpoint_path' in models_dict[model], f"Checkpoint path not found for model {model} in yaml file"
 

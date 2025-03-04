@@ -1,8 +1,9 @@
 # Main YOLO Octron class
 # We are using YOLO11 as the base class for YOLO Octron.
 # See also: https://docs.ultralytics.com/models/yolo11
-
+import shutil
 from pathlib import Path
+from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.training import (
     collect_labels,
     collect_polygons,
@@ -19,7 +20,11 @@ class YOLO_octron:
     generating training datasets, and training YOLO11 models for segmentation tasks.
     """
     
-    def __init__(self, project_path, model_path):
+    def __init__(self, 
+                 project_path, 
+                 models_yaml_path,
+                 clean_training_dir=True
+                 ):
         """
         Initialize YOLO_octron with project and model paths.
         
@@ -27,8 +32,10 @@ class YOLO_octron:
         ----------
         project_path : str or Path
             Path to the OCTRON project directory
-        model_path : str or Path, optional
-            Path to a pretrained YOLO11 model. 
+        model_yaml_path : str or Path, optional
+            Path to list of available (standard) YOLO models.
+        clean_training_dir : bool, optional
+            Whether to clean the training directory if it is not empty.
             
         """
         try:
@@ -41,14 +48,33 @@ class YOLO_octron:
         if not self.project_path.exists():
             raise FileNotFoundError(f"Project path not found: {self.project_path}")
         
-        if model_path is not None:
-            self.model_path = Path(model_path)
-            if not self.model_path.exists():
-                raise FileNotFoundError(f"Model not found at {self.model_path}")
-    
-        # Setup paths
+        self.models_yaml_path = Path(models_yaml_path) 
+        if not self.models_yaml_path.exists():
+            raise FileNotFoundError(f"Model YAML file not found: {self.models_yaml_path}")
+
+        # Check YOLO models
+        self.models_dict = check_yolo_models(YOLO_BASE_URL=None,
+                                             models_yaml_path=self.models_yaml_path,
+                                             force_download=False
+                                             )
+
+        # Setup folders for training
         self.training_path = self.project_path / 'model' # Path to all model output
         self.data_path = self.training_path / 'training_data' # Path to training data
+        # Folder checks
+        try:
+            self.training_path.mkdir(exist_ok=False)
+        except FileExistsError as e:
+            # Check if training data folder is empty
+            if len(list(self.training_path.glob('*'))) > 0:
+                if not clean_training_dir:
+                    raise FileExistsError(
+                        f'"{self.training_path.as_posix()}" is not empty. Please remove subfolders first.'
+                        )
+                else:
+                    shutil.rmtree(self.training_path)
+                    self.training_path.mkdir()
+                    print(f'Created fresh training directory "{self.training_path.as_posix()}"')
         
         # Initialize model to None (will be loaded when needed)
         self.model = None
@@ -56,7 +82,6 @@ class YOLO_octron:
         self.config_path = None
         
         print(f"YOLO Octron initialized with project: '{self.project_path.as_posix()}'")
-        print(f"Model path: '{self.model_path.as_posix()}'")    
     
     
     def prepare_labels(self, 
@@ -131,17 +156,6 @@ class YOLO_octron:
                 assert 'polygons' in labels[entry], "No polygons found in labels, run prepare_polygons() first"
                 assert 'frames_split' in labels[entry], "No data split found in labels, run prepare_split() first"  
 
-        # Folder checks
-        try:
-            self.training_path.mkdir(exist_ok=False)
-        except FileExistsError as e:
-            # Check if path_to_training_data is empty
-            if len(list(self.training_path.glob('*'))) > 1:
-                raise FileExistsError(
-                    f'"{self.training_path.as_posix()}" is not empty. Please remove subfolders first.'
-                    )
-            else:
-                pass
 
         write_training_data(self.label_dict, self.data_path, verbose=True)
     
@@ -206,14 +220,15 @@ class YOLO_octron:
         
     
     
-    def load_model(self, model_path=None):
+    def load_model(self, model_name_path):
         """
         Load the YOLO model
         
         Parameters
         ----------
-        model_path : str or Path, optional
-            Path to a custom model to load. If None, uses the initialized model path.
+        model_name_path : str or Path
+            Path to the model to load, or name of the model to load
+            (e.g. 'YOLO11m-seg'), defaults to the model in the models.yaml file.
         
         Returns
         -------
@@ -230,9 +245,16 @@ class YOLO_octron:
         from ultralytics import YOLO   
         
         # Load specified model
-        model_path = model_path if model_path else self.model_path
-        self.model = YOLO(model_path)
-        print(f"Model loaded from {model_path}")
+        try:
+            assert Path(model_name_path).exists()
+            # If this path exists, load this model, otherwise 
+            # assume that this models is part of the models_dict
+        except AssertionError:
+            model_name_path = self.models_dict[model_name_path]['model_path']
+            model_name_path = self.models_yaml_path.parent / f'models/{model_name_path}'    
+            
+        self.model = YOLO(model_name_path)
+        print(f"Model loaded from '{model_name_path.as_posix()}'")
         
         return self.model
     
@@ -259,12 +281,13 @@ class YOLO_octron:
         results : dict
             Training results
         """
-        if self.model is None:
-            self.load_model()
+        if not self.model:
+            print('😵 No model loaded!')
+            return
             
         if self.config_path is None or not self.config_path.exists():
             raise FileNotFoundError(
-                "No configuration yaml file found."
+                "No configuration .yaml file found."
             )
         if device not in ['cpu', 'cuda', 'mps']:
             raise ValueError(f"Invalid device: {device}")   
