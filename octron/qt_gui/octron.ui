@@ -285,7 +285,7 @@
             </size>
            </property>
            <property name="title">
-            <string>Add video files</string>
+            <string>Add new video file</string>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout">
             <property name="spacing">

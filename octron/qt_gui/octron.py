@@ -720,7 +720,7 @@ class Ui_octron_widgetui(object):
         self.folder_sect_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Project folder", None))
         self.create_project_btn.setText(QCoreApplication.translate("octron_widgetui", u"\u2295 Choose", None))
         self.project_folder_path_label.setText(QCoreApplication.translate("octron_widgetui", u"Project folder path", None))
-        self.project_video_drop_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Add video files", None))
+        self.project_video_drop_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Add new video file", None))
 #if QT_CONFIG(tooltip)
         self.video_file_drop_widget.setToolTip(QCoreApplication.translate("octron_widgetui", u"Drag and drop .mp4 files here", None))
 #endif // QT_CONFIG(tooltip)

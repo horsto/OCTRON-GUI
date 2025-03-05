@@ -293,6 +293,8 @@ class sam2_octron_callbacks():
         skip_frames = self.octron.skip_frames_spinbox.value()
         if skip_frames < 1:
             skip_frames = 1 # Just hard reset any unrealistic values here
+        elif skip_frames >= 1: # The user expects that the skip_frames are 1-based!
+            skip_frames +=1
         self.octron.skip_frames = skip_frames  
 
         # Prefetch images if they are not cached yet 
@@ -304,7 +306,7 @@ class sam2_octron_callbacks():
         end_frame = min(num_frames-1, current_frame + self.octron.chunk_size * skip_frames)
         image_idxs = list(range(current_frame, end_frame, skip_frames)) 
         start_time = time.time()        
-        # Loop over frames and run prediction (single frame!)
+        # Loop over frames and run prediction (single frame!)   
         counter = 1
         for out_frame_idx, out_obj_ids, out_mask_logits in self.octron.predictor.propagate_in_video(
             processing_order=image_idxs

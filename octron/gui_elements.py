@@ -792,7 +792,7 @@ class octron_gui_elements(QWidget):
         self.octron.folder_sect_groupbox.setTitle(QCoreApplication.translate("self", u"Project folder", None))
         self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Choose", None))
         self.octron.project_folder_path_label.setText(QCoreApplication.translate("self", u"Project folder path", None))
-        self.octron.project_video_drop_groupbox.setTitle(QCoreApplication.translate("self", u"Add video files", None))
+        self.octron.project_video_drop_groupbox.setTitle(QCoreApplication.translate("self", u"Add new video file", None))
 #if QT_CONFIG(tooltip)
         self.octron.video_file_drop_widget.setToolTip(QCoreApplication.translate("self", u"Drag and drop .mp4 files here", None))
 #endif // QT_CONFIG(tooltip)
@@ -925,5 +925,6 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
+
 
 
