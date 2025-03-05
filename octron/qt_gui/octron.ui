@@ -1478,7 +1478,7 @@ batch prediction?</string>
              </rect>
             </property>
             <layout class="QHBoxLayout" name="train_folder_btn_horizontalLayout">
-             <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+             <item>
               <widget class="QLabel" name="training_data_folder_label">
                <property name="enabled">
                 <bool>false</bool>
@@ -1510,13 +1510,13 @@ batch prediction?</string>
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>80</width>
+                 <width>90</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>80</width>
+                 <width>90</width>
                  <height>25</height>
                 </size>
                </property>
@@ -1718,7 +1718,7 @@ Recommended are at least ~50.</string>
               <x>300</x>
               <y>30</y>
               <width>90</width>
-              <height>59</height>
+              <height>53</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="train_verticalLayout">
@@ -1851,7 +1851,7 @@ Recommended are at least ~50.</string>
              <rect>
               <x>10</x>
               <y>140</y>
-              <width>381</width>
+              <width>380</width>
               <height>37</height>
              </rect>
             </property>
@@ -1925,13 +1925,13 @@ Recommended are at least ~50.</string>
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>80</width>
+                 <width>90</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>80</width>
+                 <width>90</width>
                  <height>25</height>
                 </size>
                </property>

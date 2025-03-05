@@ -525,14 +525,14 @@ class Ui_octron_widgetui(object):
         self.octron.training_data_folder_label.setMinimumSize(QSize(275, 25))
         self.octron.training_data_folder_label.setMaximumSize(QSize(275, 25))
 
-        self.octron.train_folder_btn_horizontalLayout.addWidget(self.octron.training_data_folder_label, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.train_folder_btn_horizontalLayout.addWidget(self.octron.training_data_folder_label)
 
         self.octron.generate_training_data_btn = QPushButton(self.octron.widget2)
         self.octron.generate_training_data_btn.setObjectName(u"generate_training_data_btn")
         sizePolicy3.setHeightForWidth(self.octron.generate_training_data_btn.sizePolicy().hasHeightForWidth())
         self.octron.generate_training_data_btn.setSizePolicy(sizePolicy3)
-        self.octron.generate_training_data_btn.setMinimumSize(QSize(80, 25))
-        self.octron.generate_training_data_btn.setMaximumSize(QSize(80, 25))
+        self.octron.generate_training_data_btn.setMinimumSize(QSize(90, 25))
+        self.octron.generate_training_data_btn.setMaximumSize(QSize(90, 25))
 
         self.octron.train_folder_btn_horizontalLayout.addWidget(self.octron.generate_training_data_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -603,7 +603,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.widget4 = QWidget(self.octron.train_train_groupbox)
         self.octron.widget4.setObjectName(u"widget4")
-        self.octron.widget4.setGeometry(QRect(300, 30, 90, 59))
+        self.octron.widget4.setGeometry(QRect(300, 30, 90, 53))
         self.octron.train_verticalLayout = QVBoxLayout(self.octron.widget4)
         self.octron.train_verticalLayout.setSpacing(10)
         self.octron.train_verticalLayout.setObjectName(u"train_verticalLayout")
@@ -652,7 +652,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.widget6 = QWidget(self.octron.train_train_groupbox)
         self.octron.widget6.setObjectName(u"widget6")
-        self.octron.widget6.setGeometry(QRect(10, 140, 381, 37))
+        self.octron.widget6.setGeometry(QRect(10, 140, 380, 37))
         self.octron.epochs_horizontalLayout = QHBoxLayout(self.octron.widget6)
         self.octron.epochs_horizontalLayout.setObjectName(u"epochs_horizontalLayout")
         self.octron.epochs_horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -680,8 +680,8 @@ class Ui_octron_widgetui(object):
         self.octron.start_stop_training_btn.setObjectName(u"start_stop_training_btn")
         sizePolicy3.setHeightForWidth(self.octron.start_stop_training_btn.sizePolicy().hasHeightForWidth())
         self.octron.start_stop_training_btn.setSizePolicy(sizePolicy3)
-        self.octron.start_stop_training_btn.setMinimumSize(QSize(80, 25))
-        self.octron.start_stop_training_btn.setMaximumSize(QSize(80, 25))
+        self.octron.start_stop_training_btn.setMinimumSize(QSize(90, 25))
+        self.octron.start_stop_training_btn.setMaximumSize(QSize(90, 25))
 
         self.octron.epochs_horizontalLayout.addWidget(self.octron.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 

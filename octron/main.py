@@ -373,8 +373,9 @@ class octron_widget(QWidget):
             # Update the table with new data
             self.label_table_model.update_data(label_dict)
             
-            # Enable the groupbox for existing data
+            # Enable the groupbox for existing data and the training generation box
             self.project_existing_data_groupbox.setEnabled(True)
+            self.train_generate_groupbox.setEnabled(True)
             
             # Enable training tab if data is available
             if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
