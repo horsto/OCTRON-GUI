@@ -31,8 +31,8 @@ class YOLO_octron:
     """
     
     def __init__(self, 
-                 project_path, 
                  models_yaml_path,
+                 project_path = None,
                  clean_training_dir=True
                  ):
         """
@@ -40,12 +40,13 @@ class YOLO_octron:
         
         Parameters
         ----------
-        project_path : str or Path
-            Path to the OCTRON project directory
-        model_yaml_path : str or Path, optional
-            Path to list of available (standard) YOLO models.
-        clean_training_dir : bool, optional
+        models_yaml_path : str or Path
+            Path to list of available (standard, pre-trained) YOLO models.
+        project_path : str or Path, optional
+            Path to the OCTRON project directory.
+        clean_training_dir : bool
             Whether to clean the training directory if it is not empty.
+            Default is True.
             
         """
         try:
@@ -53,10 +54,6 @@ class YOLO_octron:
             self.yolo_settings = settings
         except ImportError:
             raise ImportError("YOLOv11 is required to run this class.")
-        
-        self.project_path = Path(project_path)
-        if not self.project_path.exists():
-            raise FileNotFoundError(f"Project path not found: {self.project_path}")
         
         self.models_yaml_path = Path(models_yaml_path) 
         if not self.models_yaml_path.exists():
@@ -67,33 +64,104 @@ class YOLO_octron:
                                              models_yaml_path=self.models_yaml_path,
                                              force_download=False
                                              )
-
-        # Setup folders for training
-        self.training_path = self.project_path / 'model' # Path to all model output
-        self.data_path = self.training_path / 'training_data' # Path to training data
-        # Folder checks
-        try:
-            self.training_path.mkdir(exist_ok=False)
-        except FileExistsError as e:
-            # Check if training data folder is empty
-            if len(list(self.training_path.glob('*'))) > 0:
-                if not clean_training_dir:
-                    raise FileExistsError(
-                        f'"{self.training_path.as_posix()}" is not empty. Please remove subfolders first.'
-                        )
-                else:
-                    shutil.rmtree(self.training_path)
-                    self.training_path.mkdir()
-                    print(f'Created fresh training directory "{self.training_path.as_posix()}"')
         
-        # Initialize model to None (will be loaded when needed)
+        # Set up internal variables
+        self._project_path = None  # Use private variable for property
+        self.training_path = None
+        self.data_path = None
         self.model = None
         self.label_dict = None
         self.config_path = None
         
-        print(f"YOLO Octron initialized with project: '{self.project_path.as_posix()}'")
+        # If a project path was provided, set it through the property setter
+        if project_path is not None:
+            self.project_path = project_path  # Uses the property setter
+            
+            # Setup training directories after project_path is validated
+            self._setup_training_directories(clean_training_dir)
     
+    @property
+    def project_path(self):
+        """
+        Return the project path
+        """
+        return self._project_path
     
+    @project_path.setter
+    def project_path(self, path):
+        """
+        Set the project path with validation
+        
+        Parameters
+        ----------
+        path : str or Path
+            Path to the OCTRON project directory
+            
+        Raises
+        ------
+        FileNotFoundError
+            If the path doesn't exist
+        TypeError
+            If the path is not a string or Path object
+        """
+        if path is None:
+            self._project_path = None
+            return
+            
+        if isinstance(path, str):
+            path = Path(path)
+        elif not isinstance(path, Path):
+            raise TypeError(f"project_path must be a string or Path object, got {type(path)}") 
+        # Sanity checks
+        if not path.exists():
+            raise FileNotFoundError(f"Project path not found: {path}")
+        if not path.is_dir():
+            raise NotADirectoryError(f"Project path must be a directory: {path}")
+            
+        # Path is valid, set it
+        self._project_path = path
+        print(f"Project path set to: {self._project_path.as_posix()}")
+        
+        # Update dependent paths if they were previously set
+        if self._project_path is not None:
+            self.training_path = self._project_path / 'model'
+            self.data_path = self.training_path / 'training_data'
+
+
+    def _setup_training_directories(self, clean_training_dir=False):
+        """
+        Setup folders for training
+        
+        Parameters
+        ----------
+        clean_training_dir : bool
+            Whether to clean the training directory if it's not empty
+        """
+        if self._project_path is None:
+            raise ValueError("Project path must be set before setting up training directories")
+            
+        # Setup folders for training
+        self.training_path = self._project_path / 'model'  # Path to all model output
+        self.data_path = self.training_path / 'training_data'  # Path to training data
+        
+        # Folder checks
+        try:
+            self.training_path.mkdir(exist_ok=False)
+        except FileExistsError:
+            # Check if training data folder is empty
+            if len(list(self.training_path.glob('*'))) > 0:
+                if not clean_training_dir:
+                    raise FileExistsError(
+                        f'"{self.training_path.as_posix()}" is not empty. Please remove subfolders first.')
+                else:
+                    shutil.rmtree(self.training_path)
+                    self.training_path.mkdir()
+                    print(f'Created fresh training directory "{self.training_path.as_posix()}"')
+                    
+                    
+                    
+                    
+    ##### TRAINING DATA PREPARATION ###########################################################################    
     def prepare_labels(self, 
                        prune_empty_labels=True, 
                        min_num_frames=10, 
@@ -111,6 +179,7 @@ class YOLO_octron:
                                          verbose=verbose
                                         )    
         if verbose: print(f"Found {len(self.label_dict)} organizer files")
+    
     
     def prepare_polygons(self):
         """
@@ -405,7 +474,6 @@ class YOLO_octron:
         if verbose: print(f"Training data exported to {self.data_path.as_posix()}")
 
 
-    
     def write_yolo_config(self,
                          train_path="train",
                          val_path="val",
@@ -476,6 +544,7 @@ class YOLO_octron:
         print(f"YOLO config saved to '{self.config_path.as_posix()}'")
 
 
+    ##### TRAINING AND INFERENCE ############################################################################
     def load_model(self, model_name_path):
         """
         Load the YOLO model
@@ -527,7 +596,7 @@ class YOLO_octron:
         device : str
             Device to use for training (i.e. "cpu", "mps" or "cuda")
             CAREFUL: There are still issues in pytorch for MPS,
-            so it is recommended to use "cpu" for now.
+            so it is recommended to use "cpu" for now. I had a bunch of issues with MPS.
         epochs : int
             Number of epochs to train for
       
@@ -548,7 +617,7 @@ class YOLO_octron:
             raise ValueError(f"Invalid device: {device}")   
         if device == 'mps':
             print("⚠ MPS is not yet fully supported in PyTorch. Use at your own risk.")
-            
+        
         # Setup callbacks
         self.num_epochs = epochs
         # Start training
