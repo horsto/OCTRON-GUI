@@ -1166,6 +1166,9 @@ batch prediction?</string>
         <layout class="QVBoxLayout" name="train_vertical_layout" stretch="0,0">
          <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
           <widget class="QGroupBox" name="train_generate_groupbox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -1412,10 +1415,13 @@ batch prediction?</string>
               <x>300</x>
               <y>30</y>
               <width>90</width>
-              <height>51</height>
+              <height>53</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="train_checkboxes_verticalLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
              <item>
               <widget class="QCheckBox" name="train_prune_checkBox">
                <property name="minimumSize">
@@ -1525,6 +1531,9 @@ batch prediction?</string>
          </item>
          <item>
           <widget class="QGroupBox" name="train_train_groupbox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -1632,6 +1641,11 @@ batch prediction?</string>
                  <height>25</height>
                 </size>
                </property>
+               <property name="toolTip">
+                <string>How many epochs in total
+should be trained?
+Recommended are at least ~50.</string>
+               </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
@@ -1672,6 +1686,10 @@ batch prediction?</string>
                  <height>25</height>
                 </size>
                </property>
+               <property name="toolTip">
+                <string>After how many epochs should
+(intermediary) output models be saved?</string>
+               </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
@@ -1699,11 +1717,17 @@ batch prediction?</string>
              <rect>
               <x>300</x>
               <y>30</y>
-              <width>91</width>
-              <height>101</height>
+              <width>90</width>
+              <height>59</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="train_verticalLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
               <widget class="QCheckBox" name="train_resume_checkBox">
                <property name="enabled">
@@ -1748,31 +1772,6 @@ batch prediction?</string>
                </property>
                <property name="checked">
                 <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignBottom">
-              <widget class="QPushButton" name="start_stop_training_btn">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>80</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>80</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Start</string>
                </property>
               </widget>
              </item>
@@ -1853,7 +1852,7 @@ batch prediction?</string>
               <x>10</x>
               <y>140</y>
               <width>381</width>
-              <height>29</height>
+              <height>37</height>
              </rect>
             </property>
             <layout class="QHBoxLayout" name="epochs_horizontalLayout">
@@ -1870,13 +1869,13 @@ batch prediction?</string>
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>200</width>
+                 <width>120</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>200</width>
+                 <width>120</width>
                  <height>25</height>
                 </size>
                </property>
@@ -1913,6 +1912,31 @@ batch prediction?</string>
                </property>
                <property name="text">
                 <string>Finish:</string>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="start_stop_training_btn">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>80</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Start</string>
                </property>
               </widget>
              </item>

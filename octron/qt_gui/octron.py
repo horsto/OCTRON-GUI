@@ -408,6 +408,7 @@ class Ui_octron_widgetui(object):
         self.train_vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.train_generate_groupbox = QGroupBox(self.verticalLayoutWidget_4)
         self.train_generate_groupbox.setObjectName(u"train_generate_groupbox")
+        self.train_generate_groupbox.setEnabled(False)
         sizePolicy3.setHeightForWidth(self.train_generate_groupbox.sizePolicy().hasHeightForWidth())
         self.train_generate_groupbox.setSizePolicy(sizePolicy3)
         self.train_generate_groupbox.setMinimumSize(QSize(400, 140))
@@ -491,8 +492,9 @@ class Ui_octron_widgetui(object):
 
         self.widget1 = QWidget(self.train_generate_groupbox)
         self.widget1.setObjectName(u"widget1")
-        self.widget1.setGeometry(QRect(300, 30, 90, 51))
+        self.widget1.setGeometry(QRect(300, 30, 90, 53))
         self.train_checkboxes_verticalLayout = QVBoxLayout(self.widget1)
+        self.train_checkboxes_verticalLayout.setSpacing(10)
         self.train_checkboxes_verticalLayout.setObjectName(u"train_checkboxes_verticalLayout")
         self.train_checkboxes_verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.train_prune_checkBox = QCheckBox(self.widget1)
@@ -539,6 +541,7 @@ class Ui_octron_widgetui(object):
 
         self.train_train_groupbox = QGroupBox(self.verticalLayoutWidget_4)
         self.train_train_groupbox.setObjectName(u"train_train_groupbox")
+        self.train_train_groupbox.setEnabled(False)
         sizePolicy3.setHeightForWidth(self.train_train_groupbox.sizePolicy().hasHeightForWidth())
         self.train_train_groupbox.setSizePolicy(sizePolicy3)
         self.train_train_groupbox.setMinimumSize(QSize(400, 185))
@@ -600,8 +603,9 @@ class Ui_octron_widgetui(object):
 
         self.widget4 = QWidget(self.train_train_groupbox)
         self.widget4.setObjectName(u"widget4")
-        self.widget4.setGeometry(QRect(300, 30, 91, 101))
+        self.widget4.setGeometry(QRect(300, 30, 90, 59))
         self.train_verticalLayout = QVBoxLayout(self.widget4)
+        self.train_verticalLayout.setSpacing(10)
         self.train_verticalLayout.setObjectName(u"train_verticalLayout")
         self.train_verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.train_resume_checkBox = QCheckBox(self.widget4)
@@ -620,15 +624,6 @@ class Ui_octron_widgetui(object):
         self.train_training_overwrite_checkBox.setChecked(True)
 
         self.train_verticalLayout.addWidget(self.train_training_overwrite_checkBox, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
-
-        self.start_stop_training_btn = QPushButton(self.widget4)
-        self.start_stop_training_btn.setObjectName(u"start_stop_training_btn")
-        sizePolicy3.setHeightForWidth(self.start_stop_training_btn.sizePolicy().hasHeightForWidth())
-        self.start_stop_training_btn.setSizePolicy(sizePolicy3)
-        self.start_stop_training_btn.setMinimumSize(QSize(80, 25))
-        self.start_stop_training_btn.setMaximumSize(QSize(80, 25))
-
-        self.train_verticalLayout.addWidget(self.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignBottom)
 
         self.widget5 = QWidget(self.train_train_groupbox)
         self.widget5.setObjectName(u"widget5")
@@ -657,7 +652,7 @@ class Ui_octron_widgetui(object):
 
         self.widget6 = QWidget(self.train_train_groupbox)
         self.widget6.setObjectName(u"widget6")
-        self.widget6.setGeometry(QRect(10, 140, 381, 29))
+        self.widget6.setGeometry(QRect(10, 140, 381, 37))
         self.epochs_horizontalLayout = QHBoxLayout(self.widget6)
         self.epochs_horizontalLayout.setObjectName(u"epochs_horizontalLayout")
         self.epochs_horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -666,8 +661,8 @@ class Ui_octron_widgetui(object):
         self.train_epochs_progressbar.setEnabled(False)
         sizePolicy5.setHeightForWidth(self.train_epochs_progressbar.sizePolicy().hasHeightForWidth())
         self.train_epochs_progressbar.setSizePolicy(sizePolicy5)
-        self.train_epochs_progressbar.setMinimumSize(QSize(200, 25))
-        self.train_epochs_progressbar.setMaximumSize(QSize(200, 25))
+        self.train_epochs_progressbar.setMinimumSize(QSize(120, 25))
+        self.train_epochs_progressbar.setMaximumSize(QSize(120, 25))
         self.train_epochs_progressbar.setMaximum(20)
         self.train_epochs_progressbar.setValue(0)
 
@@ -680,6 +675,15 @@ class Ui_octron_widgetui(object):
         self.train_finishtime_label.setMaximumSize(QSize(150, 25))
 
         self.epochs_horizontalLayout.addWidget(self.train_finishtime_label, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+
+        self.start_stop_training_btn = QPushButton(self.widget6)
+        self.start_stop_training_btn.setObjectName(u"start_stop_training_btn")
+        sizePolicy3.setHeightForWidth(self.start_stop_training_btn.sizePolicy().hasHeightForWidth())
+        self.start_stop_training_btn.setSizePolicy(sizePolicy3)
+        self.start_stop_training_btn.setMinimumSize(QSize(80, 25))
+        self.start_stop_training_btn.setMaximumSize(QSize(80, 25))
+
+        self.epochs_horizontalLayout.addWidget(self.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.train_vertical_layout.addWidget(self.train_train_groupbox)
@@ -816,9 +820,17 @@ class Ui_octron_widgetui(object):
         self.train_train_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Train", None))
         self.num_epochs_label.setText(QCoreApplication.translate("octron_widgetui", u"Epochs", None))
         self.save_period_label.setText(QCoreApplication.translate("octron_widgetui", u"Save period", None))
+#if QT_CONFIG(tooltip)
+        self.num_epochs_input.setToolTip(QCoreApplication.translate("octron_widgetui", u"How many epochs in total\n"
+"should be trained?\n"
+"Recommended are at least ~50.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.save_period_input.setToolTip(QCoreApplication.translate("octron_widgetui", u"After how many epochs should\n"
+"(intermediary) output models be saved?", None))
+#endif // QT_CONFIG(tooltip)
         self.train_resume_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Resume", None))
         self.train_training_overwrite_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Overwrite", None))
-        self.start_stop_training_btn.setText(QCoreApplication.translate("octron_widgetui", u"Start", None))
         self.yolomodel_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Choose model ...", None))
 
         self.yoloimagesize_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Img. size", None))
@@ -831,6 +843,7 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.train_epochs_progressbar.setFormat(QCoreApplication.translate("octron_widgetui", u"%p%", None))
         self.train_finishtime_label.setText(QCoreApplication.translate("octron_widgetui", u"Finish:", None))
+        self.start_stop_training_btn.setText(QCoreApplication.translate("octron_widgetui", u"Start", None))
         self.toolBox.setItemText(self.toolBox.indexOf(self.train_tab), QCoreApplication.translate("octron_widgetui", u"Train model", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.train_tab), QCoreApplication.translate("octron_widgetui", u"Train a new or existing model with generated training data", None))

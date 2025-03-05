@@ -59,6 +59,7 @@ from octron.sam2_octron.helpers.sam2_zarr import (
 
 # YOLO specific 
 from octron.yolo_octron.helpers.training import collect_labels
+from octron.yolo_octron.yolo_octron import YOLO_octron
 
 # Annotation layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
@@ -125,6 +126,10 @@ class octron_widget(QWidget):
                                              models_yaml_path=sam2models_yaml_path,
                                              force_download=False,
                                              )
+        # Model yaml for YOLO
+        yolo_models_yaml_path = self.base_path / 'yolo_octron/yolo_models.yaml'
+        self.yolo_octron = YOLO_octron(models_yaml_path=yolo_models_yaml_path)
+        self.yolomodels_dict = self.yolo_octron.models_dict 
         
         # Initialize all UI components
         octron_gui = octron_gui_elements(self)
@@ -139,6 +144,11 @@ class octron_widget(QWidget):
         for model_id, model in self.sam2models_dict.items():
             print(f"Adding SAM2 model {model_id}")
             self.sam2model_list.addItem(model['name'])
+            
+        # Populate YOLO dropdown list with available models
+        for model_id, model in self.yolomodels_dict.items():
+            print(f"Adding YOLO model {model_id}")
+            self.yolomodel_list.addItem(model['name'])
             
         # Connect (global) GUI callbacks 
         self.gui_callback_functions()
@@ -293,6 +303,10 @@ class octron_widget(QWidget):
             self.prediction_worker_one.start()
         
 
+    ###### YOLO SPECIFIC CALLBACKS ####################################################################
+
+
+
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     def closeEvent(self):
         """
@@ -316,7 +330,9 @@ class octron_widget(QWidget):
         """
         Save the object organizer to the project directory
         """
-        assert self.project_path_video is not None, "No project video path set."
+        if self.project_path_video is None or not self.project_path_video.exists():
+            print("No project video path set or found. Not exporting object organizer.")
+            return
         organizer_path = self.project_path_video  / "object_organizer.json"
         self.object_organizer.save_to_disk(organizer_path)
 
@@ -326,6 +342,8 @@ class octron_widget(QWidget):
         Open a file dialog for the user to choose a base folder for the current OCTRON project.
         This yields self.project_path, which is used to store all project-related data.
         
+        If the project path is an existing OCTRON project, it will be inspected and 
+        the existing annotation data will be quickly displayed in a table view.
         
         """
         # Open a directory selection dialog
@@ -361,7 +379,6 @@ class octron_widget(QWidget):
             # Enable training tab if data is available
             if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
                 self.toolBox.widget(2).setEnabled(True)  # Training
-            
             
         else:
             print("No folder selected.")
@@ -425,10 +442,10 @@ class octron_widget(QWidget):
                 organizer_entry.annotation_layer = None
                 print(f'Removed annotation layer {self.layer_to_remove.name}')
             # 3. Video layer
-            # This should trigger a couple of thing ... 
+            # This should trigger a couple of things ... 
             
             
-        return
+        
             
             
             
