@@ -39,7 +39,7 @@ dependencies = [
     "kornia>=0.8.0",
     "cmasher>=1.9.2",
     "imantics",
-    "ultralytics>=8.3.81",
+    "ultralytics>=8.3.83",
     "tensorboard>=2.19.0",
     "sam-2 @ git+https://github.com/facebookresearch/sam2.git",
     "napari-pyav @ git+https://github.com/horsto/napari-pyav.git"

@@ -1,21 +1,8 @@
 # YOLO training related helpers
 from pathlib import Path
-from tqdm.auto import tqdm  
 import json
-import shutil
-from datetime import datetime
-import numpy as np  
-from zarr.core import array # For type checking 
-
-from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
-                                                 watershed_mask,
-                                                 get_polygons,
-)
+import numpy as np                                         
                                                  
-                                                 
-                                                 
-
-
 def load_object_organizer(file_path):
     """
     Load object organizer .json from disk and return
@@ -82,7 +69,6 @@ def find_common_frames(frame_arrays):
             break    
     return common
 
-
 def pick_random_frames(frames, n=20):
     """
     Pick n random frames from a frames array without replacement
@@ -110,8 +96,7 @@ def pick_random_frames(frames, n=20):
         return random_frames
     else:
         return np.array([], dtype=frames.dtype)
-
-
+    
 def collect_labels(project_path, 
                    prune_empty_labels=True, 
                    min_num_frames=10,
@@ -270,124 +255,6 @@ def collect_labels(project_path,
     return label_dict   
 
 
-def collect_polygons(label_dict,    
-                     ):
-    """
-    Calculate polygons for each mask in each frame and label in the label_dict.
-    The watershedding is performed on the masks,
-    and the polygons are extracted from the resulting labels.
-    
-    I am doing some kind of "optimal" watershedding here,
-    by determining the median object diameter from a subset of masks.
-    This is then used to determine the footprint diameter for the watershedding.
-    
-    Parameters
-    ----------
-    label_dict : dict : output from collect_labels()
-        Dictionary containing project subfolders,
-        and their corresponding labels, annotated frames, masks and video data.
-        keys: project_subfolder
-        values: dict
-            keys: label_id, video
-            values: dict, video
-                dict:
-                    keys: label, frames, masks, color
-                    values: label (str), # Name of the label corresponding to current ID
-                            frames (np.array), # Annotated frame indices for the label
-                            masks (list of zarr arrays), # Mask zarr arrays
-                            color (list) # Color of the label (RGBA, [0,1])
-                video: FastVideoReader object
-                
-    Returns
-    -------
-    label_dict : dict : Dictionary containing project subfolders,
-                        and their corresponding labels, annotated frames, masks, polygons and video data.
-        keys: project_subfolder
-        values: dict
-            keys: label_id, video
-            values: dict, video
-                dict:
-                    keys: label, frames, masks, polygons, color
-                    values: label (str), # Name of the label corresponding to current ID
-                            frames (np.array), # Annotated frame indices for the label
-                            masks (list of zarr arrays), # Mask zarr arrays
-                            polygons (dict) # Polygons for each frame index
-                            color (list) # Color of the label (RGBA, [0,1])
-                video: FastVideoReader object
-    
-    """ 
-
-
-    for labels in label_dict.values():  
-        min_area = None
-
-        for entry in labels:
-            if entry == 'video':
-                continue
-            label = labels[entry]['label']
-            frames = labels[entry]['frames']
-            mask_arrays = labels[entry]['masks'] # zarr array
-            
-            # On a subset of masks, determine object properties
-            random_frames = pick_random_frames(frames, n=10)
-            obj_diameters = []
-            for f in random_frames:
-                for mask_array in mask_arrays:
-                    sample_mask = mask_array[f]
-                    if sample_mask.sum() == 0:
-                        continue
-                    else:
-                        if min_area is None:
-                            # Determine area threshold once
-                            # threshold at 0.1 percent of the image area
-                            min_area = 0.001*sample_mask.shape[0]*sample_mask.shape[1]
-                        l, r = find_objects_in_mask(sample_mask, 
-                                                min_area=min_area
-                                                ) 
-                        for r_ in r:
-                            # Choosing feret diameter as a measure of object size
-                            # See https://en.wikipedia.org/wiki/Feret_diameter
-                            # and https://scikit-image.org/docs/stable/api/skimage.measure.html
-                            # "Maximum Feret’s diameter computed as the longest distance between 
-                            # points around a region’s convex hull contour
-                            # as determined by find_contours."
-                            obj_diameters.append(r_.feret_diameter_max)
-                            
-            # Now we can make assumptions about the median diameter of the objects
-            # I use this for "optimal" watershed parameters 
-            median_obj_diameter = np.nanmedian(obj_diameters)
-
-            ##################################################################################
-            
-            polys = {} # Collected polygons over frame indices
-            for f in tqdm(frames, 
-                          desc=f'Polygons for label {label}', 
-                          leave=True
-                          ):    
-                mask_polys = [] # List of polygons for the current frame
-                for mask_array in mask_arrays:
-                    mask_current_array = mask_array[f]
-                    # Watershed
-                    _, water_masks = watershed_mask(mask_current_array,
-                                                    footprint_diameter=median_obj_diameter,
-                                                    min_size_ratio=0.1,    
-                                                    plot=False
-                                                )
-                    # Loop over watershedded masks
-                    for mask in water_masks:
-                        try:
-                            mask_polys.append(get_polygons(mask)) 
-                        except AssertionError:
-                            # The mask is empty at this frame.
-                            # This happens if there is more than one mask 
-                            # zarr array (because there are multiple instances of a label), 
-                            # and the current label is not present in the current mask array.
-                            pass    
-                polys[f] = mask_polys
-            labels[entry]['polygons'] = polys  
-    
-    return label_dict
-
 
 def draw_polygons(labels, 
                   video_data,
@@ -474,7 +341,7 @@ def train_test_val(frame_indices,
                    verbose=False,
                    ):
     """
-    Perform a train-test-validation split on the frame indices.
+    Perform a train-test-validation split on frame indices.
     
     Parameters
     ----------
@@ -536,152 +403,4 @@ def train_test_val(frame_indices,
     assert set(collected_frames) == set(frame_indices), 'Some frames are missing in the splits'
 
     return split_dict
-
-
-def write_training_data(label_dict,
-                        path_to_training_root,
-                        verbose=False,
-                        ):
-    
-    try:
-        from PIL import Image
-    except ModuleNotFoundError:
-        print('Please install PIL first, via pip install pillow')
-        return
-    
-    # Create the training root directory
-    # If it already exists, delete it and create a new one
-    try:
-        path_to_training_root.mkdir(exist_ok=False)
-    except FileExistsError:
-        shutil.rmtree(path_to_training_root)    
-        path_to_training_root.mkdir()
-
-    # Create subdirectories for train, val, and test
-    # If they already exist, delete them and create new ones
-    for split in ['train', 'val', 'test']:
-        path_to_split = path_to_training_root / split
-        try:
-            path_to_split.mkdir(exist_ok=False)
-        except FileExistsError:
-            shutil.rmtree(path_to_split)    
-            path_to_split.mkdir()
-
-        
-    #######################################################################################################
-    # Export the training data
-    
-    for path, labels in label_dict.items():  
-        path_prefix = Path(path).name   
-        video_data = labels.pop('video')
-        
-        for entry in tqdm(labels,
-                          total=len(labels),
-                          position=0,
-                          leave=True,
-                          desc=f'Exporting {len(labels)} labels'
-                          ):
-            current_label_id = entry
-            # Extract the size of the masks for normalization later on 
-            for m in labels[entry]['masks']:
-                assert m.shape == labels[entry]['masks'][0].shape, f'All masks should have the same shape'
-            _, mask_height, mask_width = labels[entry]['masks'][0].shape
-            
-            for split in ['train', 'val', 'test']:
-                current_indices = labels[entry]['frames_split'][split]
-                for frame_id in tqdm(current_indices,
-                                    total=len(current_indices), 
-                                    desc=f'Exporting {split} frames', 
-                                    position=1,    
-                                    leave=False,
-                                    ):
-                    frame = video_data[frame_id]
-                    image_output_path = path_to_training_root / split / f'{path_prefix}_{frame_id}.png'
-                    if not image_output_path.exists():
-                        # Convert to uint8 if needed
-                        if frame.dtype != np.uint8:
-                            if frame.max() <= 1.0:
-                                frame_uint8 = (frame * 255).astype(np.uint8)
-                            else:
-                                frame_uint8 = frame.astype(np.uint8)
-                        else:
-                            frame_uint8 = frame
-                        # Convert to PIL Image
-                        img = Image.fromarray(frame_uint8)
-                        # Save with specific options for higher quality
-                        img.save(
-                            image_output_path,
-                            format="PNG",
-                            compress_level=0, # 0-9, lower means higher quality
-                            optimize=True,
-                        )
-                    
-                    # Create the label text file with the correct format
-                    with open(path_to_training_root / split / f'{path_prefix}_{frame_id}.txt', 'a') as f:
-                        for polygon in labels[entry]['polygons'][frame_id]:
-                            f.write(f'{current_label_id}')
-                            # Write each coordinate pair as normalized coordinate to txt
-                            for point in polygon:
-                                f.write(f' {point[0]/mask_height} {point[1]/mask_width}')
-                            f.write('\n')
-    if verbose: print(f"Training data exported to {path_to_training_root}")
-
-
-
-def write_yolo_config_yaml(
-    output_path: Path,
-    dataset_path: Path,
-    train_path: str,
-    val_path: str,
-    test_path: str,
-    label_dict: dict
-    ):
-    """
-    Write a YOLO configuration YAML file to disk.
-    
-    Parameters
-    ----------
-    output_path : Path, str
-        Path where to save the YAML file
-    dataset_path : Path, str
-        Path to the dataset root directory
-    train_path : str
-        Folder name of the training images (relative to dataset_path)
-    val_path : str
-        Folder name of the validation images (relative to dataset_path)
-    test_path : str, optional
-        Folder name of the images (relative to dataset_path)
-    label_dict : dict, optional
-        Dictionary mapping label IDs to label names
-    """
-    import yaml
-    assert output_path.suffix == '.yaml', 'Output file should have a .yaml extension'
-    assert dataset_path.exists(), f'Dataset path not found at {dataset_path}'
-    assert dataset_path.is_dir(), f'Dataset path should be a directory, but found a file at {dataset_path}' 
-    
-    # Create the config dictionary
-    config = {
-        "path": str(dataset_path),
-        "train": train_path,
-        "val": val_path,
-    }
-    
-    if test_path:
-        config["test"] = test_path
-    
-    # Add class names if provided
-    if label_dict:
-        config["names"] = label_dict
-    
-    # Write header comments
-    header = "# OCTRON training dataset\n# Exported on {}\n\n".format(datetime.now())
-    
-    # Write to file
-    with open(output_path, 'w') as f:
-        f.write(header)
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-    
-    print(f"YOLO config saved to {output_path}")
-    return output_path
-
 
