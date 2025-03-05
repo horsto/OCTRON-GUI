@@ -1,5 +1,6 @@
 # This file collects custom input dialogs for the main OCTRON application, 
 # such as little pop-ups where users can input additional information.
+
 from qtpy.QtWidgets import (
     QDialog,
     QWidget, 

@@ -68,10 +68,11 @@ class Ui_octron_widgetui(object):
         self.project_tab.setSizePolicy(sizePolicy1)
         self.verticalLayoutWidget_3 = QWidget(self.project_tab)
         self.verticalLayoutWidget_3.setObjectName(u"verticalLayoutWidget_3")
-        self.verticalLayoutWidget_3.setGeometry(QRect(0, -1, 402, 241))
+        self.verticalLayoutWidget_3.setGeometry(QRect(0, -1, 402, 402))
         self.project_vertical_layout = QVBoxLayout(self.verticalLayoutWidget_3)
+        self.project_vertical_layout.setSpacing(30)
         self.project_vertical_layout.setObjectName(u"project_vertical_layout")
-        self.project_vertical_layout.setContentsMargins(0, 0, 0, 0)
+        self.project_vertical_layout.setContentsMargins(0, 0, 0, 15)
         self.folder_sect_groupbox = QGroupBox(self.verticalLayoutWidget_3)
         self.folder_sect_groupbox.setObjectName(u"folder_sect_groupbox")
         sizePolicy2 = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
@@ -124,7 +125,45 @@ class Ui_octron_widgetui(object):
         self.horizontalLayout.addWidget(self.video_file_drop_widget)
 
 
-        self.project_vertical_layout.addWidget(self.project_video_drop_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
+        self.project_vertical_layout.addWidget(self.project_video_drop_groupbox, 0, Qt.AlignmentFlag.AlignTop)
+
+        self.project_existing_data_groupbox = QGroupBox(self.verticalLayoutWidget_3)
+        self.project_existing_data_groupbox.setObjectName(u"project_existing_data_groupbox")
+        self.project_existing_data_groupbox.setEnabled(False)
+        sizePolicy2.setHeightForWidth(self.project_existing_data_groupbox.sizePolicy().hasHeightForWidth())
+        self.project_existing_data_groupbox.setSizePolicy(sizePolicy2)
+        self.project_existing_data_groupbox.setMinimumSize(QSize(400, 140))
+        self.project_existing_data_groupbox.setMaximumSize(QSize(400, 140))
+        self.horizontalLayout_9 = QHBoxLayout(self.project_existing_data_groupbox)
+        self.horizontalLayout_9.setSpacing(20)
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.horizontalLayout_9.setContentsMargins(9, 9, 9, 9)
+        self.existing_data_table = QTableView(self.project_existing_data_groupbox)
+        self.existing_data_table.setObjectName(u"existing_data_table")
+        self.existing_data_table.setMinimumSize(QSize(380, 100))
+        self.existing_data_table.setMaximumSize(QSize(380, 100))
+        self.existing_data_table.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.EditKeyPressed|QAbstractItemView.EditTrigger.SelectedClicked)
+        self.existing_data_table.setProperty("showDropIndicator", False)
+        self.existing_data_table.setDragDropOverwriteMode(False)
+        self.existing_data_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.existing_data_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.existing_data_table.setGridStyle(Qt.PenStyle.SolidLine)
+        self.existing_data_table.setSortingEnabled(False)
+        self.existing_data_table.setWordWrap(False)
+        self.existing_data_table.setCornerButtonEnabled(False)
+        self.existing_data_table.horizontalHeader().setCascadingSectionResizes(True)
+        self.existing_data_table.horizontalHeader().setMinimumSectionSize(85)
+        self.existing_data_table.horizontalHeader().setDefaultSectionSize(85)
+        self.existing_data_table.horizontalHeader().setHighlightSections(False)
+        self.existing_data_table.verticalHeader().setVisible(False)
+        self.existing_data_table.verticalHeader().setMinimumSectionSize(20)
+        self.existing_data_table.verticalHeader().setDefaultSectionSize(20)
+        self.existing_data_table.verticalHeader().setHighlightSections(False)
+
+        self.horizontalLayout_9.addWidget(self.existing_data_table, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignVCenter)
+
+
+        self.project_vertical_layout.addWidget(self.project_existing_data_groupbox, 0, Qt.AlignmentFlag.AlignTop)
 
         icon = QIcon()
         icon.addFile(u"icons/noun-project-7158867.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -163,12 +202,12 @@ class Ui_octron_widgetui(object):
 
         self.horizontalLayout_8.addWidget(self.sam2model_list, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.load_model_btn = QPushButton(self.horizontalGroupBox)
-        self.load_model_btn.setObjectName(u"load_model_btn")
-        self.load_model_btn.setMinimumSize(QSize(0, 25))
-        self.load_model_btn.setMaximumSize(QSize(250, 25))
+        self.load_sam2model_btn = QPushButton(self.horizontalGroupBox)
+        self.load_sam2model_btn.setObjectName(u"load_sam2model_btn")
+        self.load_sam2model_btn.setMinimumSize(QSize(0, 25))
+        self.load_sam2model_btn.setMaximumSize(QSize(250, 25))
 
-        self.horizontalLayout_8.addWidget(self.load_model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.horizontalLayout_8.addWidget(self.load_sam2model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.annotate_vertical_layout.addWidget(self.horizontalGroupBox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
@@ -488,8 +527,10 @@ class Ui_octron_widgetui(object):
 
         self.generate_training_data_btn = QPushButton(self.widget2)
         self.generate_training_data_btn.setObjectName(u"generate_training_data_btn")
-        self.generate_training_data_btn.setMinimumSize(QSize(90, 25))
-        self.generate_training_data_btn.setMaximumSize(QSize(90, 25))
+        sizePolicy3.setHeightForWidth(self.generate_training_data_btn.sizePolicy().hasHeightForWidth())
+        self.generate_training_data_btn.setSizePolicy(sizePolicy3)
+        self.generate_training_data_btn.setMinimumSize(QSize(80, 25))
+        self.generate_training_data_btn.setMaximumSize(QSize(80, 25))
 
         self.train_folder_btn_horizontalLayout.addWidget(self.generate_training_data_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -582,14 +623,16 @@ class Ui_octron_widgetui(object):
 
         self.start_stop_training_btn = QPushButton(self.widget4)
         self.start_stop_training_btn.setObjectName(u"start_stop_training_btn")
-        self.start_stop_training_btn.setMinimumSize(QSize(90, 25))
-        self.start_stop_training_btn.setMaximumSize(QSize(90, 25))
+        sizePolicy3.setHeightForWidth(self.start_stop_training_btn.sizePolicy().hasHeightForWidth())
+        self.start_stop_training_btn.setSizePolicy(sizePolicy3)
+        self.start_stop_training_btn.setMinimumSize(QSize(80, 25))
+        self.start_stop_training_btn.setMaximumSize(QSize(80, 25))
 
-        self.train_verticalLayout.addWidget(self.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignBottom)
+        self.train_verticalLayout.addWidget(self.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignBottom)
 
         self.widget5 = QWidget(self.train_train_groupbox)
         self.widget5.setObjectName(u"widget5")
-        self.widget5.setGeometry(QRect(10, 30, 284, 31))
+        self.widget5.setGeometry(QRect(10, 30, 281, 31))
         self.model_choose_horizontalLayout = QHBoxLayout(self.widget5)
         self.model_choose_horizontalLayout.setObjectName(u"model_choose_horizontalLayout")
         self.model_choose_horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -660,7 +703,7 @@ class Ui_octron_widgetui(object):
 
         self.retranslateUi(octron_widgetui)
 
-        self.toolBox.setCurrentIndex(2)
+        self.toolBox.setCurrentIndex(0)
         self.toolBox.layout().setSpacing(10)
 
 
@@ -673,10 +716,11 @@ class Ui_octron_widgetui(object):
         self.folder_sect_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Project folder", None))
         self.create_project_btn.setText(QCoreApplication.translate("octron_widgetui", u"\u2295 Choose", None))
         self.project_folder_path_label.setText(QCoreApplication.translate("octron_widgetui", u"Project folder path", None))
-        self.project_video_drop_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Video files", None))
+        self.project_video_drop_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Add video files", None))
 #if QT_CONFIG(tooltip)
         self.video_file_drop_widget.setToolTip(QCoreApplication.translate("octron_widgetui", u"Drag and drop .mp4 files here", None))
 #endif // QT_CONFIG(tooltip)
+        self.project_existing_data_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Existing data", None))
         self.toolBox.setItemText(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Project", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Create new octron projects or load existing ones", None))
@@ -684,7 +728,7 @@ class Ui_octron_widgetui(object):
         self.horizontalGroupBox.setTitle(QCoreApplication.translate("octron_widgetui", u"Model selection", None))
         self.sam2model_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Choose model ...", None))
 
-        self.load_model_btn.setText(QCoreApplication.translate("octron_widgetui", u"Load model", None))
+        self.load_sam2model_btn.setText(QCoreApplication.translate("octron_widgetui", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Layer controls", None))
 #if QT_CONFIG(tooltip)
         self.create_projection_layer_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Create an average projection out of all segmented images for the current label", None))

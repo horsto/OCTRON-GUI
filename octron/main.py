@@ -28,6 +28,7 @@ from qtpy.QtWidgets import (
     QStyleFactory,
     QFileDialog,
     QMessageBox,
+    QHeaderView,
 )
 import napari
 from napari.utils.notifications import (
@@ -43,6 +44,7 @@ from napari_pyav._reader import FastVideoReader
 
 # GUI 
 from octron.gui_elements import octron_gui_elements
+from octron.gui_tables import ExistingDataTable
 
 # SAM2 specific 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -55,7 +57,10 @@ from octron.sam2_octron.helpers.sam2_zarr import (
     load_image_zarr,
 )
 
-# Layer creation tools
+# YOLO specific 
+from octron.yolo_octron.helpers.training import collect_labels
+
+# Annotation layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
     add_sam2_mask_layer,
     add_sam2_shapes_layer,
@@ -63,10 +68,10 @@ from octron.sam2_octron.helpers.sam2_layer import (
     add_annotation_projection,
 )                
 
-# Layer callbacks class
+# Layer callbacks classes
 from octron.sam2_octron.helpers.sam2_layer_callback import sam2_octron_callbacks
 
-# Object organizer
+# OCTRON Object organizer
 from octron.sam2_octron.object_organizer import Obj, ObjectOrganizer
   
 # Custom dialog boxes
@@ -115,9 +120,9 @@ class octron_widget(QWidget):
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
         # Model yaml for SAM2
-        models_yaml_path = self.base_path / 'sam2_octron/sam2_models.yaml'
-        self.models_dict = check_sam2_models(SAM2p1_BASE_URL='',
-                                             models_yaml_path=models_yaml_path,
+        sam2models_yaml_path = self.base_path / 'sam2_octron/sam2_models.yaml'
+        self.sam2models_dict = check_sam2_models(SAM2p1_BASE_URL='',
+                                             models_yaml_path=sam2models_yaml_path,
                                              force_download=False,
                                              )
         
@@ -131,8 +136,8 @@ class octron_widget(QWidget):
         self.layer_type_combobox.model().item(last_index).setEnabled(False)
         
         # Populate SAM2 dropdown list with available models
-        for model_id, model in self.models_dict.items():
-            print(f"Adding model {model_id}")
+        for model_id, model in self.sam2models_dict.items():
+            print(f"Adding SAM2 model {model_id}")
             self.sam2model_list.addItem(model['name'])
             
         # Connect (global) GUI callbacks 
@@ -155,7 +160,7 @@ class octron_widget(QWidget):
         
         # Buttons 
         self.create_project_btn.clicked.connect(self.open_project_folder_dialog)
-        self.load_model_btn.clicked.connect(self.load_model)
+        self.load_sam2model_btn.clicked.connect(self.load_sam2model)
         self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
         self.predict_next_batch_btn.clicked.connect(self.init_prediction_threaded)
         self.predict_next_oneframe_btn.clicked.connect(self.init_prediction_threaded)    
@@ -167,9 +172,9 @@ class octron_widget(QWidget):
     
         # Upon start, disable some of the toolbox tabs and functionality for video drop 
         self.project_video_drop_groupbox.setEnabled(False)
-        self.toolBox.widget(1).setEnabled(False) 
-        self.toolBox.widget(2).setEnabled(False) 
-        self.toolBox.widget(3).setEnabled(False) 
+        self.toolBox.widget(1).setEnabled(False) # Annotation
+        self.toolBox.widget(2).setEnabled(False) # Training
+        self.toolBox.widget(3).setEnabled(False) # Prediction
         
         # Connect to the Napari viewer close event
         self.app.lastWindowClosed.connect(self.closeEvent)
@@ -177,7 +182,7 @@ class octron_widget(QWidget):
 
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     
-    def load_model(self):
+    def load_sam2model(self):
         """
         Load the selected SAM2 model and enable the batch prediction button, 
         setting the progress bar to the chunk size and the button text to predict next chunk size
@@ -185,29 +190,29 @@ class octron_widget(QWidget):
         """
         index = self.sam2model_list.currentIndex()
         if index == 0:
-            show_warning("Please select a valid model.")
+            show_warning("Please select a valid SAM2 model.")
             return
     
         model_name = self.sam2model_list.currentText()
         # Reverse lookup model_id
-        for model_id, model in self.models_dict.items():
+        for model_id, model in self.sam2models_dict.items():
             if model['name'] == model_name:
                 break
         
-        print(f"Loading model {model_id}")
-        model = self.models_dict[model_id]
+        print(f"Loading SAM2 model {model_id}")
+        model = self.sam2models_dict[model_id]
         config_path = Path(model['config_path'])
         checkpoint_path = self.base_path / Path(f"sam2_octron/{model['checkpoint_path']}")
         self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
                                                         ckpt_path=checkpoint_path.as_posix(),
                                                         )
         self.predictor.is_initialized = False
-        show_info(f"Model {model_name} loaded on {self.device}")
+        show_info(f"SAM2 model {model_name} loaded on {self.device}")
         # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(False)
-        self.load_model_btn.setEnabled(False)
-        self.load_model_btn.setStyleSheet('QPushButton {background-color: #999; color: #495c10;}')
-        self.load_model_btn.setText(f'{model_name} ✓')
+        self.load_sam2model_btn.setEnabled(False)
+        self.load_sam2model_btn.setStyleSheet('QPushButton {background-color: #999; color: #495c10;}')
+        self.load_sam2model_btn.setText(f'{model_name} ✓')
 
         # Enable the predict next batch button
         # Take care of chunk size for batch prediction
@@ -319,20 +324,45 @@ class octron_widget(QWidget):
     def open_project_folder_dialog(self):
         """
         Open a file dialog for the user to choose a base folder for the current OCTRON project.
+        This yields self.project_path, which is used to store all project-related data.
+        
+        
         """
         # Open a directory selection dialog
         folder = QFileDialog.getExistingDirectory(self, "Select Base Folder", str(Path.home()))
         if folder:
             print(f"Project base folder selected: {folder}")
-            show_info(f"Project: {folder}")    
             
             folder = Path(folder)
             self.project_folder_path_label.setEnabled(False)
             self.project_folder_path_label.setText(f'→{folder.as_posix()}')
             
-            # Check this folder TODO ... 
             self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
+            
+            # Check this folder for existing project data
+            label_dict = collect_labels(self.project_path)  
+            
+            # Initialize the table model if not already done
+            if not hasattr(self, 'label_table_model'):
+                self.label_table_model = ExistingDataTable()
+                self.existing_data_table.setModel(self.label_table_model)
+                
+                # Configure the table appearance
+                self.existing_data_table.horizontalHeader().setStretchLastSection(False)
+                self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+                
+            # Update the table with new data
+            self.label_table_model.update_data(label_dict)
+            
+            # Enable the groupbox for existing data
+            self.project_existing_data_groupbox.setEnabled(True)
+            
+            # Enable training tab if data is available
+            if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
+                self.toolBox.widget(2).setEnabled(True)  # Training
+            
+            
         else:
             print("No folder selected.")
         return 
@@ -567,7 +597,7 @@ class octron_widget(QWidget):
         
         ...
         Create a zarr store for the video layer.
-        This will only work if a video layer is found and a model is loaded, 
+        This will only work if a video layer is found and a sam2 model is loaded, 
         since both video and model information are required to create the zarr store.
         # TODO: Tie this into project management
         """
@@ -725,7 +755,7 @@ class octron_widget(QWidget):
         # Prewarm SAM2 predictor (model)
         # This needs the zarr store to be initialized first
         # -> that happens when either the model is loaded or a video layer is found
-        # -> on_changed_layer() and load_model() take care of this
+        # -> on_changed_layer() and load_sam2model() take care of this
         if not self.predictor.is_initialized:
             self.predictor.init_state(video_data=self.video_layer.data, 
                                       zarr_store=self.video_zarr,

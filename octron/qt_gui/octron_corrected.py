@@ -68,10 +68,11 @@ class Ui_octron_widgetui(object):
         self.octron.project_tab.setSizePolicy(sizePolicy1)
         self.octron.verticalLayoutWidget_3 = QWidget(self.octron.project_tab)
         self.octron.verticalLayoutWidget_3.setObjectName(u"verticalLayoutWidget_3")
-        self.octron.verticalLayoutWidget_3.setGeometry(QRect(0, -1, 402, 241))
+        self.octron.verticalLayoutWidget_3.setGeometry(QRect(0, -1, 402, 402))
         self.octron.project_vertical_layout = QVBoxLayout(self.octron.verticalLayoutWidget_3)
+        self.octron.project_vertical_layout.setSpacing(30)
         self.octron.project_vertical_layout.setObjectName(u"project_vertical_layout")
-        self.octron.project_vertical_layout.setContentsMargins(0, 0, 0, 0)
+        self.octron.project_vertical_layout.setContentsMargins(0, 0, 0, 15)
         self.octron.folder_sect_groupbox = QGroupBox(self.octron.verticalLayoutWidget_3)
         self.octron.folder_sect_groupbox.setObjectName(u"folder_sect_groupbox")
         sizePolicy2 = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
@@ -124,7 +125,45 @@ class Ui_octron_widgetui(object):
         self.octron.horizontalLayout.addWidget(self.octron.video_file_drop_widget)
 
 
-        self.octron.project_vertical_layout.addWidget(self.octron.project_video_drop_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
+        self.octron.project_vertical_layout.addWidget(self.octron.project_video_drop_groupbox, 0, Qt.AlignmentFlag.AlignTop)
+
+        self.octron.project_existing_data_groupbox = QGroupBox(self.octron.verticalLayoutWidget_3)
+        self.octron.project_existing_data_groupbox.setObjectName(u"project_existing_data_groupbox")
+        self.octron.project_existing_data_groupbox.setEnabled(False)
+        sizePolicy2.setHeightForWidth(self.octron.project_existing_data_groupbox.sizePolicy().hasHeightForWidth())
+        self.octron.project_existing_data_groupbox.setSizePolicy(sizePolicy2)
+        self.octron.project_existing_data_groupbox.setMinimumSize(QSize(400, 140))
+        self.octron.project_existing_data_groupbox.setMaximumSize(QSize(400, 140))
+        self.octron.horizontalLayout_9 = QHBoxLayout(self.octron.project_existing_data_groupbox)
+        self.octron.horizontalLayout_9.setSpacing(20)
+        self.octron.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.octron.horizontalLayout_9.setContentsMargins(9, 9, 9, 9)
+        self.octron.existing_data_table = QTableView(self.octron.project_existing_data_groupbox)
+        self.octron.existing_data_table.setObjectName(u"existing_data_table")
+        self.octron.existing_data_table.setMinimumSize(QSize(380, 100))
+        self.octron.existing_data_table.setMaximumSize(QSize(380, 100))
+        self.octron.existing_data_table.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.EditKeyPressed|QAbstractItemView.EditTrigger.SelectedClicked)
+        self.octron.existing_data_table.setProperty("showDropIndicator", False)
+        self.octron.existing_data_table.setDragDropOverwriteMode(False)
+        self.octron.existing_data_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.octron.existing_data_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.octron.existing_data_table.setGridStyle(Qt.PenStyle.SolidLine)
+        self.octron.existing_data_table.setSortingEnabled(False)
+        self.octron.existing_data_table.setWordWrap(False)
+        self.octron.existing_data_table.setCornerButtonEnabled(False)
+        self.octron.existing_data_table.horizontalHeader().setCascadingSectionResizes(True)
+        self.octron.existing_data_table.horizontalHeader().setMinimumSectionSize(85)
+        self.octron.existing_data_table.horizontalHeader().setDefaultSectionSize(85)
+        self.octron.existing_data_table.horizontalHeader().setHighlightSections(False)
+        self.octron.existing_data_table.verticalHeader().setVisible(False)
+        self.octron.existing_data_table.verticalHeader().setMinimumSectionSize(20)
+        self.octron.existing_data_table.verticalHeader().setDefaultSectionSize(20)
+        self.octron.existing_data_table.verticalHeader().setHighlightSections(False)
+
+        self.octron.horizontalLayout_9.addWidget(self.octron.existing_data_table, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignVCenter)
+
+
+        self.octron.project_vertical_layout.addWidget(self.octron.project_existing_data_groupbox, 0, Qt.AlignmentFlag.AlignTop)
 
         icon = QIcon()
         icon.addFile(f"{base_path}/qt_gui/icons/noun-project-7158867.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -163,12 +202,12 @@ class Ui_octron_widgetui(object):
 
         self.octron.horizontalLayout_8.addWidget(self.octron.sam2model_list, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.octron.load_model_btn = QPushButton(self.octron.horizontalGroupBox)
-        self.octron.load_model_btn.setObjectName(u"load_model_btn")
-        self.octron.load_model_btn.setMinimumSize(QSize(0, 25))
-        self.octron.load_model_btn.setMaximumSize(QSize(250, 25))
+        self.octron.load_sam2model_btn = QPushButton(self.octron.horizontalGroupBox)
+        self.octron.load_sam2model_btn.setObjectName(u"load_sam2model_btn")
+        self.octron.load_sam2model_btn.setMinimumSize(QSize(0, 25))
+        self.octron.load_sam2model_btn.setMaximumSize(QSize(250, 25))
 
-        self.octron.horizontalLayout_8.addWidget(self.octron.load_model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_8.addWidget(self.octron.load_sam2model_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.octron.annotate_vertical_layout.addWidget(self.octron.horizontalGroupBox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
@@ -488,8 +527,10 @@ class Ui_octron_widgetui(object):
 
         self.octron.generate_training_data_btn = QPushButton(self.octron.widget2)
         self.octron.generate_training_data_btn.setObjectName(u"generate_training_data_btn")
-        self.octron.generate_training_data_btn.setMinimumSize(QSize(90, 25))
-        self.octron.generate_training_data_btn.setMaximumSize(QSize(90, 25))
+        sizePolicy3.setHeightForWidth(self.octron.generate_training_data_btn.sizePolicy().hasHeightForWidth())
+        self.octron.generate_training_data_btn.setSizePolicy(sizePolicy3)
+        self.octron.generate_training_data_btn.setMinimumSize(QSize(80, 25))
+        self.octron.generate_training_data_btn.setMaximumSize(QSize(80, 25))
 
         self.octron.train_folder_btn_horizontalLayout.addWidget(self.octron.generate_training_data_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
@@ -582,14 +623,16 @@ class Ui_octron_widgetui(object):
 
         self.octron.start_stop_training_btn = QPushButton(self.octron.widget4)
         self.octron.start_stop_training_btn.setObjectName(u"start_stop_training_btn")
-        self.octron.start_stop_training_btn.setMinimumSize(QSize(90, 25))
-        self.octron.start_stop_training_btn.setMaximumSize(QSize(90, 25))
+        sizePolicy3.setHeightForWidth(self.octron.start_stop_training_btn.sizePolicy().hasHeightForWidth())
+        self.octron.start_stop_training_btn.setSizePolicy(sizePolicy3)
+        self.octron.start_stop_training_btn.setMinimumSize(QSize(80, 25))
+        self.octron.start_stop_training_btn.setMaximumSize(QSize(80, 25))
 
-        self.octron.train_verticalLayout.addWidget(self.octron.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignBottom)
+        self.octron.train_verticalLayout.addWidget(self.octron.start_stop_training_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignBottom)
 
         self.octron.widget5 = QWidget(self.octron.train_train_groupbox)
         self.octron.widget5.setObjectName(u"widget5")
-        self.octron.widget5.setGeometry(QRect(10, 30, 284, 31))
+        self.octron.widget5.setGeometry(QRect(10, 30, 281, 31))
         self.octron.model_choose_horizontalLayout = QHBoxLayout(self.octron.widget5)
         self.octron.model_choose_horizontalLayout.setObjectName(u"model_choose_horizontalLayout")
         self.octron.model_choose_horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -658,7 +701,7 @@ class Ui_octron_widgetui(object):
         self.octron.toolBox.raise_()
         self.octron.octron_logo.raise_()
 
-        self.octron.toolBox.setCurrentIndex(2)
+        self.octron.toolBox.setCurrentIndex(0)
         self.octron.toolBox.layout().setSpacing(10)
 
 
@@ -668,10 +711,11 @@ class Ui_octron_widgetui(object):
         self.octron.folder_sect_groupbox.setTitle(QCoreApplication.translate("self", u"Project folder", None))
         self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Choose", None))
         self.octron.project_folder_path_label.setText(QCoreApplication.translate("self", u"Project folder path", None))
-        self.octron.project_video_drop_groupbox.setTitle(QCoreApplication.translate("self", u"Video files", None))
+        self.octron.project_video_drop_groupbox.setTitle(QCoreApplication.translate("self", u"Add video files", None))
 #if QT_CONFIG(tooltip)
         self.octron.video_file_drop_widget.setToolTip(QCoreApplication.translate("self", u"Drag and drop .mp4 files here", None))
 #endif // QT_CONFIG(tooltip)
+        self.octron.project_existing_data_groupbox.setTitle(QCoreApplication.translate("self", u"Existing data", None))
         self.octron.toolBox.setItemText(self.octron.toolBox.indexOf(self.octron.project_tab), QCoreApplication.translate("self", u"Project", None))
 #if QT_CONFIG(tooltip)
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.project_tab), QCoreApplication.translate("self", u"Create new octron projects or load existing ones", None))
@@ -679,7 +723,7 @@ class Ui_octron_widgetui(object):
         self.octron.horizontalGroupBox.setTitle(QCoreApplication.translate("self", u"Model selection", None))
         self.octron.sam2model_list.setItemText(0, QCoreApplication.translate("self", u"Choose model ...", None))
 
-        self.octron.load_model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
+        self.octron.load_sam2model_btn.setText(QCoreApplication.translate("self", u"Load model", None))
         self.octron.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("self", u"Layer controls", None))
 #if QT_CONFIG(tooltip)
         self.octron.create_projection_layer_btn.setToolTip(QCoreApplication.translate("self", u"Create an average projection out of all segmented images for the current label", None))
