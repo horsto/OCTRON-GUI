@@ -116,7 +116,7 @@ class octron_widget(QWidget):
         self.remove_current_layer = False # Removal of layer yes/no
         self.layer_to_remove_idx = None # Index of layer to remove
         self.layer_to_remove = None # The actual layer to remove
-        
+        self.polygons_generated = False
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
@@ -169,7 +169,9 @@ class octron_widget(QWidget):
         self._viewer.layers.events.removed.connect(self._on_layer_removed)
         
         # Buttons 
+        # ... project 
         self.create_project_btn.clicked.connect(self.open_project_folder_dialog)
+        # ... SAM2 and annotations 
         self.load_sam2model_btn.clicked.connect(self.load_sam2model)
         self.create_annotation_layer_btn.clicked.connect(self.create_annotation_layers)
         self.predict_next_batch_btn.clicked.connect(self.init_prediction_threaded)
@@ -177,6 +179,10 @@ class octron_widget(QWidget):
         self.create_projection_layer_btn.clicked.connect(self.create_annotation_projections)
         self.hard_reset_layer_btn.clicked.connect(self.reset_predictor)
         self.hard_reset_layer_btn.setEnabled(False)
+        # ... YOLO
+        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #416c10;}')
+        self.generate_training_data_btn.setText(f'▷ Generate')
+        self.generate_training_data_btn.clicked.connect(self.init_training_data_threaded)
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
     
@@ -221,7 +227,7 @@ class octron_widget(QWidget):
         # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(False)
         self.load_sam2model_btn.setEnabled(False)
-        self.load_sam2model_btn.setStyleSheet('QPushButton {background-color: #999; color: #495c10;}')
+        self.load_sam2model_btn.setStyleSheet('QPushButton { color: #416c10;}')
         self.load_sam2model_btn.setText(f'{model_name} ✓')
 
         # Enable the predict next batch button
@@ -245,6 +251,7 @@ class octron_widget(QWidget):
     
     def _batch_predict_yielded(self, value):
         """
+        prediction_worker()
         Called upon yielding from the batch prediction thread worker.
         Updates the progress bar and the mask layer with the predicted mask.
         """
@@ -260,6 +267,7 @@ class octron_widget(QWidget):
           
     def _on_prediction_finished(self):
         """
+        prediction_worker()
         Callback for when worker within init_prediction_threaded() 
         has finished executing. 
         """
@@ -285,7 +293,7 @@ class octron_widget(QWidget):
         # Identify the sender (button) that called this function
         sender = self.sender()
         
-        # Disable the predcition button
+        # Disable the prediction button
         self.predict_next_batch_btn.setEnabled(False)
         self.predict_next_oneframe_btn.setEnabled(False)
         self.skip_frames_spinbox.setEnabled(False)
@@ -304,9 +312,108 @@ class octron_widget(QWidget):
         
 
     ###### YOLO SPECIFIC CALLBACKS ####################################################################
+    
+    def _polygon_yielded(self, value):
+        """
+        polygon_worker()
+        Called upon yielding from the batch polygon generation thread worker.
+        Updates the progress bar and label text next to it.
+        """
+        no_entry, total_label_dict, label, frame_no, total_frames = value
+        self.train_polygons_overall_progressbar.setMaximum(total_label_dict)
+        self.train_polygons_overall_progressbar.setValue(no_entry-1)
+        self.train_polygons_frames_progressbar.setMaximum(total_frames) 
+        self.train_polygons_frames_progressbar.setValue(frame_no)   
+        self.train_polygons_label.setText(label)    
+        
+        
+    def _on_polygon_finished(self):
+        """
+        polygon_worker()
+        Callback for when polygon generation worker has finished executing. 
+        """
+        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #416c10;}')
+        self.generate_training_data_btn.setText(f'▷ Generate')
+        self.train_polygons_overall_progressbar.setValue(0)
+        self.train_polygons_frames_progressbar.setValue(0)
+        if self.polygon_worker_interrupt:
+            show_warning("Polygon generation interrupted.")  
+            self.polygons_generated = False
+        else:
+            show_info("Polygon generation finished.")
+            self.polygons_generated = True
+            
+        self.train_polygons_overall_progressbar.setEnabled(False)    
+        self.train_polygons_frames_progressbar.setEnabled(False)
+        self.train_polygons_label.setText('')
+        self.train_polygons_label.setEnabled(False)
 
-
-
+    def init_training_data_threaded(self):
+        """
+        Thread worker for creating training datasets from 
+        existing annotation data.
+        """
+        def _create_worker():
+            # Create a new worker
+            self.polygon_worker = create_worker(self.yolo_octron.prepare_polygons)
+            self.polygon_worker.setAutoDelete(True) # auto destruct!!
+            self.polygon_worker.yielded.connect(self._polygon_yielded)
+            self.polygon_worker.finished.connect(self._on_polygon_finished)
+            self.train_polygons_overall_progressbar.setEnabled(True)    
+            self.train_polygons_frames_progressbar.setEnabled(True)
+            self.train_polygons_label.setEnabled(True)
+            
+        # Sanity check 
+        if not self.project_path:
+            show_warning("Please select a project directory first.")
+            return
+        if not hasattr(self, 'yolo_octron'):
+            show_warning("Please load a YOLO first.")
+            return
+        # Check status of "Prune" checkbox
+        prune = self.train_prune_checkBox.isChecked()
+        print('Prune:', prune)
+        self.yolo_octron.project_path = self.project_path
+        
+        self.save_object_organizer() # This is safe, since it checks whether a video was loaded
+        try:
+            # After saving the object organizer, extract info from all 
+            # available .json files in the project directory
+            self.yolo_octron.prepare_labels(
+                        prune_empty_labels=prune, 
+                        min_num_frames=10, # hardcoded ... less than 10 frames are not useful
+                        verbose=False, 
+            )
+        except AssertionError as e:
+            print(f"😵 Error when preparing labels: {e}")
+            return
+        
+        self.polygon_interrupt = False
+        if not hasattr(self, 'polygon_worker'):
+            _create_worker()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #bd5b3a;}')
+            self.generate_training_data_btn.setText(f'Interrupt')
+            self.polygon_worker.start()
+            self.polygon_worker_interrupt = False
+        elif hasattr(self, 'polygon_worker') and not self.polygon_worker.is_running:
+            # Worker exists but is not running - clean up and create a new one
+            try:
+                self.polygon_worker.yielded.disconnect(self._polygon_yielded)
+                self.polygon_worker.finished.disconnect(self._on_polygon_finished)
+            except Exception as e:
+                print(f"Error when cleaning up polygon worker: {e}")
+            _create_worker()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #bd5b3a;}')
+            self.generate_training_data_btn.setText(f'Interrupt')
+            self.polygon_worker.start()
+            self.polygon_worker_interrupt = False
+        elif hasattr(self, 'polygon_worker') and self.polygon_worker.is_running:
+            self.polygon_worker.quit()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #416c10;}')
+            self.generate_training_data_btn.setText(f'▷ Generate')
+            self.polygon_worker_interrupt = True
+            
+        
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     def closeEvent(self):
         """
