@@ -156,11 +156,25 @@ class YOLO_octron:
                                 color (list) # Color of the label (RGBA, [0,1])
                     video: FastVideoReader object
         
+        Yields
+        ------
+        no_entry : int
+            Number of entry processed
+        total_label_dict : int
+            Total number of entries in label_dict (all json files)
+        label : str
+            Current label name
+        frame_no : int
+            Current frame number being processed
+        total_frames : int
+            Total number of frames for the current label
+            
+        
         """ 
         if self.label_dict is None:
             raise ValueError("No labels found. Please run prepare_labels() first.")
 
-        for labels in self.label_dict.values():  
+        for no_entry, labels in enumerate(self.label_dict.values(), start=1):  
             min_area = None
 
             for entry in labels:
@@ -200,10 +214,10 @@ class YOLO_octron:
                 median_obj_diameter = np.nanmedian(obj_diameters)
 
                 ##################################################################################
-                
                 polys = {} # Collected polygons over frame indices
-                for f in tqdm(frames, 
+                for f_no, f in tqdm(enumerate(frames, start=1), 
                             desc=f'Polygons for label {label}', 
+                            total=len(frames),
                             leave=True
                             ):    
                     mask_polys = [] # List of polygons for the current frame
@@ -226,6 +240,9 @@ class YOLO_octron:
                                 # and the current label is not present in the current mask array.
                                 pass    
                     polys[f] = mask_polys
+                    # Yield, to update the progress bar
+                    yield((no_entry, len(self.label_dict), label, f_no, len(frames)))  
+                     
                 labels[entry]['polygons'] = polys  
             
     
@@ -270,7 +287,21 @@ class YOLO_octron:
         verbose : bool
             Whether to print progress messages
 
-            
+        Yields
+        ------
+        no_entry : int
+            Number of entry processed
+        total_label_dict : int
+            Total number of entries in label_dict (all json files)
+        label : str
+            Current label name
+        split : str
+            Current split (train, val, test)
+        frame_no : int
+            Current frame number being processed
+        total_frames : int
+            Total number of frames for the current label
+                     
         
         """
         if self.label_dict is None:
@@ -313,7 +344,7 @@ class YOLO_octron:
         #######################################################################################################
         # Export the training data
         
-        for path, labels in self.label_dict.items():  
+        for no_entry, (path, labels) in enumerate(self.label_dict.items(), start=1):  
             path_prefix = Path(path).name   
             video_data = labels.pop('video')
             
@@ -324,6 +355,7 @@ class YOLO_octron:
                             desc=f'Exporting {len(labels)} labels'
                             ):
                 current_label_id = entry
+                label = labels[entry]['label']  
                 # Extract the size of the masks for normalization later on 
                 for m in labels[entry]['masks']:
                     assert m.shape == labels[entry]['masks'][0].shape, f'All masks should have the same shape'
@@ -331,12 +363,12 @@ class YOLO_octron:
                 
                 for split in ['train', 'val', 'test']:
                     current_indices = labels[entry]['frames_split'][split]
-                    for frame_id in tqdm(current_indices,
-                                        total=len(current_indices), 
-                                        desc=f'Exporting {split} frames', 
-                                        position=1,    
-                                        leave=False,
-                                        ):
+                    for frame_no, frame_id in tqdm(enumerate(current_indices),
+                                                    total=len(current_indices), 
+                                                    desc=f'Exporting {split} frames', 
+                                                    position=1,    
+                                                    leave=False,
+                                                    ):
                         frame = video_data[frame_id]
                         image_output_path = self.data_path / split / f'{path_prefix}_{frame_id}.png'
                         if not image_output_path.exists():
@@ -366,6 +398,10 @@ class YOLO_octron:
                                 for point in polygon:
                                     f.write(f' {point[0]/mask_height} {point[1]/mask_width}')
                                 f.write('\n')
+                                
+                        # Yield, to update the progress bar
+                        yield((no_entry, len(self.label_dict), label, split, frame_no, len(current_indices)))  
+                        
         if verbose: print(f"Training data exported to {self.data_path.as_posix()}")
 
 
