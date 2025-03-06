@@ -637,7 +637,7 @@ class octron_widget(QWidget):
                                             device=self.device_label, 
                                             imagesz=self.image_size_yolo,
                                             epochs=self.num_epochs_yolo,
-                                            save_period=1,
+                                            save_period=self.save_period,
                                         ):
             # Yield the progress info back to the GUI thread
             yield progress_info
@@ -697,7 +697,7 @@ class octron_widget(QWidget):
         if self.num_epochs_yolo <= 1:
             show_warning("Please select a number of epochs >1")
             return
-        save_period = self.save_period_input.value()
+        self.save_period = int(self.save_period_input.value())
         
         # LOAD YOLO MODEL 
         print(f"Loading YOLO model {model_id}")

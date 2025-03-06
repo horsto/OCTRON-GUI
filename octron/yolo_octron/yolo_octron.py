@@ -624,32 +624,51 @@ class YOLO_octron:
             - epoch_time: Time taken for current epoch
             - estimated_finish_time: Estimated finish time
         """
-        # Internal callback to capture training progress
-        def _on_epoch_end(trainer):
-            current_epoch = trainer.epoch + 1
-            epoch_time = trainer.epoch_time
-            remaining_time = epoch_time * (epochs - current_epoch)
-            finish_time = time.time() + remaining_time
-            
-            yield {
-                'epoch': current_epoch,
-                'total_epochs': epochs,
-                'epoch_time': epoch_time,
-                'remaining_time': remaining_time,
-                'finish_time': finish_time,
-            }
-            
         if not self.model:
             print('😵 No model loaded!')
             return
+            
         # Clear any existing callbacks
         if hasattr(self.model, 'callbacks'):
             for callback_name in ['on_fit_epoch_end', 'on_train_start', 'on_train_end']:
                 if callback_name in self.model.callbacks:
                     self.model.callbacks.pop(callback_name, None)
-        # Add our yielding callback that can update the progress bars and label in OCTRON
-        self.model.add_callback("on_fit_epoch_end", _on_epoch_end)
-    
+                    
+        # Setup a queue to receive yielded values from the callback
+        import queue
+        progress_queue = queue.Queue()
+        
+        # Track last epoch seen to avoid duplicates
+        last_epoch_reported = -1
+        
+        # Internal callback to capture training progress
+        def _on_fit_epoch_end(trainer):
+            nonlocal last_epoch_reported
+            current_epoch = trainer.epoch + 1
+            
+            # Skip if we already reported this epoch (prevents duplicates)
+            if current_epoch <= last_epoch_reported:
+                return
+                
+            last_epoch_reported = current_epoch
+            
+            # Calculate progress information
+            epoch_time = trainer.epoch_time
+            remaining_time = epoch_time * (epochs - current_epoch)
+            finish_time = time.time() + remaining_time
+            
+            # Put the information in the queue
+            progress_queue.put({
+                'epoch': current_epoch,
+                'total_epochs': epochs,
+                'epoch_time': epoch_time,
+                'remaining_time': remaining_time,
+                'finish_time': finish_time,
+            })
+        
+        # Add our callback that will put progress info into the queue
+        self.model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
+        
         if self.config_path is None or not self.config_path.exists():
             raise FileNotFoundError(
                 "No configuration .yaml file found."
@@ -661,42 +680,78 @@ class YOLO_octron:
         
         assert imagesz % 32 == 0, 'YOLO image size must be a multiple of 32'
 
-
-        # Start training
-        print(f"Starting training for {epochs} epochs...")
-        results = self.model.train(
-                      data=self.config_path.as_posix(), 
-                      save_dir=self.training_path.as_posix(),
-                      name='training',
-                      mode='segment',
-                      device=device,
-                      mask_ratio=4,
-                      epochs=epochs,
-                      imgsz=imagesz,
-                      resume=False,
-                      plots=True,
-                      batch=.9,
-                      cache=False,
-                      save=True,
-                      save_period=save_period,
-                      project=None,
-                      exist_ok=True,
-                      # Augmentation
-                      hsv_v=.25,
-                      degrees=180,
-                      scale=.5,
-                      shear=2,
-                      flipud=.1,
-                      fliplr=.1,
-                      mosaic=1.0,
-                      copy_paste=.5,
-                      copy_paste_mode='mixup', 
-                      erasing=.25,
-                      crop_fraction=1.0,
-                      )
+        # Start training in a separate thread
+        import threading
         
-        return results
-    
+        training_complete = threading.Event()
+        training_error = None
+        
+        def run_training():
+            nonlocal training_error
+            try:
+                # Start training
+                print(f"Starting training for {epochs} epochs...")
+                self.model.train(
+                    data=self.config_path.as_posix(), 
+                    save_dir=self.training_path.as_posix(),
+                    name='training',
+                    mode='segment',
+                    device=device,
+                    mask_ratio=4,
+                    epochs=epochs,
+                    imgsz=imagesz,
+                    resume=False,
+                    plots=True,
+                    batch=.9,
+                    cache=False,
+                    save=True,
+                    save_period=save_period,
+                    project=None,
+                    exist_ok=True,
+                    # Augmentation
+                    hsv_v=.25,
+                    degrees=180,
+                    scale=.5,
+                    shear=2,
+                    flipud=.1,
+                    fliplr=.1,
+                    mosaic=1.0,
+                    copy_paste=.5,
+                    copy_paste_mode='mixup', 
+                    erasing=.25,
+                    crop_fraction=1.0,
+                )
+            except Exception as e:
+                training_error = e
+            finally:
+                # Signal that training is complete
+                training_complete.set()
+        
+        # Start training thread
+        training_thread = threading.Thread(target=run_training)
+        training_thread.daemon = True
+        training_thread.start()
+        
+        try:
+            # Monitor progress queue and yield updates until training completes
+            while not training_complete.is_set() or not progress_queue.empty():
+                try:
+                    # Wait for progress info with timeout
+                    progress_info = progress_queue.get(timeout=1.0)
+                    yield progress_info
+                    progress_queue.task_done()
+                except queue.Empty:
+                    # No progress info available yet, continue waiting
+                    pass
+                    
+            # If there was an error in the training thread, raise it
+            if training_error:
+                raise training_error
+                
+        except KeyboardInterrupt:
+            print("Training interrupted by user")
+            self.quit_trainer()
+            
     
     def launch_tensorboard(self, port=6006):
         """
