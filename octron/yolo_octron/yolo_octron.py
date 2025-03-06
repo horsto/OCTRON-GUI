@@ -702,7 +702,7 @@ class YOLO_octron:
                     imgsz=imagesz,
                     resume=False,
                     plots=True,
-                    batch=-1,
+                    batch=16,
                     cache=False,
                     save=True,
                     save_period=save_period,
