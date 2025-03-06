@@ -2,6 +2,7 @@
 # We are using YOLO11 as the base class for YOLO Octron.
 # See also: https://docs.ultralytics.com/models/yolo11
 import os 
+import gc
 import subprocess # Used to launch tensorboard
 import signal
 import webbrowser # Used to launch tensorboard
@@ -598,28 +599,57 @@ class YOLO_octron:
               device='cpu',
               imagesz = 640,    
               epochs=30, 
+              save_period=15,
               ):
         """
-        Train the YOLO model
+        Train the YOLO model with epoch progress updates
         
         Parameters
         ----------
         device : str
-            Device to use for training (i.e. "cpu", "mps" or "cuda")
-            CAREFUL: There are still issues in pytorch for MPS,
-            so it is recommended to use "cpu" for now. I had a bunch of issues with MPS.
+            Device to use ('cpu', 'cuda', 'mps')
+        imagesz : int
+            Input image size
         epochs : int
             Number of epochs to train for
-      
-        Returns
-        -------
-        results : dict
-            Training results
+        save_period : int
+            Save model every n epochs
+            
+        Yields
+        ------
+        dict
+            Progress information including:
+            - epoch: Current epoch
+            - total_epochs: Total number of epochs
+            - epoch_time: Time taken for current epoch
+            - estimated_finish_time: Estimated finish time
         """
+        # Internal callback to capture training progress
+        def _on_epoch_end(trainer):
+            current_epoch = trainer.epoch + 1
+            epoch_time = trainer.epoch_time
+            remaining_time = epoch_time * (epochs - current_epoch)
+            finish_time = time.time() + remaining_time
+            
+            yield {
+                'epoch': current_epoch,
+                'total_epochs': epochs,
+                'epoch_time': epoch_time,
+                'remaining_time': remaining_time,
+                'finish_time': finish_time,
+            }
+            
         if not self.model:
             print('😵 No model loaded!')
             return
-            
+        # Clear any existing callbacks
+        if hasattr(self.model, 'callbacks'):
+            for callback_name in ['on_fit_epoch_end', 'on_train_start', 'on_train_end']:
+                if callback_name in self.model.callbacks:
+                    self.model.callbacks.pop(callback_name, None)
+        # Add our yielding callback that can update the progress bars and label in OCTRON
+        self.model.add_callback("on_fit_epoch_end", _on_epoch_end)
+    
         if self.config_path is None or not self.config_path.exists():
             raise FileNotFoundError(
                 "No configuration .yaml file found."
@@ -631,25 +661,24 @@ class YOLO_octron:
         
         assert imagesz % 32 == 0, 'YOLO image size must be a multiple of 32'
 
-        # Setup callbacks
-        self.num_epochs = epochs
+
         # Start training
         print(f"Starting training for {epochs} epochs...")
         results = self.model.train(
-                      data=self.config_path, 
+                      data=self.config_path.as_posix(), 
                       save_dir=self.training_path.as_posix(),
                       name='training',
                       mode='segment',
                       device=device,
                       mask_ratio=4,
-                      epochs=self.num_epochs,
+                      epochs=epochs,
                       imgsz=imagesz,
                       resume=False,
                       plots=True,
                       batch=.9,
                       cache=False,
                       save=True,
-                      save_period=15,
+                      save_period=save_period,
                       project=None,
                       exist_ok=True,
                       # Augmentation
@@ -666,7 +695,6 @@ class YOLO_octron:
                       crop_fraction=1.0,
                       )
         
-        print("🏆 Segmentation training complete!")
         return results
     
     
@@ -735,8 +763,6 @@ class YOLO_octron:
             webbrowser.open(tensorboard_url)
             
             print("TensorBoard is running.")
-            print("You can leave it running in the background.")
-            
             return True
             
         except Exception as e:
@@ -764,17 +790,17 @@ class YOLO_octron:
                 )
                 lines = result.stdout.split('\n')
                 for line in lines:
-                    if 'tensorboard.main' in line or 'tensorboard ' or 'tensorboard' in line:
+                    if 'tensorboard.main' in line or 'tensorboard ' in line:
                         # Extract PID and kill
                         parts = line.split()
                         if len(parts) >= 2:
                             try:
-                                pid = int(parts[2])
+                                pid = int(parts[1])
                                 print(f"Terminating TensorBoard process with PID {pid}")
                                 os.kill(pid, signal.SIGTERM)
                             except (ValueError, ProcessLookupError) as e:
                                 print(f"Failed to terminate TensorBoard process: {e}")
-                                
+
             # On Windows
             elif os.name == 'nt':
                 # Use tasklist and taskkill on Windows
@@ -796,6 +822,58 @@ class YOLO_octron:
         
         except Exception as e:
             print(f"Error when checking for TensorBoard processes: {e}")
+     
+    
+    def quit_trainer(self):
+        """
+        Quit the trainer
+        
+        """ 
+        if hasattr(self, 'model') and self.model is not None:
+            try:
+                # Get the trainer instance
+                trainer = None
+                if hasattr(self.model, 'trainer'):
+                    trainer = self.model.trainer
+                
+                # Deal with trainer-specific resources
+                if trainer is not None:
+                    # Set stop flag
+                    trainer.stop_training = True
+                    
+                    # Close all opened files
+                    if hasattr(trainer, 'save_dir') and trainer.save_dir is not None:
+                        # Close any open writers
+                        if hasattr(trainer, 'tb') and trainer.tb is not None:
+                            try:
+                                trainer.tb.close()
+                                trainer.tb = None
+                            except:
+                                pass
+                            
+                        # Close plots
+                        if hasattr(trainer, 'plots') and trainer.plots:
+                            for p in trainer.plots:
+                                try:
+                                    if hasattr(p, 'close'):
+                                        p.close()
+                                except:
+                                    pass
+                            trainer.plots = {}
+                # Clear callbacks
+                if hasattr(self.model, 'callbacks'):
+                    self.model.callbacks.clear()
+                
+                # Explicitly delete the model and trainer
+                if trainer is not None:
+                    del trainer
+
+            except Exception as e:
+                print(f"Error when destroying model/trainer: {e}")
+        
+        # Force garbage collection repeatedly to clean up any remaining references
+        gc.collect()
+     
      
     def validate(self, data=None, device='auto', plots=True):
         """

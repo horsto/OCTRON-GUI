@@ -4,6 +4,7 @@ Main GUI file
 
 """
 import os, sys
+import gc
 import time
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -573,79 +574,88 @@ class octron_widget(QWidget):
             
     ###### YOLO TRAINERS ###########################################################################
     
-    def _yolo_on_train_start(self, trainer):
-        show_info("🚀 Training started.")
-    
-    def _yolo_on_train_end(self, trainer):  
-        show_info("🏁 Training finished.")
-        if not self.training_interrupt:
-            self.training_finished = True
-            self.start_stop_training_btn.setText(f'🌱 Done.')
-            self.start_stop_training_btn.setEnabled(False)
-            self.train_epochs_progressbar.setEnabled(False)    
-        
-    def _yolo_on_fit_epoch_end(self, trainer):
-        """
-        Callback for the end of each epoch during YOLO training.
-        
-        """
-        # Calculate estimated time remaining
-        current_epoch = trainer.epoch + 1 
-        time_epoch = trainer.epoch_time
-        remaining_time = time_epoch * (self.num_epochs_yolo - current_epoch)   
-        finish_time = time.time() + remaining_time
-        finish_time_str = ' '.join(time.ctime(finish_time).split()[:-1])
-        print(f"Estimated time remaining: {remaining_time} seconds")    
-        print(f'Estimated finish time: {finish_time_str}')  
-        
-        # Update scale bar and label text 
-        self.train_epochs_progressbar.setMaximum(self.num_epochs_yolo)
-        self.train_epochs_progressbar.setValue(current_epoch)        
-        self.train_finishtime_label.setText(f'⌚︎ {finish_time_str}')    
-    
     def _uncouple_yolo_trainer(self):
         try:
+            # Signal the worker to stop
             if hasattr(self, 'yolo_trainer_worker'):
-                # Signal the worker to stop
                 self.yolo_trainer_worker.quit()
-                self.yolo_octron.quit_tensorboard()
-                # Force YOLO model to terminate training if it exists
-                if hasattr(self.yolo_octron, 'model') and self.yolo_octron.model is not None:
-                    # Set the model's training flag to False (signals training should stop)
-                    if hasattr(self.yolo_octron.model.trainer, 'stop_training'):
-                        # TODO: FIND OUT HOW TO STOP A TRAINER
-                        self.yolo_octron.model.trainer.stop_training = True
-                    # Remove all callbacks
-                    if hasattr(self.yolo_octron.model, 'callbacks'):
-                        # Remove our callbacks to avoid issues during cleanup
-                        for callback_name in ['on_train_start', 'on_fit_epoch_end', 'on_train_end']:
-                            if callback_name in self.yolo_octron.model.callbacks:
-                                self.yolo_octron.model.callbacks.pop(callback_name, None)
+
+            self.yolo_octron.quit_tensorboard()
+            self.yolo_octron.quit_trainer()
+            
+            # Reset flags and update UI
+            self.training_interrupt = True
+            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.start_stop_training_btn.setText('▷ Train')
+            self.train_epochs_progressbar.setValue(0)
+            self.train_finishtime_label.setText('⌚︎ Stopped')
+            print("Training stopped and resources cleaned up")
+                
         except Exception as e:
             print(f"Error when uncoupling yolo training worker: {e}")
             
-            
-    def _create_yolo_trainer(self):
-        # Create a new worker for YOLO training 
-        self.yolo_trainer_worker = create_worker(self._yolo_trainer)
-        self.yolo_trainer_worker.setAutoDelete(True) # auto destruct !!
-        self.train_epochs_progressbar.setEnabled(True)    
-        self.train_finishtime_label.setEnabled(True)
-        self.train_finishtime_label.setText('⌚︎ ... wait one epoch')    
-        if self.launch_tensorbrd:
-            self.yolo_octron.launch_tensorboard()   
+    def _update_training_progress(self, progress_info):
+        """
+        Handle training progress updates from the worker thread
         
+        Parameters
+        ----------
+        progress_info : dict
+            Dictionary containing training progress information
+        """
+        current_epoch = progress_info['epoch']
+        total_epochs = progress_info['total_epochs']
+        epoch_time = progress_info['epoch_time']
+        remaining_time = progress_info['remaining_time']
+        finish_time = progress_info['finish_time']
+        
+        # Format the finish time (without year as requested)
+        finish_time_str = ' '.join(time.ctime(finish_time).split()[:-1])
+   
+        self.train_epochs_progressbar.setMaximum(total_epochs)
+        self.train_epochs_progressbar.setValue(current_epoch)        
+        self.train_finishtime_label.setText(f'⌚︎ {finish_time_str}')
+        print(f"Epoch {current_epoch}/{total_epochs} - Time for epoch: {epoch_time:.1f}s")
+        print(f"Estimated time remaining: {remaining_time:.1f} seconds")    
+        print(f"Estimated finish time: {finish_time_str}")  
+
+        if current_epoch == total_epochs: 
+            self.training_finished = True
+            self.start_stop_training_btn.setText(f'🌱 Done.')
+            self.start_stop_training_btn.setEnabled(False)
+            self.train_epochs_progressbar.setEnabled(False)  
+    
     def _yolo_trainer(self):
         if not self.device_label:
             show_error("No device label found for YOLO.")
             return
         else:
             show_info(f"Training on device: {self.device_label}")
-        self.yolo_octron.train(device=self.device_label, 
-                               imagesz=int(self.image_size_yolo),
-                               epochs=self.num_epochs_yolo
-                               )
         
+        # Call the training function which yields progress info
+        for progress_info in self.yolo_octron.train(
+                                            device=self.device_label, 
+                                            imagesz=self.image_size_yolo,
+                                            epochs=self.num_epochs_yolo,
+                                            save_period=1,
+                                        ):
+            # Yield the progress info back to the GUI thread
+            yield progress_info
+            
+            
+    def _create_yolo_trainer(self):
+        # Create a new worker for YOLO training 
+        self.yolo_trainer_worker = create_worker(self._yolo_trainer)
+        self.yolo_trainer_worker.setAutoDelete(True)  # auto destruct !!
+        self.yolo_trainer_worker.yielded.connect(self._update_training_progress)
+        self.train_epochs_progressbar.setEnabled(True)    
+        self.train_finishtime_label.setEnabled(True)
+        self.train_finishtime_label.setText('⌚︎ ... wait one epoch')    
+        if self.launch_tensorbrd:
+            self.yolo_octron.quit_tensorboard()
+            self.yolo_octron.launch_tensorboard()
+            
+
     def init_yolo_training_threaded(self):
         """
         This function manages the training of the YOLO model.
@@ -654,12 +664,13 @@ class octron_widget(QWidget):
         """
         if self.training_finished:
             return
+        
         # Sanity check 
         if not self.project_path:
             show_warning("Please select a project directory first.")
             return
         if not hasattr(self, 'yolo_octron'):
-            show_warning("Please load a YOLO first.")
+            show_warning("Please load YOLO first.")
             return
         
         index_model_list = self.yolomodel_list.currentIndex()
@@ -675,13 +686,14 @@ class octron_widget(QWidget):
         if index_imagesize_list == 0:
             show_warning("Please select an image size")
             return 
-        self.image_size_yolo = self.yoloimagesize_list.currentText()                                       
+        self.image_size_yolo = int(self.yoloimagesize_list.currentText())                                     
         # Check status of "Launch Tensorboard" checkbox
         self.launch_tensorbrd = self.launch_tensorboard_checkBox.isChecked()   
-        resume_training = self.train_resume_checkBox.isChecked()    
-        overwrite = self.train_training_overwrite_checkBox.isChecked()  
+        # TODO: Implement these options
+        #resume_training = self.train_resume_checkBox.isChecked()    
+        #overwrite = self.train_training_overwrite_checkBox.isChecked()  
         
-        self.num_epochs_yolo = self.num_epochs_input.value()   
+        self.num_epochs_yolo = int(self.num_epochs_input.value())   
         if self.num_epochs_yolo <= 1:
             show_warning("Please select a number of epochs >1")
             return
@@ -694,12 +706,8 @@ class octron_widget(QWidget):
             show_warning("Could not load YOLO model.")
             return
         
-        # Deactivate the training data tab 
+        # Deactivate the training data generation box 
         self.train_generate_groupbox.setEnabled(False)
-        
-        yolo_model.add_callback("on_train_start", self._yolo_on_train_start)
-        yolo_model.add_callback("on_fit_epoch_end", self._yolo_on_fit_epoch_end)
-        yolo_model.add_callback("on_train_end", self._yolo_on_train_end)
         
         # Otherwise, create a new worker and manage interruptions
         if not hasattr(self, 'yolo_trainer_worker'):
@@ -717,16 +725,14 @@ class octron_widget(QWidget):
             self.yolo_trainer_worker.start()
             self.training_interrupt = False
         elif hasattr(self, 'yolo_trainer_worker') and self.yolo_trainer_worker.is_running:
-            self.yolo_trainer_worker.quit()
+            self._uncouple_yolo_trainer()
             self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
             self.start_stop_training_btn.setText(f'▷ Train')
             self.training_interrupt = True
             
         
         
-        
 
-     
      
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     
