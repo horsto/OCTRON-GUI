@@ -882,6 +882,10 @@ class YOLO_octron:
     def quit_trainer(self):
         """
         Quit the trainer
+        This is half AI generated ... and does not really work
+        ON TODO list! 
+        
+        
         
         """ 
         if hasattr(self, 'model') and self.model is not None:

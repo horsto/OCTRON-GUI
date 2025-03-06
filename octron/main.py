@@ -709,6 +709,8 @@ class octron_widget(QWidget):
         # Deactivate the training data generation box 
         self.train_generate_groupbox.setEnabled(False)
         
+        # TODO: Implement proper quitting ... for now ... 
+        self.start_stop_training_btn.setEnabled(False)
         # Otherwise, create a new worker and manage interruptions
         if not hasattr(self, 'yolo_trainer_worker'):
             self._create_yolo_trainer()
