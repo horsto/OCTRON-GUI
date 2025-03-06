@@ -652,7 +652,6 @@ class Ui_octron_widgetui(object):
         self.octron.yoloimagesize_list.addItem("")
         self.octron.yoloimagesize_list.addItem("")
         self.octron.yoloimagesize_list.addItem("")
-        self.octron.yoloimagesize_list.addItem("")
         self.octron.yoloimagesize_list.setObjectName(u"yoloimagesize_list")
         self.octron.yoloimagesize_list.setMinimumSize(QSize(100, 25))
         self.octron.yoloimagesize_list.setMaximumSize(QSize(100, 25))
@@ -873,9 +872,8 @@ class Ui_octron_widgetui(object):
         self.octron.yolomodel_list.setItemText(0, QCoreApplication.translate("self", u"Choose model ...", None))
 
         self.octron.yoloimagesize_list.setItemText(0, QCoreApplication.translate("self", u"Img. size", None))
-        self.octron.yoloimagesize_list.setItemText(1, QCoreApplication.translate("self", u"256", None))
-        self.octron.yoloimagesize_list.setItemText(2, QCoreApplication.translate("self", u"512", None))
-        self.octron.yoloimagesize_list.setItemText(3, QCoreApplication.translate("self", u"1024", None))
+        self.octron.yoloimagesize_list.setItemText(1, QCoreApplication.translate("self", u"640", None))
+        self.octron.yoloimagesize_list.setItemText(2, QCoreApplication.translate("self", u"1024", None))
 
 #if QT_CONFIG(tooltip)
         self.octron.yoloimagesize_list.setToolTip(QCoreApplication.translate("self", u"Image size used for training within YOLO", None))

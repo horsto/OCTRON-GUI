@@ -4,6 +4,7 @@ Main GUI file
 
 """
 import os, sys
+import time
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import shutil
@@ -19,6 +20,8 @@ cur_path  = Path(os.path.abspath(__file__)).parent.parent
 base_path = Path(os.path.dirname(__file__)) # Important for example for .svg files
 sys.path.append(cur_path.as_posix()) 
 
+# PyTorch
+import torch
 
 # Napari plugin QT components
 from qtpy.QtWidgets import (
@@ -111,7 +114,7 @@ class octron_widget(QWidget):
         self.video_zarr = None
         self.all_zarrs = [] # Collect zarrs in list so they can be cleaned up upon closing
         self.prefetcher_worker = None
-        self.predictor, self.device = None, None
+        self.predictor, self.device, self.device_label = None, None, None
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         self.remove_current_layer = False # Removal of layer yes/no
         self.layer_to_remove_idx = None # Index of layer to remove
@@ -120,9 +123,22 @@ class octron_widget(QWidget):
         self.polygons_generated = False
         self.training_data_interrupt  = False # Training data generation interrupt
         self.training_data_generated = False
+        self.training_interrupt = False
+        self.training_finished = False # YOLO training
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
+        
+        # Device label?
+        if torch.cuda.is_available():
+            self.device_label = "cuda" # torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device_label = "cpu" #"mps" # torch.device("mps")
+            print(f'MPS is available, but not yet supported. Using CPU instead.')
+        else:
+            self.device_label = "cpu" #torch.device("cpu")
+        print(f'Using YOLO device: "{self.device_label}"')
+        
         # Model yaml for SAM2
         sam2models_yaml_path = self.base_path / 'sam2_octron/sam2_models.yaml'
         self.sam2models_dict = check_sam2_models(SAM2p1_BASE_URL='',
@@ -186,7 +202,7 @@ class octron_widget(QWidget):
         self.generate_training_data_btn.setText('')
         self.generate_training_data_btn.clicked.connect(self.init_training_data_threaded)
         self.start_stop_training_btn.setText('')
-        #self.start_stop_training_btn.clicked.connect(self....)
+        self.start_stop_training_btn.clicked.connect(self.init_yolo_training_threaded)
     
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
@@ -211,7 +227,6 @@ class octron_widget(QWidget):
         """
         index = self.sam2model_list.currentIndex()
         if index == 0:
-            show_warning("Please select a valid SAM2 model.")
             return
     
         model_name = self.sam2model_list.currentText()
@@ -386,7 +401,6 @@ class octron_widget(QWidget):
             self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
             self.generate_training_data_btn.setText(f'▷ Generate')
         else:
-            show_info("Polygon generation finished.")
             self.polygons_generated = True
             
         # If self.polygons_generated is True, then start the 
@@ -439,7 +453,11 @@ class octron_widget(QWidget):
             self.train_prune_checkBox.setEnabled(False)
             # Write yolo config file 
             self.yolo_octron.write_yolo_config()    
+            # Enable next part (YOLO training) of the pipeline 
             self.train_train_groupbox.setEnabled(True)
+            self.launch_tensorboard_checkBox.setEnabled(True)
+            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.start_stop_training_btn.setText(f'▷ Train')
         
     def _training_data_export(self):
         """
@@ -511,7 +529,7 @@ class octron_widget(QWidget):
 
     def init_training_data_threaded(self):
         """
-        This manages the creation of polygon data and the subsequent
+        This function manages the creation of polygon data and the subsequent
         creation / the export of training data.
         It kicks off the pipeline by calling the polygon generation function.
         
@@ -553,7 +571,163 @@ class octron_widget(QWidget):
         # Kick off polygon generation - check are done within the following functions 
         self._polygon_generation()
             
+    ###### YOLO TRAINERS ###########################################################################
+    
+    def _yolo_on_train_start(self, trainer):
+        show_info("🚀 Training started.")
+    
+    def _yolo_on_train_end(self, trainer):  
+        show_info("🏁 Training finished.")
+        if not self.training_interrupt:
+            self.training_finished = True
+            self.start_stop_training_btn.setText(f'🌱 Done.')
+            self.start_stop_training_btn.setEnabled(False)
+            self.train_epochs_progressbar.setEnabled(False)    
         
+    def _yolo_on_fit_epoch_end(self, trainer):
+        """
+        Callback for the end of each epoch during YOLO training.
+        
+        """
+        # Calculate estimated time remaining
+        current_epoch = trainer.epoch + 1 
+        time_epoch = trainer.epoch_time
+        remaining_time = time_epoch * (self.num_epochs_yolo - current_epoch)   
+        finish_time = time.time() + remaining_time
+        finish_time_str = ' '.join(time.ctime(finish_time).split()[:-1])
+        print(f"Estimated time remaining: {remaining_time} seconds")    
+        print(f'Estimated finish time: {finish_time_str}')  
+        
+        # Update scale bar and label text 
+        self.train_epochs_progressbar.setMaximum(self.num_epochs_yolo)
+        self.train_epochs_progressbar.setValue(current_epoch)        
+        self.train_finishtime_label.setText(f'⌚︎ {finish_time_str}')    
+    
+    def _uncouple_yolo_trainer(self):
+        try:
+            if hasattr(self, 'yolo_trainer_worker'):
+                # Signal the worker to stop
+                self.yolo_trainer_worker.quit()
+                self.yolo_octron.quit_tensorboard()
+                # Force YOLO model to terminate training if it exists
+                if hasattr(self.yolo_octron, 'model') and self.yolo_octron.model is not None:
+                    # Set the model's training flag to False (signals training should stop)
+                    if hasattr(self.yolo_octron.model.trainer, 'stop_training'):
+                        # TODO: FIND OUT HOW TO STOP A TRAINER
+                        self.yolo_octron.model.trainer.stop_training = True
+                    # Remove all callbacks
+                    if hasattr(self.yolo_octron.model, 'callbacks'):
+                        # Remove our callbacks to avoid issues during cleanup
+                        for callback_name in ['on_train_start', 'on_fit_epoch_end', 'on_train_end']:
+                            if callback_name in self.yolo_octron.model.callbacks:
+                                self.yolo_octron.model.callbacks.pop(callback_name, None)
+        except Exception as e:
+            print(f"Error when uncoupling yolo training worker: {e}")
+            
+            
+    def _create_yolo_trainer(self):
+        # Create a new worker for YOLO training 
+        self.yolo_trainer_worker = create_worker(self._yolo_trainer)
+        self.yolo_trainer_worker.setAutoDelete(True) # auto destruct !!
+        self.train_epochs_progressbar.setEnabled(True)    
+        self.train_finishtime_label.setEnabled(True)
+        self.train_finishtime_label.setText('⌚︎ ... wait one epoch')    
+        if self.launch_tensorbrd:
+            self.yolo_octron.launch_tensorboard()   
+        
+    def _yolo_trainer(self):
+        if not self.device_label:
+            show_error("No device label found for YOLO.")
+            return
+        else:
+            show_info(f"Training on device: {self.device_label}")
+        self.yolo_octron.train(device=self.device_label, 
+                               imagesz=int(self.image_size_yolo),
+                               epochs=self.num_epochs_yolo
+                               )
+        
+    def init_yolo_training_threaded(self):
+        """
+        This function manages the training of the YOLO model.
+        
+        
+        """
+        if self.training_finished:
+            return
+        # Sanity check 
+        if not self.project_path:
+            show_warning("Please select a project directory first.")
+            return
+        if not hasattr(self, 'yolo_octron'):
+            show_warning("Please load a YOLO first.")
+            return
+        
+        index_model_list = self.yolomodel_list.currentIndex()
+        if index_model_list == 0:
+            show_warning("Please select a YOLO model")
+            return
+        model_name = self.yolomodel_list.currentText()
+        # Reverse lookup model_id
+        for model_id, model in self.yolomodels_dict.items():
+            if model['name'] == model_name:
+                break        
+        index_imagesize_list = self.yoloimagesize_list.currentIndex()
+        if index_imagesize_list == 0:
+            show_warning("Please select an image size")
+            return 
+        self.image_size_yolo = self.yoloimagesize_list.currentText()                                       
+        # Check status of "Launch Tensorboard" checkbox
+        self.launch_tensorbrd = self.launch_tensorboard_checkBox.isChecked()   
+        resume_training = self.train_resume_checkBox.isChecked()    
+        overwrite = self.train_training_overwrite_checkBox.isChecked()  
+        
+        self.num_epochs_yolo = self.num_epochs_input.value()   
+        if self.num_epochs_yolo <= 1:
+            show_warning("Please select a number of epochs >1")
+            return
+        save_period = self.save_period_input.value()
+        
+        # LOAD YOLO MODEL 
+        print(f"Loading YOLO model {model_id}")
+        yolo_model = self.yolo_octron.load_model(model_id)
+        if not yolo_model:
+            show_warning("Could not load YOLO model.")
+            return
+        
+        # Deactivate the training data tab 
+        self.train_generate_groupbox.setEnabled(False)
+        
+        yolo_model.add_callback("on_train_start", self._yolo_on_train_start)
+        yolo_model.add_callback("on_fit_epoch_end", self._yolo_on_fit_epoch_end)
+        yolo_model.add_callback("on_train_end", self._yolo_on_train_end)
+        
+        # Otherwise, create a new worker and manage interruptions
+        if not hasattr(self, 'yolo_trainer_worker'):
+            self._create_yolo_trainer()
+            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.start_stop_training_btn.setText(f'✋🏼 Interrupt')
+            self.yolo_trainer_worker.start()
+            self.training_interrupt = False
+        elif hasattr(self, 'yolo_trainer_worker') and not self.yolo_trainer_worker.is_running:
+            # Worker exists but is not running - clean up and create a new one
+            self._uncouple_yolo_trainer()
+            self._create_yolo_trainer()
+            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.start_stop_training_btn.setText(f'✋🏼 Interrupt')
+            self.yolo_trainer_worker.start()
+            self.training_interrupt = False
+        elif hasattr(self, 'yolo_trainer_worker') and self.yolo_trainer_worker.is_running:
+            self.yolo_trainer_worker.quit()
+            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.start_stop_training_btn.setText(f'▷ Train')
+            self.training_interrupt = True
+            
+        
+        
+        
+
+     
+     
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     
     def closeEvent(self):

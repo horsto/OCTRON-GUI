@@ -1864,12 +1864,7 @@ Recommended are at least ~50.</string>
                </item>
                <item>
                 <property name="text">
-                 <string>256</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>512</string>
+                 <string>640</string>
                 </property>
                </item>
                <item>

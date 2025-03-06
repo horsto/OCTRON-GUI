@@ -1,7 +1,9 @@
 # Main YOLO Octron class
 # We are using YOLO11 as the base class for YOLO Octron.
 # See also: https://docs.ultralytics.com/models/yolo11
+import os 
 import subprocess # Used to launch tensorboard
+import signal
 import webbrowser # Used to launch tensorboard
 import time
 import sys
@@ -594,6 +596,7 @@ class YOLO_octron:
 
     def train(self, 
               device='cpu',
+              imagesz = 640,    
               epochs=30, 
               ):
         """
@@ -626,6 +629,8 @@ class YOLO_octron:
         if device == 'mps':
             print("⚠ MPS is not yet fully supported in PyTorch. Use at your own risk.")
         
+        assert imagesz % 32 == 0, 'YOLO image size must be a multiple of 32'
+
         # Setup callbacks
         self.num_epochs = epochs
         # Start training
@@ -638,7 +643,7 @@ class YOLO_octron:
                       device=device,
                       mask_ratio=4,
                       epochs=self.num_epochs,
-                      imgsz=640,
+                      imgsz=imagesz,
                       resume=False,
                       plots=True,
                       batch=.9,
@@ -738,7 +743,60 @@ class YOLO_octron:
             print(f"Error launching TensorBoard: {e}")
             return False
         
+
+    
+    def quit_tensorboard(self):
+        """
+        Find and quit all TensorBoard processes.
         
+        
+        """
+         # Find TensorBoard processes
+        try:
+            # On Unix-like systems
+            if os.name == 'posix':
+                # Find processes with tensorboard in the command
+                result = subprocess.run(
+                    ["ps", "-ef"], 
+                    capture_output=True, 
+                    text=True, 
+                    check=True
+                )
+                lines = result.stdout.split('\n')
+                for line in lines:
+                    if 'tensorboard.main' in line or 'tensorboard ' or 'tensorboard' in line:
+                        # Extract PID and kill
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            try:
+                                pid = int(parts[2])
+                                print(f"Terminating TensorBoard process with PID {pid}")
+                                os.kill(pid, signal.SIGTERM)
+                            except (ValueError, ProcessLookupError) as e:
+                                print(f"Failed to terminate TensorBoard process: {e}")
+                                
+            # On Windows
+            elif os.name == 'nt':
+                # Use tasklist and taskkill on Windows
+                result = subprocess.run(
+                    ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV"], 
+                    capture_output=True, 
+                    text=True
+                )
+                for line in result.stdout.split('\n'):
+                    if 'tensorboard' in line.lower():
+                        try:
+                            parts = line.strip('"').split('","')
+                            if len(parts) >= 2:
+                                pid = int(parts[1])
+                                print(f"Terminating TensorBoard process with PID {pid}")
+                                subprocess.run(["taskkill", "/F", "/PID", str(pid)])
+                        except (ValueError, IndexError) as e:
+                            print(f"Failed to terminate TensorBoard process: {e}")
+        
+        except Exception as e:
+            print(f"Error when checking for TensorBoard processes: {e}")
+     
     def validate(self, data=None, device='auto', plots=True):
         """
         Validate the model
