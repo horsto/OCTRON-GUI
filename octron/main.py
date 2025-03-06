@@ -116,7 +116,10 @@ class octron_widget(QWidget):
         self.remove_current_layer = False # Removal of layer yes/no
         self.layer_to_remove_idx = None # Index of layer to remove
         self.layer_to_remove = None # The actual layer to remove
+        self.polygon_interrupt  = False # Training data generation interrupt
         self.polygons_generated = False
+        self.training_data_interrupt  = False # Training data generation interrupt
+        self.training_data_generated = False
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
@@ -180,9 +183,11 @@ class octron_widget(QWidget):
         self.hard_reset_layer_btn.clicked.connect(self.reset_predictor)
         self.hard_reset_layer_btn.setEnabled(False)
         # ... YOLO
-        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #416c10;}')
-        self.generate_training_data_btn.setText(f'▷ Generate')
+        self.generate_training_data_btn.setText('')
         self.generate_training_data_btn.clicked.connect(self.init_training_data_threaded)
+        self.start_stop_training_btn.setText('')
+        #self.start_stop_training_btn.clicked.connect(self....)
+    
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
     
@@ -227,7 +232,7 @@ class octron_widget(QWidget):
         # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(False)
         self.load_sam2model_btn.setEnabled(False)
-        self.load_sam2model_btn.setStyleSheet('QPushButton { color: #416c10;}')
+        self.load_sam2model_btn.setStyleSheet('QPushButton { color: #8ed634;}')
         self.load_sam2model_btn.setText(f'{model_name} ✓')
 
         # Enable the predict next batch button
@@ -313,6 +318,42 @@ class octron_widget(QWidget):
 
     ###### YOLO SPECIFIC CALLBACKS ####################################################################
     
+    def _create_worker_polygons(self):
+        # Create a new worker for polygon generation
+        self.polygon_worker = create_worker(self.yolo_octron.prepare_polygons)
+        self.polygon_worker.setAutoDelete(True) # auto destruct !!
+        self.polygon_worker.yielded.connect(self._polygon_yielded)
+        self.polygon_worker.finished.connect(self._on_polygon_finished)
+        self.train_polygons_overall_progressbar.setEnabled(True)    
+        self.train_polygons_frames_progressbar.setEnabled(True)
+        self.train_polygons_label.setEnabled(True)
+        
+    def _create_worker_training_data(self):
+        # Create a new worker for training data generation / export
+        self.training_data_worker = create_worker(self.yolo_octron.create_training_data)
+        self.training_data_worker.setAutoDelete(True) # auto destruct !!
+        self.training_data_worker.yielded.connect(self._training_data_yielded)
+        self.training_data_worker.finished.connect(self._on_training_data_finished)
+        self.train_export_overall_progressbar.setEnabled(True)    
+        self.train_export_frames_progressbar.setEnabled(True)
+        self.train_polygons_label.setEnabled(True)
+    
+    def _uncouple_worker_polygons(self):
+        try:
+            self.polygon_worker.yielded.disconnect(self._polygon_yielded)
+            self.polygon_worker.finished.disconnect(self._on_polygon_finished)
+            self.polygon_worker.quit()
+        except Exception as e:
+            print(f"Error when uncoupling polygon worker: {e}")
+            
+    def _uncouple_worker_training_data(self):
+        try:
+            self.training_data_worker.yielded.disconnect(self._training_data_yielded)
+            self.training_data_worker.finished.disconnect(self._on_training_data_finished)
+            self.training_data_worker.quit()
+        except Exception as e:
+            print(f"Error when uncoupling training data worker: {e}")   
+
     def _polygon_yielded(self, value):
         """
         polygon_worker()
@@ -325,44 +366,162 @@ class octron_widget(QWidget):
         self.train_polygons_frames_progressbar.setMaximum(total_frames) 
         self.train_polygons_frames_progressbar.setValue(frame_no)   
         self.train_polygons_label.setText(label)    
-        
-        
+
     def _on_polygon_finished(self):
         """
         polygon_worker()
         Callback for when polygon generation worker has finished executing. 
         """
-        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #416c10;}')
-        self.generate_training_data_btn.setText(f'▷ Generate')
+
         self.train_polygons_overall_progressbar.setValue(0)
         self.train_polygons_frames_progressbar.setValue(0)
-        if self.polygon_worker_interrupt:
+        self.train_polygons_overall_progressbar.setEnabled(False)    
+        self.train_polygons_frames_progressbar.setEnabled(False)
+        self.train_polygons_label.setText('')
+        self.train_polygons_label.setEnabled(False) 
+        
+        if self.polygon_interrupt:
             show_warning("Polygon generation interrupted.")  
             self.polygons_generated = False
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.generate_training_data_btn.setText(f'▷ Generate')
         else:
             show_info("Polygon generation finished.")
             self.polygons_generated = True
             
-        self.train_polygons_overall_progressbar.setEnabled(False)    
-        self.train_polygons_frames_progressbar.setEnabled(False)
-        self.train_polygons_label.setText('')
-        self.train_polygons_label.setEnabled(False)
+        # If self.polygons_generated is True, then start the 
+        # training data export worker right after ...
+        if self.polygons_generated and not self.training_data_generated:
+            # First call the data splitting function to split frames into train,test,val 
+            self.yolo_octron.prepare_split() # This is so fast, we can just do it here
+            self._training_data_export() 
+        else:
+            show_info("Training data generation finished.")
+            
+            
+    def _training_data_yielded(self, value):
+        """
+        training_data_worker()
+        Called upon yielding from the batch training data generation thread worker.
+        Updates the progress bar and label text next to it.
+        """
+        no_entry, total_label_dict, label, split, frame_no, total_frames = value
+        self.train_export_overall_progressbar.setMaximum(total_label_dict)
+        self.train_export_overall_progressbar.setValue(no_entry-1)
+        self.train_export_frames_progressbar.setMaximum(total_frames) 
+        self.train_export_frames_progressbar.setValue(frame_no)   
+        self.train_export_label.setText(f'{label} ({split})')   
+    
+        
+    def _on_training_data_finished(self):
+        """
+        training_data_worker()
+        Callback for when training data generation worker has finished executing. 
+        """
+        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.generate_training_data_btn.setText(f'▷ Generate')
+        self.train_export_overall_progressbar.setValue(0)
+        self.train_export_frames_progressbar.setValue(0)
+        self.train_export_overall_progressbar.setEnabled(False)    
+        self.train_export_frames_progressbar.setEnabled(False)
+        self.train_export_label.setText('')
+        self.train_export_label.setEnabled(False) 
+        
+        if self.training_data_interrupt:
+            show_warning("Training data generation interrupted.")  
+            self.training_data_generated = False
+        else:
+            show_info("Training data generation finished.")
+            self.training_data_generated = True
+            self.generate_training_data_btn.setText(f'🌱 Done.')
+            self.generate_training_data_btn.setEnabled(False)   
+            self.train_data_overwrite_checkBox.setEnabled(False)
+            self.train_prune_checkBox.setEnabled(False)
+            # Write yolo config file 
+            self.yolo_octron.write_yolo_config()    
+            self.train_train_groupbox.setEnabled(True)
+        
+    def _training_data_export(self):
+        """
+        MAIN MANAGER FOR TRAINING DATA EXPORT
+        training_data_worker()
+        Manages thread worker for exporting training data
+        """
+        if not self.training_data_interrupt and self.training_data_generated:
+            self._on_training_data_finished()
+            return
+        # Otherwise, create a new worker and manage interruptions
+        if not hasattr(self, 'training_data_worker'):
+            self._create_worker_training_data()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.training_data_worker.start()
+            self.training_data_interrupt = False
+        if hasattr(self, 'training_data_worker') and not self.training_data_worker.is_running:
+            # Worker exists but is not running - clean up and create a new one
+            self._uncouple_worker_training_data()
+            self._create_worker_training_data()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.training_data_worker.start()
+            self.training_data_interrupt = False
+        elif hasattr(self, 'training_data_worker') and self.training_data_worker.is_running:
+            self.training_data_worker.quit()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.generate_training_data_btn.setText(f'▷ Generate')
+            self.training_data_interrupt = True
+            self.polygons_generated = False # this needs to be here, since polygon generation needs to run
+
+        self.training_data_folder_label.setEnabled(True)
+        self.training_data_folder_label.setText(f'→{self.yolo_octron.training_path.as_posix()[-40:]}')
+
+
+    def _polygon_generation(self):
+        """
+        MAIN MANAGER FOR POLYGON GENERATION
+        polygon_worker()
+        Manages thread worker for generating polygons
+        """
+        # Check if the worker has already run and was not interrupted.
+        # If so, do not create a new worker, but just call the callback function.
+        if not self.polygon_interrupt and self.polygons_generated:
+            self._on_polygon_finished()
+            return
+        # Otherwise, create a new worker and manage interruptions
+        if not hasattr(self, 'polygon_worker'):
+            self._create_worker_polygons()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.polygon_worker.start()
+            self.polygon_interrupt = False
+        elif hasattr(self, 'polygon_worker') and not self.polygon_worker.is_running:
+            # Worker exists but is not running - clean up and create a new one
+            self._uncouple_worker_polygons()
+            self._create_worker_polygons()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.polygon_worker.start()
+            self.polygon_interrupt = False
+        elif hasattr(self, 'polygon_worker') and self.polygon_worker.is_running:
+            self.polygon_worker.quit()
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.generate_training_data_btn.setText(f'▷ Generate')
+            self.polygon_interrupt = True
+            
 
     def init_training_data_threaded(self):
         """
-        Thread worker for creating training datasets from 
-        existing annotation data.
+        This manages the creation of polygon data and the subsequent
+        creation / the export of training data.
+        It kicks off the pipeline by calling the polygon generation function.
+        
         """
-        def _create_worker():
-            # Create a new worker
-            self.polygon_worker = create_worker(self.yolo_octron.prepare_polygons)
-            self.polygon_worker.setAutoDelete(True) # auto destruct!!
-            self.polygon_worker.yielded.connect(self._polygon_yielded)
-            self.polygon_worker.finished.connect(self._on_polygon_finished)
-            self.train_polygons_overall_progressbar.setEnabled(True)    
-            self.train_polygons_frames_progressbar.setEnabled(True)
-            self.train_polygons_label.setEnabled(True)
-            
+        # Whenever the button "Generate" is clicked, 
+        # the training data generation pipeline is started anew.
+        if not hasattr(self, 'polygon_worker') and not hasattr(self, 'training_data_worker'):   
+            self.polygons_generated = False
+            self.training_data_generated = False   
+        
         # Sanity check 
         if not self.project_path:
             show_warning("Please select a project directory first.")
@@ -372,9 +531,12 @@ class octron_widget(QWidget):
             return
         # Check status of "Prune" checkbox
         prune = self.train_prune_checkBox.isChecked()
-        print('Prune:', prune)
-        self.yolo_octron.project_path = self.project_path
-        
+        if not self.yolo_octron.project_path:
+            self.yolo_octron.project_path = self.project_path
+        elif self.yolo_octron.project_path != self.project_path: 
+            # Assuming that the user wants to change the project path
+            self.yolo_octron.project_path = self.project_path
+
         self.save_object_organizer() # This is safe, since it checks whether a video was loaded
         try:
             # After saving the object organizer, extract info from all 
@@ -384,37 +546,16 @@ class octron_widget(QWidget):
                         min_num_frames=10, # hardcoded ... less than 10 frames are not useful
                         verbose=False, 
             )
+      
         except AssertionError as e:
             print(f"😵 Error when preparing labels: {e}")
             return
-        
-        self.polygon_interrupt = False
-        if not hasattr(self, 'polygon_worker'):
-            _create_worker()
-            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #bd5b3a;}')
-            self.generate_training_data_btn.setText(f'Interrupt')
-            self.polygon_worker.start()
-            self.polygon_worker_interrupt = False
-        elif hasattr(self, 'polygon_worker') and not self.polygon_worker.is_running:
-            # Worker exists but is not running - clean up and create a new one
-            try:
-                self.polygon_worker.yielded.disconnect(self._polygon_yielded)
-                self.polygon_worker.finished.disconnect(self._on_polygon_finished)
-            except Exception as e:
-                print(f"Error when cleaning up polygon worker: {e}")
-            _create_worker()
-            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #bd5b3a;}')
-            self.generate_training_data_btn.setText(f'Interrupt')
-            self.polygon_worker.start()
-            self.polygon_worker_interrupt = False
-        elif hasattr(self, 'polygon_worker') and self.polygon_worker.is_running:
-            self.polygon_worker.quit()
-            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #416c10;}')
-            self.generate_training_data_btn.setText(f'▷ Generate')
-            self.polygon_worker_interrupt = True
+        # Kick off polygon generation - check are done within the following functions 
+        self._polygon_generation()
             
         
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
+    
     def closeEvent(self):
         """
         Callback for the Napari viewer close event
@@ -483,6 +624,8 @@ class octron_widget(QWidget):
             # Enable the groupbox for existing data and the training generation box
             self.project_existing_data_groupbox.setEnabled(True)
             self.train_generate_groupbox.setEnabled(True)
+            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.generate_training_data_btn.setText(f'▷ Generate')
             
             # Enable training tab if data is available
             if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
