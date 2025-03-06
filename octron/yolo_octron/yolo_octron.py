@@ -1,6 +1,11 @@
 # Main YOLO Octron class
 # We are using YOLO11 as the base class for YOLO Octron.
 # See also: https://docs.ultralytics.com/models/yolo11
+import subprocess # Used to launch tensorboard
+import webbrowser # Used to launch tensorboard
+import time
+import sys
+import importlib.util
 import shutil
 from pathlib import Path
 from datetime import datetime
@@ -49,6 +54,7 @@ class YOLO_octron:
             Default is True.
             
         """
+        self.clean_training_dir = clean_training_dir
         try:
             from ultralytics import settings
             self.yolo_settings = settings
@@ -78,7 +84,7 @@ class YOLO_octron:
             self.project_path = project_path  # Uses the property setter
             
             # Setup training directories after project_path is validated
-            self._setup_training_directories(clean_training_dir)
+            self._setup_training_directories(self.clean_training_dir)
     
     @property
     def project_path(self):
@@ -126,6 +132,8 @@ class YOLO_octron:
         if self._project_path is not None:
             self.training_path = self._project_path / 'model'
             self.data_path = self.training_path / 'training_data'
+            # Setup training directories after project_path is validated
+            self._setup_training_directories(self.clean_training_dir)
 
 
     def _setup_training_directories(self, clean_training_dir=False):
@@ -657,7 +665,80 @@ class YOLO_octron:
         return results
     
     
-    
+    def launch_tensorboard(self, port=6006):
+        """
+        Check if TensorBoard is installed, launch it with the training directory,
+        and open a web browser to view the TensorBoard interface.
+        
+        Parameters
+        ----------
+        port : int
+            Port number for TensorBoard to run on (default: 6006)
+        
+        Returns
+        -------
+        bool
+            True if TensorBoard was successfully launched, False otherwise
+        """
+        
+        
+        # Check if tensorboard is installed
+        if importlib.util.find_spec("tensorboard") is None:
+            print("TensorBoard is not installed. Installing now...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "tensorboard"])
+                print("TensorBoard installed successfully!")
+            except subprocess.CalledProcessError:
+                print("Failed to install TensorBoard. Please install it manually with:")
+                print("pip install tensorboard")
+                return False
+        
+        if self.training_path is None:
+            print("No training path set. Set project_path first.")
+            return False
+            
+        if not self.training_path.exists():
+            print(f"Training path '{self.training_path}' does not exist.")
+            return False
+        
+        # Launch tensorboard in a separate process
+        log_dir = self.training_path / 'segment/training'
+        try:
+            print(f"Starting TensorBoard on port {port}...")
+            tensorboard_process = subprocess.Popen(
+                [sys.executable, "-m", "tensorboard.main", 
+                "--logdir", log_dir.as_posix(),
+                "--port", str(port)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            # Give it a moment to start up
+            time.sleep(3)
+            
+            # Check if process is still running
+            if tensorboard_process.poll() is not None:
+                # Process terminated - get error message
+                _, stderr = tensorboard_process.communicate()
+                print(f"Failed to start TensorBoard: {stderr}")
+                return False
+                
+            # Open web browser
+            tensorboard_url = f"http://localhost:{port}/"
+            print(f"Opening TensorBoard in browser: {tensorboard_url}")
+            webbrowser.open(tensorboard_url)
+            
+            print("TensorBoard is running.")
+            print("You can leave it running in the background.")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error launching TensorBoard: {e}")
+            return False
+        
+        
     def validate(self, data=None, device='auto', plots=True):
         """
         Validate the model
