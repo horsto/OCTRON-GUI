@@ -2,6 +2,8 @@
 
 import numpy as np  
 
+from imantics import Polygons
+
 def find_objects_in_mask(mask, min_area=10):
     """
     Find all objects in a binary mask using connected component labeling.
@@ -200,3 +202,32 @@ def get_polygons(mask):
         polygon_points = polygons.points[0]
         
     return polygon_points
+
+
+def polygon_to_mask(empty_mask, polygons):
+    """
+    Convert a polygon to a binary mask
+    
+    Parameters
+    ----------
+    empty_mask : np.array : Empty mask to fill with the polygon
+    polygons : np.array : Polygon points for the extracted binary mask(s)
+    
+    Returns
+    -------
+    mask : np.array : Binary mask for the polygon(s)
+    """
+
+    try:
+        from imantics import Mask
+    except ImportError:
+        raise ImportError('to_mask() requires imantics')
+    try:
+        import cv2
+    except ImportError:
+        raise ImportError('to_mask() requires OpenCV')
+    assert isinstance(polygons, np.ndarray), 'Polygons should be a numpy array'
+        
+    mask = cv2.fillPoly(empty_mask, [np.round(polygons).astype(np.int32)], color=(1,), lineType=cv2.LINE_8)
+    mask = Mask(mask)
+    return mask.array
