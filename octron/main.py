@@ -124,7 +124,6 @@ class octron_widget(QWidget):
         self.polygons_generated = False
         self.training_data_interrupt  = False # Training data generation interrupt
         self.training_data_generated = False
-        self.training_interrupt = False
         self.training_finished = False # YOLO training
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
@@ -297,6 +296,11 @@ class octron_widget(QWidget):
         self.predict_next_oneframe_btn.setEnabled(True)
         self.skip_frames_spinbox.setEnabled(True)
         self.batch_predict_progressbar.setValue(0)
+        
+        # Save the object organizer and also refresh the table view
+        self.save_object_organizer()
+        self.refresh_label_list() # This is the table in the project tab
+            
 
     def init_prediction_threaded(self):
         """
@@ -411,7 +415,7 @@ class octron_widget(QWidget):
             self.yolo_octron.prepare_split() # This is so fast, we can just do it here
             self._training_data_export() 
         else:
-            show_info("Training data generation finished.")
+            pass
             
             
     def _training_data_yielded(self, value):
@@ -448,7 +452,7 @@ class octron_widget(QWidget):
         else:
             show_info("Training data generation finished.")
             self.training_data_generated = True
-            self.generate_training_data_btn.setText(f'🌱 Done.')
+            self.generate_training_data_btn.setText(f'✓ Done.')
             self.generate_training_data_btn.setEnabled(False)   
             self.train_data_overwrite_checkBox.setEnabled(False)
             self.train_prune_checkBox.setEnabled(False)
@@ -473,7 +477,7 @@ class octron_widget(QWidget):
         if not hasattr(self, 'training_data_worker'):
             self._create_worker_training_data()
             self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.generate_training_data_btn.setText(f'🅧 Interrupt')
             self.training_data_worker.start()
             self.training_data_interrupt = False
         if hasattr(self, 'training_data_worker') and not self.training_data_worker.is_running:
@@ -481,7 +485,7 @@ class octron_widget(QWidget):
             self._uncouple_worker_training_data()
             self._create_worker_training_data()
             self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.generate_training_data_btn.setText(f'🅧 Interrupt')
             self.training_data_worker.start()
             self.training_data_interrupt = False
         elif hasattr(self, 'training_data_worker') and self.training_data_worker.is_running:
@@ -510,7 +514,7 @@ class octron_widget(QWidget):
         if not hasattr(self, 'polygon_worker'):
             self._create_worker_polygons()
             self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.generate_training_data_btn.setText(f'🅧 Interrupt')
             self.polygon_worker.start()
             self.polygon_interrupt = False
         elif hasattr(self, 'polygon_worker') and not self.polygon_worker.is_running:
@@ -518,7 +522,7 @@ class octron_widget(QWidget):
             self._uncouple_worker_polygons()
             self._create_worker_polygons()
             self.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.generate_training_data_btn.setText(f'✋🏼 Interrupt')
+            self.generate_training_data_btn.setText(f'🅧 Interrupt')
             self.polygon_worker.start()
             self.polygon_interrupt = False
         elif hasattr(self, 'polygon_worker') and self.polygon_worker.is_running:
@@ -574,29 +578,11 @@ class octron_widget(QWidget):
             
     ###### YOLO TRAINERS ###########################################################################
     
-    def _uncouple_yolo_trainer(self):
-        try:
-            # Signal the worker to stop
-            if hasattr(self, 'yolo_trainer_worker'):
-                self.yolo_trainer_worker.quit()
-
-            self.yolo_octron.quit_tensorboard()
-            self.yolo_octron.quit_trainer()
-            
-            # Reset flags and update UI
-            self.training_interrupt = True
-            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
-            self.start_stop_training_btn.setText('▷ Train')
-            self.train_epochs_progressbar.setValue(0)
-            self.train_finishtime_label.setText('⌚︎ Stopped')
-            print("Training stopped and resources cleaned up")
-                
-        except Exception as e:
-            print(f"Error when uncoupling yolo training worker: {e}")
             
     def _update_training_progress(self, progress_info):
         """
-        Handle training progress updates from the worker thread
+        Handle training progress updates from the worker thread.
+        When finished, enable the next step.
         
         Parameters
         ----------
@@ -614,16 +600,19 @@ class octron_widget(QWidget):
    
         self.train_epochs_progressbar.setMaximum(total_epochs)
         self.train_epochs_progressbar.setValue(current_epoch)        
-        self.train_finishtime_label.setText(f'⌚︎ {finish_time_str}')
+        self.train_finishtime_label.setText(f'↬ {finish_time_str}')
+        
         print(f"Epoch {current_epoch}/{total_epochs} - Time for epoch: {epoch_time:.1f}s")
         print(f"Estimated time remaining: {remaining_time:.1f} seconds")    
         print(f"Estimated finish time: {finish_time_str}")  
 
         if current_epoch == total_epochs: 
             self.training_finished = True
-            self.start_stop_training_btn.setText(f'🌱 Done.')
-            self.start_stop_training_btn.setEnabled(False)
+            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.start_stop_training_btn.setText(f'✓ Done.')
             self.train_epochs_progressbar.setEnabled(False)  
+            self.train_finishtime_label.setEnabled(False)
+            
     
     def _yolo_trainer(self):
         if not self.device_label:
@@ -650,7 +639,7 @@ class octron_widget(QWidget):
         self.yolo_trainer_worker.yielded.connect(self._update_training_progress)
         self.train_epochs_progressbar.setEnabled(True)    
         self.train_finishtime_label.setEnabled(True)
-        self.train_finishtime_label.setText('⌚︎ ... wait one epoch')    
+        self.train_finishtime_label.setText('↬ ... wait one epoch')    
         if self.launch_tensorbrd:
             self.yolo_octron.quit_tensorboard()
             self.yolo_octron.launch_tensorboard()
@@ -708,34 +697,16 @@ class octron_widget(QWidget):
         
         # Deactivate the training data generation box 
         self.train_generate_groupbox.setEnabled(False)
-        
-        # TODO: Implement proper quitting ... for now ... 
-        self.start_stop_training_btn.setEnabled(False)
         # Otherwise, create a new worker and manage interruptions
         if not hasattr(self, 'yolo_trainer_worker'):
             self._create_yolo_trainer()
             self.start_stop_training_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.start_stop_training_btn.setText(f'✋🏼 Interrupt')
+            self.start_stop_training_btn.setText(f'↯ Training')
             self.yolo_trainer_worker.start()
-            self.training_interrupt = False
-        elif hasattr(self, 'yolo_trainer_worker') and not self.yolo_trainer_worker.is_running:
-            # Worker exists but is not running - clean up and create a new one
-            self._uncouple_yolo_trainer()
-            self._create_yolo_trainer()
-            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.start_stop_training_btn.setText(f'✋🏼 Interrupt')
-            self.yolo_trainer_worker.start()
-            self.training_interrupt = False
-        elif hasattr(self, 'yolo_trainer_worker') and self.yolo_trainer_worker.is_running:
-            self._uncouple_yolo_trainer()
-            self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
-            self.start_stop_training_btn.setText(f'▷ Train')
-            self.training_interrupt = True
+            self.start_stop_training_btn.setEnabled(False)
             
-        
-        
-
-     
+            
+            
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     
     def closeEvent(self):
@@ -766,6 +737,35 @@ class octron_widget(QWidget):
         organizer_path = self.project_path_video  / "object_organizer.json"
         self.object_organizer.save_to_disk(organizer_path)
 
+    def refresh_label_list(self):
+        """
+        Refresh the label list combobox with the current labels in the object organizer
+        """
+        # Check this folder for existing project data
+        label_dict = collect_labels(self.project_path, min_num_frames=0)  
+        
+        # Initialize the table model if not already done
+        if not hasattr(self, 'label_table_model'):
+            self.label_table_model = ExistingDataTable()
+            self.existing_data_table.setModel(self.label_table_model)
+            
+            # Configure the table appearance
+            self.existing_data_table.horizontalHeader().setStretchLastSection(False)
+            self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+            
+        # Update the table with new data
+        self.label_table_model.update_data(label_dict)
+        
+        # Enable the groupbox for existing data and the training generation box
+        self.project_existing_data_groupbox.setEnabled(True)
+        self.train_generate_groupbox.setEnabled(True)
+        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.generate_training_data_btn.setText(f'▷ Generate')
+        
+        # Enable training tab if data is available
+        if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
+            self.toolBox.widget(2).setEnabled(True)  # Training
+
 
     def open_project_folder_dialog(self):
         """
@@ -787,31 +787,7 @@ class octron_widget(QWidget):
             
             self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
-            
-            # Check this folder for existing project data
-            label_dict = collect_labels(self.project_path)  
-            
-            # Initialize the table model if not already done
-            if not hasattr(self, 'label_table_model'):
-                self.label_table_model = ExistingDataTable()
-                self.existing_data_table.setModel(self.label_table_model)
-                
-                # Configure the table appearance
-                self.existing_data_table.horizontalHeader().setStretchLastSection(False)
-                self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-                
-            # Update the table with new data
-            self.label_table_model.update_data(label_dict)
-            
-            # Enable the groupbox for existing data and the training generation box
-            self.project_existing_data_groupbox.setEnabled(True)
-            self.train_generate_groupbox.setEnabled(True)
-            self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
-            self.generate_training_data_btn.setText(f'▷ Generate')
-            
-            # Enable training tab if data is available
-            if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
-                self.toolBox.widget(2).setEnabled(True)  # Training
+            self.refresh_label_list()
             
         else:
             print("No folder selected.")
@@ -877,11 +853,7 @@ class octron_widget(QWidget):
             # 3. Video layer
             # This should trigger a couple of things ... 
             
-            
-        
-            
-            
-            
+    
     def on_layer_removing(self, event):
         """ 
         Callback triggered when a layer is about to be removed.

@@ -2,8 +2,9 @@
 # We are using YOLO11 as the base class for YOLO Octron.
 # See also: https://docs.ultralytics.com/models/yolo11
 import os 
-import gc
 import subprocess # Used to launch tensorboard
+import threading # For training to run in a separate thread
+import queue # For training progress updates
 import signal
 import webbrowser # Used to launch tensorboard
 import time
@@ -476,7 +477,7 @@ class YOLO_octron:
                                 f.write(f'{current_label_id}')
                                 # Write each coordinate pair as normalized coordinate to txt
                                 for point in polygon:
-                                    f.write(f' {point[0]/mask_height} {point[1]/mask_width}')
+                                    f.write(f' {point[0]/mask_width} {point[1]/mask_height}')
                                 f.write('\n')
                                 
                         # Yield, to update the progress bar
@@ -635,12 +636,10 @@ class YOLO_octron:
                     self.model.callbacks.pop(callback_name, None)
                     
         # Setup a queue to receive yielded values from the callback
-        import queue
         progress_queue = queue.Queue()
         
         # Track last epoch seen to avoid duplicates
         last_epoch_reported = -1
-        
         # Internal callback to capture training progress
         def _on_fit_epoch_end(trainer):
             nonlocal last_epoch_reported
@@ -681,8 +680,6 @@ class YOLO_octron:
         assert imagesz % 32 == 0, 'YOLO image size must be a multiple of 32'
 
         # Start training in a separate thread
-        import threading
-        
         training_complete = threading.Event()
         training_error = None
         
@@ -693,8 +690,8 @@ class YOLO_octron:
                 print(f"Starting training for {epochs} epochs...")
                 self.model.train(
                     data=self.config_path.as_posix(), 
-                    save_dir=self.training_path.as_posix(),
                     name='training',
+                    project=self.training_path.as_posix(),
                     mode='segment',
                     device=device,
                     mask_ratio=4,
@@ -705,8 +702,7 @@ class YOLO_octron:
                     batch=16,
                     cache=False,
                     save=True,
-                    save_period=save_period,
-                    project=None,
+                    save_period=save_period, 
                     exist_ok=True,
                     # Augmentation
                     hsv_v=.25,
@@ -750,7 +746,6 @@ class YOLO_octron:
                 
         except KeyboardInterrupt:
             print("Training interrupted by user")
-            self.quit_trainer()
             
     
     def launch_tensorboard(self, port=6006):
@@ -790,7 +785,7 @@ class YOLO_octron:
             return False
         
         # Launch tensorboard in a separate process
-        log_dir = self.training_path / 'segment/training'
+        log_dir = self.training_path / 'training'
         try:
             print(f"Starting TensorBoard on port {port}...")
             tensorboard_process = subprocess.Popen(
@@ -825,114 +820,80 @@ class YOLO_octron:
             return False
         
 
+    def _quit_tensorboard_posix(self):
+        """
+        Helper method to terminate TensorBoard on Unix-like systems
+        """
+        # Find processes with tensorboard in the command
+        result = subprocess.run(
+            ["ps", "-ef"], 
+            capture_output=True, 
+            text=True, 
+            check=True
+        )
+        lines = result.stdout.split('\n')
+        found_processes = False
+        
+        for line in lines:
+            if 'tensorboard.main' in line or 'tensorboard ' in line:
+                # Extract PID and kill
+                parts = line.split()
+                if len(parts) >= 2:
+                    try:
+                        pid = int(parts[1])
+                        print(f"Terminating TensorBoard process with PID {pid}")
+                        os.kill(pid, signal.SIGTERM)
+                        found_processes = True
+                    except (ValueError, ProcessLookupError) as e:
+                        print(f"Failed to terminate TensorBoard process: {e}")
+        
+        if not found_processes:
+            print("No TensorBoard processes found")
+
+    def _quit_tensorboard_windows(self):
+        """Helper method to terminate TensorBoard on Windows"""
+        # Use tasklist and taskkill on Windows
+        result = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV"], 
+            capture_output=True, 
+            text=True
+        )
+        found_processes = False
+        
+        for line in result.stdout.split('\n'):
+            if 'tensorboard' in line.lower():
+                try:
+                    parts = line.strip('"').split('","')
+                    if len(parts) >= 2:
+                        pid = int(parts[1])
+                        print(f"Terminating TensorBoard process with PID {pid}")
+                        subprocess.run(["taskkill", "/F", "/PID", str(pid)])
+                        found_processes = True
+                except (ValueError, IndexError) as e:
+                    print(f"Failed to terminate TensorBoard process: {e}")
+        
+        if not found_processes:
+            print("No TensorBoard processes found")
+
     
     def quit_tensorboard(self):
         """
-        Find and quit all TensorBoard processes.
-        
-        
+        Find and quit all TensorBoard processes on both Unix-like systems 
+        and Windows platforms.
         """
-         # Find TensorBoard processes
+        print("Stopping any running TensorBoard processes...")
+        
         try:
-            # On Unix-like systems
-            if os.name == 'posix':
-                # Find processes with tensorboard in the command
-                result = subprocess.run(
-                    ["ps", "-ef"], 
-                    capture_output=True, 
-                    text=True, 
-                    check=True
-                )
-                lines = result.stdout.split('\n')
-                for line in lines:
-                    if 'tensorboard.main' in line or 'tensorboard ' in line:
-                        # Extract PID and kill
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            try:
-                                pid = int(parts[1])
-                                print(f"Terminating TensorBoard process with PID {pid}")
-                                os.kill(pid, signal.SIGTERM)
-                            except (ValueError, ProcessLookupError) as e:
-                                print(f"Failed to terminate TensorBoard process: {e}")
-
-            # On Windows
-            elif os.name == 'nt':
-                # Use tasklist and taskkill on Windows
-                result = subprocess.run(
-                    ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV"], 
-                    capture_output=True, 
-                    text=True
-                )
-                for line in result.stdout.split('\n'):
-                    if 'tensorboard' in line.lower():
-                        try:
-                            parts = line.strip('"').split('","')
-                            if len(parts) >= 2:
-                                pid = int(parts[1])
-                                print(f"Terminating TensorBoard process with PID {pid}")
-                                subprocess.run(["taskkill", "/F", "/PID", str(pid)])
-                        except (ValueError, IndexError) as e:
-                            print(f"Failed to terminate TensorBoard process: {e}")
-        
+            # Check platform-specific approach
+            if os.name == 'posix':  # Unix-like systems (macOS, Linux)
+                self._quit_tensorboard_posix()
+            elif os.name == 'nt':  # Windows
+                self._quit_tensorboard_windows()
+            else:
+                print(f"Unsupported platform: {os.name}")
         except Exception as e:
-            print(f"Error when checking for TensorBoard processes: {e}")
-     
+            print(f"Error when terminating TensorBoard processes: {e}")
     
-    def quit_trainer(self):
-        """
-        Quit the trainer
-        This is half AI generated ... and does not really work
-        ON TODO list! 
-        
-        
-        
-        """ 
-        if hasattr(self, 'model') and self.model is not None:
-            try:
-                # Get the trainer instance
-                trainer = None
-                if hasattr(self.model, 'trainer'):
-                    trainer = self.model.trainer
-                
-                # Deal with trainer-specific resources
-                if trainer is not None:
-                    # Set stop flag
-                    trainer.stop_training = True
-                    
-                    # Close all opened files
-                    if hasattr(trainer, 'save_dir') and trainer.save_dir is not None:
-                        # Close any open writers
-                        if hasattr(trainer, 'tb') and trainer.tb is not None:
-                            try:
-                                trainer.tb.close()
-                                trainer.tb = None
-                            except:
-                                pass
-                            
-                        # Close plots
-                        if hasattr(trainer, 'plots') and trainer.plots:
-                            for p in trainer.plots:
-                                try:
-                                    if hasattr(p, 'close'):
-                                        p.close()
-                                except:
-                                    pass
-                            trainer.plots = {}
-                # Clear callbacks
-                if hasattr(self.model, 'callbacks'):
-                    self.model.callbacks.clear()
-                
-                # Explicitly delete the model and trainer
-                if trainer is not None:
-                    del trainer
-
-            except Exception as e:
-                print(f"Error when destroying model/trainer: {e}")
-        
-        # Force garbage collection repeatedly to clean up any remaining references
-        gc.collect()
-     
      
     def validate(self, data=None, device='auto', plots=True):
         """
