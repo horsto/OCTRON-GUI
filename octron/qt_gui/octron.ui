@@ -1500,7 +1500,7 @@ labels is present.</string>
                 </size>
                </property>
                <property name="text">
-                <string>Folder</string>
+                <string/>
                </property>
               </widget>
              </item>
@@ -1823,13 +1823,13 @@ Recommended are at least ~50.</string>
               <widget class="QComboBox" name="yolomodel_list">
                <property name="minimumSize">
                 <size>
-                 <width>160</width>
+                 <width>150</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>160</width>
+                 <width>150</width>
                  <height>25</height>
                 </size>
                </property>
@@ -1944,7 +1944,7 @@ Recommended are at least ~50.</string>
                 <string>Approximate time of training finish</string>
                </property>
                <property name="text">
-                <string>Finish:</string>
+                <string>Finish time</string>
                </property>
               </widget>
              </item>
@@ -2011,14 +2011,20 @@ Recommended are at least ~50.</string>
           <x>0</x>
           <y>0</y>
           <width>402</width>
-          <height>150</height>
+          <height>313</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="predict_verticalLayout">
+         <property name="spacing">
+          <number>20</number>
+         </property>
+         <property name="bottomMargin">
+          <number>10</number>
+         </property>
          <item>
           <widget class="QGroupBox" name="predict_video_drop_groupbox">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
@@ -2077,6 +2083,171 @@ Recommended are at least ~50.</string>
              </widget>
             </item>
            </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="predict_video_predict_groupbox">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>400</width>
+             <height>110</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>400</width>
+             <height>110</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>Create predictions from videos</string>
+           </property>
+           <widget class="QWidget" name="">
+            <property name="geometry">
+             <rect>
+              <x>12</x>
+              <y>32</y>
+              <width>381</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QComboBox" name="yolomodel_trained_list">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>150</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>OCTRON user trained models that are found in the project path</string>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Choose model ...</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QComboBox" name="yolomodel_tracker_list">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>OCTRON user trained models that are found in the project path</string>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Tracker ...</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>ByteTrack</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="1" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QComboBox" name="videos_for_prediction_list">
+               <property name="minimumSize">
+                <size>
+                 <width>260</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>260</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>Select, add or remove labels</string>
+               </property>
+               <property name="editable">
+                <bool>false</bool>
+               </property>
+               <property name="currentText">
+                <string>Videos</string>
+               </property>
+               <property name="maxCount">
+                <number>15</number>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>14</width>
+                 <height>14</height>
+                </size>
+               </property>
+               <property name="frame">
+                <bool>false</bool>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Videos</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>⊖ Remove</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="predict_start_interrupt_btn">
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Let's go!</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
           </widget>
          </item>
         </layout>

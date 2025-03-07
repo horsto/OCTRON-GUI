@@ -612,6 +612,8 @@ class octron_widget(QWidget):
             self.start_stop_training_btn.setText(f'✓ Done.')
             self.train_epochs_progressbar.setEnabled(False)  
             self.train_finishtime_label.setEnabled(False)
+            # Enable the prediction tab
+            self.toolBox.widget(3).setEnabled(True) # Prediction
             
     
     def _yolo_trainer(self):
@@ -704,6 +706,8 @@ class octron_widget(QWidget):
             self.start_stop_training_btn.setText(f'↯ Training')
             self.yolo_trainer_worker.start()
             self.start_stop_training_btn.setEnabled(False)
+            # Disable the training data generation box
+            self.toolBox.widget(1).setEnabled(False) # Annotation
             
             
             
