@@ -83,6 +83,7 @@ from octron.sam2_octron.object_organizer import Obj, ObjectOrganizer
 from octron.gui_dialog_elements import (
     add_new_label_dialog,
     remove_label_dialog,
+    remove_video_dialog,
 )
 
 # If there's already a QApplication instance (as may be the case when running as a napari plugin),
@@ -125,6 +126,8 @@ class octron_widget(QWidget):
         self.training_data_interrupt  = False # Training data generation interrupt
         self.training_data_generated = False
         self.training_finished = False # YOLO training
+        self.trained_models = {}
+        self.video_to_predict = {}
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
@@ -206,12 +209,19 @@ class octron_widget(QWidget):
     
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
-    
+        self.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
         # Upon start, disable some of the toolbox tabs and functionality for video drop 
         self.project_video_drop_groupbox.setEnabled(False)
         self.toolBox.widget(1).setEnabled(False) # Annotation
         self.toolBox.widget(2).setEnabled(False) # Training
         self.toolBox.widget(3).setEnabled(False) # Prediction
+        
+        # And ... 
+        self.train_generate_groupbox.setEnabled(False)
+        self.train_train_groupbox.setEnabled(False)
+        # ... 
+        self.predict_video_drop_groupbox.setEnabled(False)
+        self.predict_video_predict_groupbox.setEnabled(False)
         
         # Connect to the Napari viewer close event
         self.app.lastWindowClosed.connect(self.closeEvent)
@@ -614,6 +624,8 @@ class octron_widget(QWidget):
             self.train_finishtime_label.setEnabled(False)
             # Enable the prediction tab
             self.toolBox.widget(3).setEnabled(True) # Prediction
+            self.predict_video_drop_groupbox.setEnabled(True)
+            self.predict_video_predict_groupbox.setEnabled(True)
             
     
     def _yolo_trainer(self):
@@ -747,7 +759,8 @@ class octron_widget(QWidget):
         """
         # Check this folder for existing project data
         label_dict = collect_labels(self.project_path, min_num_frames=0)  
-        
+        if not label_dict:
+            return
         # Initialize the table model if not already done
         if not hasattr(self, 'label_table_model'):
             self.label_table_model = ExistingDataTable()
@@ -769,6 +782,27 @@ class octron_widget(QWidget):
         # Enable training tab if data is available
         if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
             self.toolBox.widget(2).setEnabled(True)  # Training
+            self.train_generate_groupbox.setEnabled(True)
+            self.train_train_groupbox.setEnabled(True)
+
+    def refresh_trained_model_list(self):
+        """
+        Refresh the trained model list combobox with the current models in the project directory
+        
+        """
+        trained_models = self.yolo_octron.find_trained_models(project_path=self.project_path)
+        
+        if not trained_models:
+            return
+        # Write the trained models to yolomodel_trained_list one by bon
+        for model in trained_models:
+            if model.stem not in self.trained_models:
+                self.trained_models[model.stem] = model
+            self.yolomodel_trained_list.addItem(model.stem)
+        # Enable prediction tab if trained models are available
+        self.toolBox.widget(3).setEnabled(True)
+        self.predict_video_drop_groupbox.setEnabled(True)
+        self.predict_video_predict_groupbox.setEnabled(True)
 
 
     def open_project_folder_dialog(self):
@@ -792,6 +826,7 @@ class octron_widget(QWidget):
             self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
             self.refresh_label_list()
+            self.refresh_trained_model_list()
             
         else:
             print("No folder selected.")
@@ -942,7 +977,7 @@ class octron_widget(QWidget):
         
         return
         
-    def on_file_dropped_area(self, video_paths):
+    def on_mp4_file_dropped_area(self, video_paths):
         """
         Adds video layer on freshly dropped mp4 file.
         Callback function for the file drop area. 
@@ -1013,6 +1048,67 @@ class octron_widget(QWidget):
                      }
         add_layer = getattr(self._viewer, "add_image")
         add_layer(FastVideoReader(video_path, read_format='rgb24'), **layer_dict)
+
+    def on_mp4_predict_dropped_area(self, video_paths):
+        """
+        Adds mp4 files for prediction. 
+        Callback function for the file drop area.
+        """
+        
+        video_paths = [Path(v) for v in video_paths]
+        for v_path in video_paths:
+            if v_path.name in self.video_to_predict:
+                show_warning(f"Video {v_path.name} already in prediction list.")
+                return
+            if not v_path.exists():
+                show_error(f"File {v_path} does not exist.")
+                return
+            if not v_path.suffix == '.mp4':
+                show_error(f"File {v_path} is not an mp4 file.")
+                return
+            # Get video dictionary metadata
+            # contains 'file_path', 'num_frames', 'height', 'width'
+            video_dict = probe_video(v_path) 
+            self.video_to_predict[v_path.name] = video_dict
+            video_reader= FastVideoReader(v_path, read_format='rgb24')
+            self.video_to_predict[v_path.name]['video'] = video_reader
+            # Add video to self.videos_for_prediction_list
+            self.videos_for_prediction_list.addItem(v_path.name)
+            print(f"Added video {v_path.name} to prediction list.")
+        return
+    
+    
+    def on_video_prediction_change(self):
+        """
+        Callback function for the video prediction list widget.
+        Handles the removal of videos from the prediction list.
+        
+        """
+        index = self.videos_for_prediction_list.currentIndex()
+        all_list_entries = [self.videos_for_prediction_list.itemText(i) \
+            for i in range(self.videos_for_prediction_list.count())]
+        if index == 0:
+            return
+        
+        elif index == 1:
+            if len(all_list_entries) <= 2: 
+                self.videos_for_prediction_list.setCurrentIndex(0)
+                return
+             # User wants to remove a video from the list
+            dialog = remove_video_dialog(self, all_list_entries[2:])
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                selected_video = dialog.list_widget.currentItem().text()
+                item_to_remove = self.videos_for_prediction_list.findText(selected_video)
+                self.videos_for_prediction_list.removeItem(item_to_remove)
+                self.videos_for_prediction_list.setCurrentIndex(0)
+                self.video_to_predict.pop(selected_video)
+                print(f'Removed video "{selected_video}"')
+            else:
+                self.videos_for_prediction_list.setCurrentIndex(0)
+                return
+        else:
+            pass
         
         
     def init_zarr_prefetcher_threaded(self):

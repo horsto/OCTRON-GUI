@@ -90,4 +90,49 @@ class remove_label_dialog(QDialog):
         
         self.remove_btn.clicked.connect(self.accept)
         self.cancel_btn.clicked.connect(self.reject)
+
+class remove_video_dialog(QDialog):
+    """
+    A dialog that shows a list of  current videos for prediction, 
+    and allows the user to click on an entry to remove it.
+    """
+    def __init__(self, parent: QWidget, items: list):
+        """
+        Parameters
+        ----------
+        parent : QWidget
+            That is the octron main GUI 
+        items : list
+            A list of current label names
+        
+        
+        """
+        super().__init__(parent)
+        self.setWindowTitle("Remove video from list")
+        self.resize(300, 200)
+        
+        # Create a list widget and add items if provided
+        self.list_widget = QListWidget()
+        if items:
+            self.list_widget.addItems(items)
+        
+        # Create buttons
+        self.remove_btn = QPushButton("Remove")
+        self.cancel_btn = QPushButton("Cancel")
+        
+        # Layout setup
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(QLabel("Select a video file to remove:"))
+        main_layout.addWidget(self.list_widget)
+        
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(self.remove_btn)
+        button_layout.addWidget(self.cancel_btn)
+        main_layout.addLayout(button_layout)
+        
+        self.setLayout(main_layout)
+        
+        self.remove_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.reject)
         

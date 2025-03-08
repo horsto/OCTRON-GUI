@@ -318,7 +318,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Drag and drop .mp4 files here</string>
+               <string>Drag and drop one .mp4 file here</string>
               </property>
              </widget>
             </item>
@@ -2011,7 +2011,7 @@ Recommended are at least ~50.</string>
           <x>0</x>
           <y>0</y>
           <width>402</width>
-          <height>401</height>
+          <height>409</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="predict_verticalLayout">
@@ -2253,7 +2253,7 @@ Recommended are at least ~50.</string>
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
               <x>11</x>
@@ -2421,7 +2421,7 @@ Recommended are at least ~50.</string>
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
               <x>11</x>

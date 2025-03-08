@@ -706,7 +706,7 @@ class Ui_octron_widgetui(object):
         self.predict_tab.setSizePolicy(sizePolicy1)
         self.verticalLayoutWidget_5 = QWidget(self.predict_tab)
         self.verticalLayoutWidget_5.setObjectName(u"verticalLayoutWidget_5")
-        self.verticalLayoutWidget_5.setGeometry(QRect(0, 0, 402, 401))
+        self.verticalLayoutWidget_5.setGeometry(QRect(0, 0, 402, 409))
         self.predict_verticalLayout = QVBoxLayout(self.verticalLayoutWidget_5)
         self.predict_verticalLayout.setSpacing(20)
         self.predict_verticalLayout.setObjectName(u"predict_verticalLayout")
@@ -791,13 +791,13 @@ class Ui_octron_widgetui(object):
 
         self.predict_finish_time_layout.addWidget(self.predict_finish_time_label, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.widget = QWidget(self.predict_video_predict_groupbox)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(11, 32, 381, 71))
-        self.predict_grid_layout1 = QGridLayout(self.widget)
+        self.layoutWidget8 = QWidget(self.predict_video_predict_groupbox)
+        self.layoutWidget8.setObjectName(u"layoutWidget8")
+        self.layoutWidget8.setGeometry(QRect(11, 32, 381, 71))
+        self.predict_grid_layout1 = QGridLayout(self.layoutWidget8)
         self.predict_grid_layout1.setObjectName(u"predict_grid_layout1")
         self.predict_grid_layout1.setContentsMargins(0, 0, 0, 0)
-        self.yolomodel_trained_list = QComboBox(self.widget)
+        self.yolomodel_trained_list = QComboBox(self.layoutWidget8)
         self.yolomodel_trained_list.addItem("")
         self.yolomodel_trained_list.setObjectName(u"yolomodel_trained_list")
         self.yolomodel_trained_list.setEnabled(True)
@@ -806,7 +806,7 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout1.addWidget(self.yolomodel_trained_list, 0, 0, 1, 1)
 
-        self.yolomodel_tracker_list = QComboBox(self.widget)
+        self.yolomodel_tracker_list = QComboBox(self.layoutWidget8)
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.setObjectName(u"yolomodel_tracker_list")
@@ -815,14 +815,14 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout1.addWidget(self.yolomodel_tracker_list, 0, 1, 1, 1)
 
-        self.open_when_finish_checkBox = QCheckBox(self.widget)
+        self.open_when_finish_checkBox = QCheckBox(self.layoutWidget8)
         self.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
 
         self.predict_grid_layout1.addWidget(self.open_when_finish_checkBox, 0, 2, 1, 1)
 
-        self.videos_for_prediction_list = QComboBox(self.widget)
+        self.videos_for_prediction_list = QComboBox(self.layoutWidget8)
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.setObjectName(u"videos_for_prediction_list")
@@ -836,7 +836,7 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout1.addWidget(self.videos_for_prediction_list, 1, 0, 1, 2)
 
-        self.overwrite_prediction_checkBox = QCheckBox(self.widget)
+        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget8)
         self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
         self.overwrite_prediction_checkBox.setEnabled(False)
         self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
@@ -845,13 +845,13 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout1.addWidget(self.overwrite_prediction_checkBox, 1, 2, 1, 1)
 
-        self.widget1 = QWidget(self.predict_video_predict_groupbox)
-        self.widget1.setObjectName(u"widget1")
-        self.widget1.setGeometry(QRect(11, 113, 381, 73))
-        self.predict_grid_layout2 = QGridLayout(self.widget1)
+        self.layoutWidget9 = QWidget(self.predict_video_predict_groupbox)
+        self.layoutWidget9.setObjectName(u"layoutWidget9")
+        self.layoutWidget9.setGeometry(QRect(11, 113, 381, 73))
+        self.predict_grid_layout2 = QGridLayout(self.layoutWidget9)
         self.predict_grid_layout2.setObjectName(u"predict_grid_layout2")
         self.predict_grid_layout2.setContentsMargins(0, 0, 0, 0)
-        self.prediction_iou_label = QLabel(self.widget1)
+        self.prediction_iou_label = QLabel(self.layoutWidget9)
         self.prediction_iou_label.setObjectName(u"prediction_iou_label")
         sizePolicy4.setHeightForWidth(self.prediction_iou_label.sizePolicy().hasHeightForWidth())
         self.prediction_iou_label.setSizePolicy(sizePolicy4)
@@ -861,14 +861,14 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout2.addWidget(self.prediction_iou_label, 0, 2, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignBottom)
 
-        self.predict_start_btn = QPushButton(self.widget1)
+        self.predict_start_btn = QPushButton(self.layoutWidget9)
         self.predict_start_btn.setObjectName(u"predict_start_btn")
         self.predict_start_btn.setMinimumSize(QSize(80, 25))
         self.predict_start_btn.setMaximumSize(QSize(80, 25))
 
         self.predict_grid_layout2.addWidget(self.predict_start_btn, 1, 3, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTop)
 
-        self.prediction_poly_sigma_label = QLabel(self.widget1)
+        self.prediction_poly_sigma_label = QLabel(self.layoutWidget9)
         self.prediction_poly_sigma_label.setObjectName(u"prediction_poly_sigma_label")
         sizePolicy4.setHeightForWidth(self.prediction_poly_sigma_label.sizePolicy().hasHeightForWidth())
         self.prediction_poly_sigma_label.setSizePolicy(sizePolicy4)
@@ -877,7 +877,7 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout2.addWidget(self.prediction_poly_sigma_label, 0, 0, 1, 1, Qt.AlignmentFlag.AlignBottom)
 
-        self.prediction_conf_thresh_label = QLabel(self.widget1)
+        self.prediction_conf_thresh_label = QLabel(self.layoutWidget9)
         self.prediction_conf_thresh_label.setObjectName(u"prediction_conf_thresh_label")
         sizePolicy4.setHeightForWidth(self.prediction_conf_thresh_label.sizePolicy().hasHeightForWidth())
         self.prediction_conf_thresh_label.setSizePolicy(sizePolicy4)
@@ -886,7 +886,7 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout2.addWidget(self.prediction_conf_thresh_label, 1, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.predict_polygo_sigma_spinbox = QDoubleSpinBox(self.widget1)
+        self.predict_polygo_sigma_spinbox = QDoubleSpinBox(self.layoutWidget9)
         self.predict_polygo_sigma_spinbox.setObjectName(u"predict_polygo_sigma_spinbox")
         self.predict_polygo_sigma_spinbox.setMinimumSize(QSize(90, 25))
         self.predict_polygo_sigma_spinbox.setMaximumSize(QSize(90, 25))
@@ -897,7 +897,7 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout2.addWidget(self.predict_polygo_sigma_spinbox, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignBottom)
 
-        self.predict_conf_thresh_spinbox = QDoubleSpinBox(self.widget1)
+        self.predict_conf_thresh_spinbox = QDoubleSpinBox(self.layoutWidget9)
         self.predict_conf_thresh_spinbox.setObjectName(u"predict_conf_thresh_spinbox")
         self.predict_conf_thresh_spinbox.setMinimumSize(QSize(90, 25))
         self.predict_conf_thresh_spinbox.setMaximumSize(QSize(90, 25))
@@ -907,7 +907,7 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout2.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.predict_iou_thresh_spinbox = QDoubleSpinBox(self.widget1)
+        self.predict_iou_thresh_spinbox = QDoubleSpinBox(self.layoutWidget9)
         self.predict_iou_thresh_spinbox.setObjectName(u"predict_iou_thresh_spinbox")
         self.predict_iou_thresh_spinbox.setMinimumSize(QSize(90, 25))
         self.predict_iou_thresh_spinbox.setMaximumSize(QSize(90, 25))
@@ -946,7 +946,7 @@ class Ui_octron_widgetui(object):
         self.project_folder_path_label.setText(QCoreApplication.translate("octron_widgetui", u"Project folder path", None))
         self.project_video_drop_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Add new video file", None))
 #if QT_CONFIG(tooltip)
-        self.video_file_drop_widget.setToolTip(QCoreApplication.translate("octron_widgetui", u"Drag and drop .mp4 files here", None))
+        self.video_file_drop_widget.setToolTip(QCoreApplication.translate("octron_widgetui", u"Drag and drop one .mp4 file here", None))
 #endif // QT_CONFIG(tooltip)
         self.project_existing_data_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Existing data", None))
         self.toolBox.setItemText(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Project", None))

@@ -66,9 +66,17 @@ content = re.sub(
 # Replace the video_file_drop_widget assignment line with the desired replacement.
 content = re.sub(
     r'self\.octron\.video_file_drop_widget\s*=\s*QWidget\(self\.octron\.project_video_drop_groupbox\)',
-    'self.octron.video_file_drop_widget = Mp4DropWidget(callback=self.octron.on_file_dropped_area)',
+    'self.octron.video_file_drop_widget = Mp4DropWidget(callback=self.octron.on_mp4_file_dropped_area)',
     content
 )
+
+# Replace the video_file_drop_widget assignment line with the desired replacement.
+content = re.sub(
+    r'self\.octron\.predict_video_drop_widget\s*=\s*QWidget\(self\.octron\.predict_video_drop_groupbox\)',
+    'self.octron.predict_video_drop_widget = Mp4DropWidget(callback=self.octron.on_mp4_predict_dropped_area)',
+    content
+)
+
 
 # Write the corrected content to the output file
 with open(output_file_path, 'w') as file:

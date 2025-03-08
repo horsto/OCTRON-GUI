@@ -16,7 +16,7 @@ from datetime import datetime
 import yaml
 from tqdm import tqdm
 import numpy as np
-
+from natsort import natsorted
 
 from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
@@ -931,6 +931,62 @@ class YOLO_octron:
         # return metrics
         pass
     
+    def find_trained_models(self, 
+                            project_path, 
+                            subfolder_route='training/weights'
+                            ):
+        """
+        Find all trained models in the training directory
+        
+        Parameters
+        ----------
+        project_path : str or Path
+            Path to the project directory
+        subfolder_route : str
+            Subfolder route to the models. 
+            This defaults to 'training/weights' for trained OCTRON YOLO models.   
+            
+        """
+        project_path = Path(project_path)
+        assert project_path.exists(), f"Project path not found: {project_path}"
+        assert project_path.is_dir(), f"Project path must be a directory: {project_path}"
+        found_models_project = natsorted(project_path.rglob(f'*{subfolder_route}/*.pt'))
+        return found_models_project 
+    
+    def write_byte_tracker_yaml(self, output_path):
+        """
+        Write a ByteTrack tracker configuration to a YAML file
+        
+        """
+        import yaml
+        
+        assert output_path.suffix == '.yaml', "Tracker yaml path must have a .yaml extension" 
+        output_path = Path(output_path)
+        assert output_path.parent.exists(), "Tracker output path parent directory does not exist"
+        
+        # Define the tracker configuration
+        tracker_config = {
+            'tracker_type': 'bytetrack',  # tracker type, ['botsort', 'bytetrack']
+            'track_high_thresh': 0.25,    # threshold for the first association
+            'track_low_thresh': 0.1,      # threshold for the second association
+            'new_track_thresh': 0.25,     # threshold for init new track if the detection does not match any tracks
+            'track_buffer': 30,           # buffer to calculate the time when to remove tracks
+            'match_thresh': 0.8,          # threshold for matching tracks
+            'fuse_score': True,           # Whether to fuse confidence scores with the iou distances before matching
+            # 'min_box_area': 10,         # threshold for min box areas(for tracker evaluation, not used for now)
+        }
+
+
+        # Add a header comment to the YAML file
+        header = """# Tracker configuration for ByteTrack\n# For ByteTrack source code see https://github.com/ifzhang/ByteTrack\n"""
+
+        # Write the configuration to a YAML file with header
+        with open(output_path, 'w') as f:
+            f.write(header)
+            yaml.dump(tracker_config, f, default_flow_style=False, sort_keys=False)
+
+        print(f"Tracker configuration written to {output_path.absolute()}")
+        
     
     def predict(self):
         # # Run inference on 'bus.jpg' with arguments
@@ -943,3 +999,48 @@ class YOLO_octron:
         #               conf=0.9
         #               )
         pass
+    
+    
+    def create_tracking_dataframe(self, video_dict):
+        """
+        Create an empty DataFrame for storing tracking data and associated metadata
+        I am using the video_dict to get number of frames that are expected for the 
+        tracking dataframe and to store the video metadata in the DataFrame attributes.
+        
+        Parameters
+        ----------
+        video_dict : dict
+            Dictionary with video metadata including num_frames
+
+            
+        Returns
+        -------
+        pd.DataFrame
+            Empty DataFrame initialized for tracking data
+        """
+        import pandas as pd
+        assert 'num_frames' in video_dict, "Video metadata must include 'num_frames'"
+        # Create a flat column structure
+        columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity' ]
+        
+        # Initialize the DataFrame with NaN values
+        df = pd.DataFrame(
+            index=pd.MultiIndex.from_product([
+                range(video_dict['num_frames']),  # Frame numbers
+                []  # Empty track_id list - will be populated during tracking
+            ], names=['frame', 'track_id']),
+            columns=columns,
+
+        )
+        
+        # Add metadata as DataFrame attributes
+        df.attrs = {
+            'video_hash': video_dict.get('hash', ''), 
+            'video_name': None,  # Will be filled in later
+            'video_height': video_dict.get('height', np.nan),
+            'video_width': video_dict.get('width', np.nan),
+            'frame_count': video_dict['num_frames'],
+            'created_at': str(datetime.now())
+        }
+        
+        return df
