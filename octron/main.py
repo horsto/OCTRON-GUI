@@ -127,7 +127,7 @@ class octron_widget(QWidget):
         self.training_data_generated = False
         self.training_finished = False # YOLO training
         self.trained_models = {}
-        self.video_to_predict = {}
+        self.videos_to_predict = {}
         # ... and some parameters
         self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
         self.skip_frames = 1 # Skip frames for prefetching images
@@ -206,7 +206,8 @@ class octron_widget(QWidget):
         self.generate_training_data_btn.clicked.connect(self.init_training_data_threaded)
         self.start_stop_training_btn.setText('')
         self.start_stop_training_btn.clicked.connect(self.init_yolo_training_threaded)
-    
+        self.predict_start_btn.setText('')
+        self.predict_start_btn.clicked.connect(self.init_yolo_prediction_threaded)
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
         self.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
@@ -721,7 +722,136 @@ class octron_widget(QWidget):
             # Disable the training data generation box
             self.toolBox.widget(1).setEnabled(False) # Annotation
             
+    ###### YOLO PREDICTION ###########################################################################
+    
             
+    def _update_prediction_progress(self, progress_info):
+        """
+        Handle prediction timing / progress updates from the worker thread.
+        When finished, show results.
+        
+        Parameters
+        ----------
+        progress_info : dict
+            Dictionary containing training progress information
+        """
+
+        # Format the finish time (without year as requested)
+        finish_time_str = ' '.join(time.ctime(finish_time).split()[:-1])
+   
+        self.train_epochs_progressbar.setMaximum(total_epochs)
+        self.train_epochs_progressbar.setValue(current_epoch)        
+        self.train_finishtime_label.setText(f'↬ {finish_time_str}')
+        
+        print(f"Epoch {current_epoch}/{total_epochs} - Time for epoch: {epoch_time:.1f}s")
+        print(f"Estimated time remaining: {remaining_time:.1f} seconds")    
+        print(f"Estimated finish time: {finish_time_str}")  
+
+        # if current_epoch == total_epochs: 
+        #     self.training_finished = True
+        #     self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        #     self.start_stop_training_btn.setText(f'✓ Done.')
+        #     self.train_epochs_progressbar.setEnabled(False)  
+        #     self.train_finishtime_label.setEnabled(False)
+        #     # Enable the prediction tab
+        #     self.toolBox.widget(3).setEnabled(True) # Prediction
+        #     self.predict_video_drop_groupbox.setEnabled(True)
+        #     self.predict_video_predict_groupbox.setEnabled(True)
+            
+    
+    def _yolo_predictor(self):
+        if not self.device_label:
+            show_error("No device label found for YOLO.")
+            return
+        else:
+            show_info(f"Predicting on device: {self.device_label}")
+        
+        # Call the training function which yields progress info
+        for progress_info in self.yolo_octron.predict_batch(
+                                            videos_dict=self.videos_to_predict,
+                                            model_path=self.model_predict_path,
+                                            device=self.device_label,
+                                            tracker_name=self.yolo_tracker_name,
+                                            iou=self.iou_thresh,
+                                            conf=self.conf_thresh,
+                                            polygon_sigma=self.polygon_sigma,
+                                            overwrite=True, # TODO integrate option here
+                                        ):
+
+            # Yield the progress info back to the GUI thread
+            yield progress_info
+            
+            
+    def _create_yolo_predictor(self):
+        # Create a new worker for YOLO prediction 
+        self.yolo_prediction_worker = create_worker(self._yolo_predictor)
+        self.yolo_prediction_worker.setAutoDelete(True)  # auto destruct !!
+        self.yolo_prediction_worker.yielded.connect(self._update_prediction_progress)
+        self.predict_overall_progressbar.setEnabled(True)  
+        self.predict_current_video_progressbar.setEnabled(True)   
+        self.predict_current_videoname_label.setEnabled(True)
+        self.train_finishtime_label.setText('↬ ... waiting for estimate')    
+        self.predict_finish_time_label.setEnabled(True)
+
+
+    def init_yolo_prediction_threaded(self):
+        """
+        This function manages the prediction of videos
+        with custom trained YOLO models
+        
+        
+        """
+        
+        # Sanity check 
+        if not self.project_path:
+            show_warning("Please select a project directory first.")
+            return
+        if not hasattr(self, 'yolo_octron'):
+            show_warning("Please load YOLO first.")
+            return
+        
+        index_model_list = self.yolomodel_trained_list.currentIndex()
+        if index_model_list == 0:
+            show_warning("Please select a YOLO model")
+            return
+        model_name = self.yolomodel_trained_list.currentText()
+        # The self.trained_models dictionary contains the model name as key
+        # and the model path as value
+        assert model_name in self.trained_models, f"Model {model_name} not found in trained models."
+        self.model_predict_path = self.trained_models[model_name]
+        index_tracker_list = self.yolomodel_tracker_list.currentIndex()
+        if index_tracker_list == 0:
+            show_warning("Please select a tracker")
+            return 
+        # Check if there are any videos to predict 
+        if not self.videos_to_predict:
+            show_warning("Please select a video to predict.")
+            return
+        
+        self.yolo_tracker_name = self.yolomodel_tracker_list.currentText()                              
+        # Check status of "view results" checkbox
+        self.view_prediction_resuts = self.open_when_finish_checkBox.isChecked()   
+        self.polygon_sigma = float(self.predict_polygo_sigma_spinbox.value())
+        self.conf_thresh = float(self.predict_conf_thresh_spinbox.value())
+        self.iou_thresh = float(self.predict_iou_thresh_spinbox.value())
+
+        # LOAD YOLO MODEL 
+        print(f"Loading trained YOLO model {self.model_predict_path.as_posix()}")
+
+        # Deactivate the training data generation box 
+        self.train_generate_groupbox.setEnabled(False)
+        # Otherwise, create a new worker and manage interruptions
+        if not hasattr(self, 'yolo_prediction_worker'):
+            self._create_yolo_predictor()
+            self.predict_start_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+            self.predict_start_btn.setText(f'↯ Predicting')
+            self.yolo_prediction_worker.start()
+            self.predict_start_btn.setEnabled(False)
+            # Disable the annotation + training data generation tabs
+            self.toolBox.widget(1).setEnabled(False) # Annotation
+            self.toolBox.widget(2).setEnabled(False) # Training
+            # And the video dropbox
+            self.predict_video_drop_groupbox.setEnabled(False)
             
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     
@@ -803,7 +933,9 @@ class octron_widget(QWidget):
         self.toolBox.widget(3).setEnabled(True)
         self.predict_video_drop_groupbox.setEnabled(True)
         self.predict_video_predict_groupbox.setEnabled(True)
-
+        self.predict_start_btn.setEnabled(True)
+        self.predict_start_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.predict_start_btn.setText(f'▷ Predict')
 
     def open_project_folder_dialog(self):
         """
@@ -1049,6 +1181,7 @@ class octron_widget(QWidget):
         add_layer = getattr(self._viewer, "add_image")
         add_layer(FastVideoReader(video_path, read_format='rgb24'), **layer_dict)
 
+
     def on_mp4_predict_dropped_area(self, video_paths):
         """
         Adds mp4 files for prediction. 
@@ -1057,7 +1190,7 @@ class octron_widget(QWidget):
         
         video_paths = [Path(v) for v in video_paths]
         for v_path in video_paths:
-            if v_path.name in self.video_to_predict:
+            if v_path.name in self.videos_to_predict:
                 show_warning(f"Video {v_path.name} already in prediction list.")
                 return
             if not v_path.exists():
@@ -1069,9 +1202,9 @@ class octron_widget(QWidget):
             # Get video dictionary metadata
             # contains 'file_path', 'num_frames', 'height', 'width'
             video_dict = probe_video(v_path) 
-            self.video_to_predict[v_path.name] = video_dict
+            self.videos_to_predict[v_path.name] = video_dict
             video_reader= FastVideoReader(v_path, read_format='rgb24')
-            self.video_to_predict[v_path.name]['video'] = video_reader
+            self.videos_to_predict[v_path.name]['video'] = video_reader
             # Add video to self.videos_for_prediction_list
             self.videos_for_prediction_list.addItem(v_path.name)
             print(f"Added video {v_path.name} to prediction list.")
@@ -1102,7 +1235,7 @@ class octron_widget(QWidget):
                 item_to_remove = self.videos_for_prediction_list.findText(selected_video)
                 self.videos_for_prediction_list.removeItem(item_to_remove)
                 self.videos_for_prediction_list.setCurrentIndex(0)
-                self.video_to_predict.pop(selected_video)
+                self.videos_to_predict.pop(selected_video)
                 print(f'Removed video "{selected_video}"')
             else:
                 self.videos_for_prediction_list.setCurrentIndex(0)

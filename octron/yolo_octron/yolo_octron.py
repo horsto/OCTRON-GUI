@@ -17,13 +17,20 @@ import yaml
 from tqdm import tqdm
 import numpy as np
 from natsort import natsorted
+import zarr 
 
 from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
                                                  watershed_mask,
                                                  get_polygons,
+                                                 polygon_to_mask,
 )
-      
+
+
+from octron.yolo_octron.helpers.yolo_zarr import (create_prediction_store, 
+                                                  create_prediction_zarr
+)
+
 from octron.yolo_octron.helpers.training import (
     pick_random_frames,
     collect_labels,
@@ -986,20 +993,250 @@ class YOLO_octron:
             yaml.dump(tracker_config, f, default_flow_style=False, sort_keys=False)
 
         print(f"Tracker configuration written to {output_path.absolute()}")
+      
+      
+    def predict(self, 
+                video, 
+                video_dict, 
+                model, 
+                tracker,
+                save_dir,
+                conf,
+                iou,
+                device='cpu',
+                poly_smooth_sigma=0,
+                ):
+        """
+        Run predictions on a video and save the results
         
+        Parameters
+        ----------
+        video : FastVideoReader
+            Video to run predictions on
+        video_dict : dict
+            Dictionary containing video metadata
+        model : YOLO
+            YOLO model to use for predictions
+        tracker : Path
+            Path to the tracker configuration file (.yaml)
+        save_dir : Path
+            Directory to save predictions to
+        conf : float
+            Confidence threshold
+        iou : float
+            Intersection over union threshold
+        device : str    
+            Device to use ('cpu', 'cuda', 'mps')
+        poly_smooth_sigma : float
+            Sigma value for smoothing the polygons  
+        
+        
+        """
+        
+        print(f"Saving predictions to {save_dir}")
+        
+        assert save_dir.exists(), f"Save directory not found: {save_dir}"
+        assert tracker.exists(), f"Tracker configuration file not found: {tracker}"
+        
+        zarr_store_dir = save_dir / 'predictions.zarr'  # Zarr store directory
+        # Create initial zarr store reference
+        prediction_store = create_prediction_store(zarr_store_dir)
+        # Delete previous predictions
+        for file in save_dir.rglob('*'):
+            os.remove(file)
+        # Open the zarr store
+        zarr_root = zarr.open_group(store=prediction_store, mode='a')
+        print("Existing keys in zarr archive:", list(zarr_root.array_keys()))
+            
+        # Loop over the video frames and run predictions
+        tracking_df_dict = {}
+        for frame_no, frame in enumerate(tqdm(video, 
+                                            total=video_dict['num_frames'], 
+                                            desc='Processing video')
+                                        ):  
+            # Run YOLO11 tracking on the frame, persisting tracks between frames
+            results = model.track(source=frame, 
+                                persist=True,
+                                task='segment',   
+                                tracker=tracker.as_posix(),
+                                project=save_dir.parent.as_posix(),
+                                name=save_dir.name,
+                                show=False,
+                                save=False,   
+                                conf=conf,    
+                                iou=iou,
+                                device=device, 
+                                half=False,
+                                retina_masks=True,
+                                show_boxes=False,
+                                save_txt=False,
+                                save_conf=False,   
+                                )
+            
+            # Get the boxes and track IDs
+            boxes = results[0].boxes.xywh.cpu()
+            confidences = results[0].boxes.conf.cpu().numpy()
+            label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
+            
+            masks_polys = results[0].masks.xy  
+            track_ids = results[0].boxes.id.int().cpu().tolist()
+            
+            # Extract tracks 
+            for label, mask_poly, track_id, conf in zip(label_names, 
+                                                        masks_polys, 
+                                                        track_ids, 
+                                                        confidences
+                                                        ):
+                # Initialize mask zarr array if needed
+                if f'{track_id}_masks' not in list(zarr_root.array_keys()):
+                    video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
+                    mask_store = create_prediction_zarr(prediction_store, 
+                                    f'{track_id}_masks',
+                                    shape=video_shape,
+                                    chunk_size=50,     
+                                    fill_value=-1,
+                                    dtype='int8',                           
+                                    video_hash=video_dict.get('hash', ''),
+                                    )
+                    mask_store.attrs['label'] = label
+                    mask_store.attrs['classes'] = results[0].names
+                else:
+                    mask_store = zarr_root[f'{track_id}_masks']
+                # Initialize dataframe if needed
+                if track_id not in tracking_df_dict:
+                    tracking_df = self.create_tracking_dataframe(video_dict)
+                    tracking_df.attrs['label'] = label
+                    tracking_df.attrs['track_id'] = track_id
+                    # Add to the dictionary
+                    tracking_df_dict[track_id] = tracking_df
+                else:
+                    tracking_df = tracking_df_dict[track_id]
+                    assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
+                    assert tracking_df.attrs['label'] == label, "Label mismatch"    
+                
+                # Masks
+                dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
+                mask = polygon_to_mask(dummy_mask.astype('int8'), 
+                                    mask_poly, 
+                                    smooth_sigma=poly_smooth_sigma
+                                    )
+                mask_store[frame_no,:,:] = mask
+                
+                # Get region properties and save them to the dataframe
+                _, regions_props = find_objects_in_mask(mask, min_area=0)
+                assert len(regions_props) == 1
+                region_prop = regions_props[0]
+                # ... extract all the properties we want to track
+                centroid = region_prop.centroid
+                area = region_prop.area
+                eccentricity = region_prop.eccentricity
+                orientation = region_prop.orientation
+                solidity = region_prop.solidity 
+                
+                # Store data in DataFrame with flat column names
+                tracking_df.loc[(frame_no, track_id), 'pos_x'] = centroid[1]  # x coordinate
+                tracking_df.loc[(frame_no, track_id), 'pos_y'] = centroid[0]  # y coordinate
+                tracking_df.loc[(frame_no, track_id), 'area'] = area
+                tracking_df.loc[(frame_no, track_id), 'eccentricity'] = eccentricity
+                tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
+                tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
+                tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
+
+        # Save each tracking DataFrame with a label column added
+        for track_id, tr_df in tracking_df_dict.items():
+            label = tr_df.attrs["label"]
+            df_to_save = tr_df.copy()
+            # Add the label column (will be filled with the same value for all rows)
+            df_to_save.insert(0, 'label', label)
+            # Save to CSV 
+            filename = f'{label}_track_{track_id}.csv'
+            csv_path = save_dir / filename
+            df_to_save.to_csv(csv_path)
+            print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")  
+                
     
-    def predict(self):
-        # # Run inference on 'bus.jpg' with arguments
-        # model.predict('/Users/horst/Downloads/octron_project/test data/8_behaviour_filtered2024-11-04T14_20_34_20240930_Th19.mp4', 
-        #               save=True, 
-        #               classes=[0],
-        #               imgsz=1000, 
-        #               device='cpu',
-        #               visualize=False,
-        #               conf=0.9
-        #               )
-        pass
-    
+    def predict_batch(self, 
+                    videos_dict,
+                    model_path,
+                    device,
+                    tracker_name='bytetrack',
+                    iou=.9,
+                    conf=.8,
+                    polygon_sigma=1,
+                    overwrite=True
+                    ):
+        """
+        Run predictions on a batch of videos.
+        Handle model loading, video reading, and saving predictions.
+        Writes a tracker .yaml file into the "save_dir" directory and hands 
+        that to the model for tracking.
+        
+        Parameters
+        ----------
+        videos_dict : dict
+            Dictionary with video metadata and FastVideoReader objects
+        model_path : str or Path
+            Path to the YOLO model
+        device : str
+            Device to use ('cpu', 'cuda', 'mps')
+        tracker_name : str
+            Name of the tracker configuration, for example "ByteTrack"
+        iou : float
+            Intersection over union threshold
+        conf : float
+            Confidence threshold
+        polygon_sigma : float
+            Sigma value for smoothing the polygons
+        overwrite : bool
+            Whether to overwrite existing predictions
+            
+        """
+
+        from ultralytics import YOLO
+        # Check tracker yaml 
+        available_trackers = ['bytetrack', 'botsort']
+        tracker_name = tracker_name.strip().lower()
+        assert tracker_name in available_trackers, f"Tracker not available: {tracker_name}"
+      
+        # Check model 
+        model_path = Path(model_path)
+        assert model_path.exists(), f"Model path not found: {model_path}"
+        assert model_path.suffix == '.pt', "Model path must have a .pt extension"
+        model = YOLO(model_path)
+        
+        for video_name, video_dict in videos_dict.items():
+            
+            video_file_path = Path(video_dict['video_file_path'])
+            assert video_file_path.exists(), f"Video file not found: {video_file_path}"
+            assert video_file_path.suffix == '.mp4', "Video file must have a .mp4 extension"
+            video_reader = video_dict['video'] # FastVideoReader object
+            save_dir = Path(video_file_path.replace('.mp4', '_predictions'))
+            os.makedirs(save_dir, exist_ok=True)        
+            if save_dir.rglob('*') and not overwrite:
+                print(f"Predictions already exist in {save_dir}. Skipping...")
+                continue   
+            
+            # Write tracker 
+            if tracker_name == 'bytetrack': 
+                tracker = save_dir / 'bytetrack.yaml'
+                self.write_byte_tracker_yaml(tracker)
+            else:
+                raise NotImplementedError(f"Tracker {tracker_name} not implemented yet")
+            
+            print(f"Processing video {video_name}")
+            self.predict(
+                        video=video_reader, 
+                        video_dict=video_dict, 
+                        model=model,
+                        tracker=tracker,
+                        save_dir=save_dir,
+                        conf=conf,
+                        iou=iou,
+                        device=device,
+                        poly_smooth_sigma=polygon_sigma,
+                        )
+            
+            
     
     def create_tracking_dataframe(self, video_dict):
         """
