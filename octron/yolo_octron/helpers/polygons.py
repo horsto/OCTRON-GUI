@@ -1,8 +1,6 @@
 # Polygon helpers for training data extraction
-
+# Also contains helpers for mask manipulation / polygon generation
 import numpy as np  
-
-from imantics import Polygons
 
 def find_objects_in_mask(mask, min_area=10):
     """
@@ -204,7 +202,7 @@ def get_polygons(mask):
     return polygon_points
 
 
-def polygon_to_mask(empty_mask, polygons):
+def polygon_to_mask(empty_mask, polygons, smooth_sigma=1.):
     """
     Convert a polygon to a binary mask
     
@@ -215,7 +213,7 @@ def polygon_to_mask(empty_mask, polygons):
     
     Returns
     -------
-    mask : np.array : Binary mask for the polygon(s)
+    mask : np.array : Mask for the polygon(s) with dtype int8
     """
 
     try:
@@ -227,7 +225,12 @@ def polygon_to_mask(empty_mask, polygons):
     except ImportError:
         raise ImportError('to_mask() requires OpenCV')
     assert isinstance(polygons, np.ndarray), 'Polygons should be a numpy array'
-        
+    
+    # Smooth?
+    if smooth_sigma > 0:
+        from scipy.ndimage import gaussian_filter1d
+        polygons = gaussian_filter1d(polygons, axis=0, sigma=smooth_sigma)
+    
     mask = cv2.fillPoly(empty_mask, [np.round(polygons).astype(np.int32)], color=(1,), lineType=cv2.LINE_8)
-    mask = Mask(mask)
-    return mask.array
+    mask = Mask(mask).array
+    return mask.astype('int8')
