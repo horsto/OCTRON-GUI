@@ -581,11 +581,14 @@ class YOLO_octron:
         """
          
         # Configure YOLO settings
-        self.yolo_settings.update({
-            'sync': False,
-            'hub': False,
-            'runs_dir': self.training_path.as_posix()
-        })
+        if not hasattr(self, 'training_path') or self.training_path is None:
+            pass
+        else:
+            self.yolo_settings.update({
+                'sync': False,
+                'hub': False,
+                'runs_dir': self.training_path.as_posix()
+            })
         from ultralytics import YOLO   
         
         # Load specified model
@@ -995,165 +998,6 @@ class YOLO_octron:
         print(f"Tracker configuration written to {output_path.absolute()}")
       
       
-    def predict(self, 
-                video, 
-                video_dict, 
-                model, 
-                tracker,
-                save_dir,
-                conf,
-                iou,
-                device='cpu',
-                poly_smooth_sigma=0,
-                ):
-        """
-        Run predictions on a video and save the results
-        
-        Parameters
-        ----------
-        video : FastVideoReader
-            Video to run predictions on
-        video_dict : dict
-            Dictionary containing video metadata
-        model : YOLO
-            YOLO model to use for predictions
-        tracker : Path
-            Path to the tracker configuration file (.yaml)
-        save_dir : Path
-            Directory to save predictions to
-        conf : float
-            Confidence threshold
-        iou : float
-            Intersection over union threshold
-        device : str    
-            Device to use ('cpu', 'cuda', 'mps')
-        poly_smooth_sigma : float
-            Sigma value for smoothing the polygons  
-        
-        
-        """
-        
-        print(f"Saving predictions to {save_dir}")
-        
-        assert save_dir.exists(), f"Save directory not found: {save_dir}"
-        assert tracker.exists(), f"Tracker configuration file not found: {tracker}"
-        
-        zarr_store_dir = save_dir / 'predictions.zarr'  # Zarr store directory
-        # Create initial zarr store reference
-        prediction_store = create_prediction_store(zarr_store_dir)
-        # Delete previous predictions
-        for file in save_dir.rglob('*'):
-            os.remove(file)
-        # Open the zarr store
-        zarr_root = zarr.open_group(store=prediction_store, mode='a')
-        print("Existing keys in zarr archive:", list(zarr_root.array_keys()))
-            
-        # Loop over the video frames and run predictions
-        tracking_df_dict = {}
-        for frame_no, frame in enumerate(tqdm(video, 
-                                            total=video_dict['num_frames'], 
-                                            desc='Processing video')
-                                        ):  
-            # Run YOLO11 tracking on the frame, persisting tracks between frames
-            results = model.track(source=frame, 
-                                persist=True,
-                                task='segment',   
-                                tracker=tracker.as_posix(),
-                                project=save_dir.parent.as_posix(),
-                                name=save_dir.name,
-                                show=False,
-                                save=False,   
-                                conf=conf,    
-                                iou=iou,
-                                device=device, 
-                                half=False,
-                                retina_masks=True,
-                                show_boxes=False,
-                                save_txt=False,
-                                save_conf=False,   
-                                )
-            
-            # Get the boxes and track IDs
-            boxes = results[0].boxes.xywh.cpu()
-            confidences = results[0].boxes.conf.cpu().numpy()
-            label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
-            
-            masks_polys = results[0].masks.xy  
-            track_ids = results[0].boxes.id.int().cpu().tolist()
-            
-            # Extract tracks 
-            for label, mask_poly, track_id, conf in zip(label_names, 
-                                                        masks_polys, 
-                                                        track_ids, 
-                                                        confidences
-                                                        ):
-                # Initialize mask zarr array if needed
-                if f'{track_id}_masks' not in list(zarr_root.array_keys()):
-                    video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
-                    mask_store = create_prediction_zarr(prediction_store, 
-                                    f'{track_id}_masks',
-                                    shape=video_shape,
-                                    chunk_size=50,     
-                                    fill_value=-1,
-                                    dtype='int8',                           
-                                    video_hash=video_dict.get('hash', ''),
-                                    )
-                    mask_store.attrs['label'] = label
-                    mask_store.attrs['classes'] = results[0].names
-                else:
-                    mask_store = zarr_root[f'{track_id}_masks']
-                # Initialize dataframe if needed
-                if track_id not in tracking_df_dict:
-                    tracking_df = self.create_tracking_dataframe(video_dict)
-                    tracking_df.attrs['label'] = label
-                    tracking_df.attrs['track_id'] = track_id
-                    # Add to the dictionary
-                    tracking_df_dict[track_id] = tracking_df
-                else:
-                    tracking_df = tracking_df_dict[track_id]
-                    assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
-                    assert tracking_df.attrs['label'] == label, "Label mismatch"    
-                
-                # Masks
-                dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
-                mask = polygon_to_mask(dummy_mask.astype('int8'), 
-                                    mask_poly, 
-                                    smooth_sigma=poly_smooth_sigma
-                                    )
-                mask_store[frame_no,:,:] = mask
-                
-                # Get region properties and save them to the dataframe
-                _, regions_props = find_objects_in_mask(mask, min_area=0)
-                assert len(regions_props) == 1
-                region_prop = regions_props[0]
-                # ... extract all the properties we want to track
-                centroid = region_prop.centroid
-                area = region_prop.area
-                eccentricity = region_prop.eccentricity
-                orientation = region_prop.orientation
-                solidity = region_prop.solidity 
-                
-                # Store data in DataFrame with flat column names
-                tracking_df.loc[(frame_no, track_id), 'pos_x'] = centroid[1]  # x coordinate
-                tracking_df.loc[(frame_no, track_id), 'pos_y'] = centroid[0]  # y coordinate
-                tracking_df.loc[(frame_no, track_id), 'area'] = area
-                tracking_df.loc[(frame_no, track_id), 'eccentricity'] = eccentricity
-                tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
-                tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
-                tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
-
-        # Save each tracking DataFrame with a label column added
-        for track_id, tr_df in tracking_df_dict.items():
-            label = tr_df.attrs["label"]
-            df_to_save = tr_df.copy()
-            # Add the label column (will be filled with the same value for all rows)
-            df_to_save.insert(0, 'label', label)
-            # Save to CSV 
-            filename = f'{label}_track_{track_id}.csv'
-            csv_path = save_dir / filename
-            df_to_save.to_csv(csv_path)
-            print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")  
-                
     
     def predict_batch(self, 
                     videos_dict,
@@ -1166,77 +1010,292 @@ class YOLO_octron:
                     overwrite=True
                     ):
         """
-        Run predictions on a batch of videos.
-        Handle model loading, video reading, and saving predictions.
-        Writes a tracker .yaml file into the "save_dir" directory and hands 
-        that to the model for tracking.
+        Predict and track objects in multiple videos.
         
         Parameters
         ----------
         videos_dict : dict
-            Dictionary with video metadata and FastVideoReader objects
+            Dictionary of video paths and video dictionaries with metadata.
         model_path : str or Path
-            Path to the YOLO model
+            Path to the YOLO model to use for prediction.
         device : str
-            Device to use ('cpu', 'cuda', 'mps')
+            Device to run prediction on ('cpu', 'cuda', etc.)
         tracker_name : str
-            Name of the tracker configuration, for example "ByteTrack"
+            Name of the tracker to use ('bytetrack' or 'botsort')
         iou : float
-            Intersection over union threshold
+            IOU threshold for detection
         conf : float
-            Confidence threshold
+            Confidence threshold for detection
         polygon_sigma : float
-            Sigma value for smoothing the polygons
+            Sigma value for polygon smoothing
         overwrite : bool
-            Whether to overwrite existing predictions
+            Whether to overwrite existing prediction results
             
+        Yields
+        ------
+        dict
+            Progress information including:
+            - stage: Current stage ('initializing', 'processing')
+            - video_name: Current video name
+            - video_index: Index of current video
+            - total_videos: Total number of videos
+            - frame: Current frame
+            - total_frames: Total frames in current video
+            - fps: Processing speed (frames per second)
+            - eta: Estimated time remaining in seconds
+            - eta_finish_time: Estimated finish time timestamp
+            - overall_progress: Overall progress as percentage (0-100)
         """
-
-        from ultralytics import YOLO
-        # Check tracker yaml 
-        available_trackers = ['bytetrack', 'botsort']
-        tracker_name = tracker_name.strip().lower()
-        assert tracker_name in available_trackers, f"Tracker not available: {tracker_name}"
-      
-        # Check model 
-        model_path = Path(model_path)
-        assert model_path.exists(), f"Model path not found: {model_path}"
-        assert model_path.suffix == '.pt', "Model path must have a .pt extension"
-        model = YOLO(model_path)
         
-        for video_name, video_dict in videos_dict.items():
+        # Start timing for initialization
+        start_time = time.time()
+        
+        # Load model
+        try:
+            # Yield initializing stage
+            yield {
+                'stage': 'initializing',
+                'message': f'Model: {model_path.name}',
+                'overall_progress': 0
+            }
             
-            video_file_path = Path(video_dict['video_file_path'])
-            assert video_file_path.exists(), f"Video file not found: {video_file_path}"
-            assert video_file_path.suffix == '.mp4', "Video file must have a .mp4 extension"
-            video_reader = video_dict['video'] # FastVideoReader object
-            save_dir = Path(video_file_path.replace('.mp4', '_predictions'))
-            os.makedirs(save_dir, exist_ok=True)        
-            if save_dir.rglob('*') and not overwrite:
-                print(f"Predictions already exist in {save_dir}. Skipping...")
-                continue   
+            # Load the YOLO model for tracking
+            model = self.load_model(model_name_path=model_path)
+            if not model:
+                print(f"Failed to load model from {model_path}")
+                return
             
-            # Write tracker 
-            if tracker_name == 'bytetrack': 
-                tracker = save_dir / 'bytetrack.yaml'
-                self.write_byte_tracker_yaml(tracker)
-            else:
-                raise NotImplementedError(f"Tracker {tracker_name} not implemented yet")
+        except Exception as e:
+            print(f"Error during initialization: {e}")
+            return
+        
+        # Calculate total frames across all videos
+        total_videos = len(videos_dict)
+        total_frames = sum(v['num_frames'] for v in videos_dict.values())
+        processed_frames = 0
+        
+        # Process each video
+        for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), 1):
+            video_start_time = time.time()
+            video_path = Path(video_dict['video_file_path'])
+            num_frames = video_dict['num_frames']
             
-            print(f"Processing video {video_name}")
-            self.predict(
-                        video=video_reader, 
-                        video_dict=video_dict, 
-                        model=model,
-                        tracker=tracker,
-                        save_dir=save_dir,
-                        conf=conf,
-                        iou=iou,
-                        device=device,
-                        poly_smooth_sigma=polygon_sigma,
-                        )
+            # Set up prediction directory structure
+            save_dir = video_path.parent / 'predictions' / f"{video_path.stem}_{tracker_name}"
+            save_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Set up tracker 
+            tracker_yaml_path = save_dir / f'{tracker_name}.yaml'
+            if not tracker_yaml_path.exists():
+                self.write_byte_tracker_yaml(tracker_yaml_path)
+            
+            # Yield video start info
+            yield {
+                'stage': 'processing',
+                'video_name': video_name,
+                'video_index': video_index,
+                'total_videos': total_videos,
+                'frame': 0,
+                'total_frames': num_frames,
+                'fps': 0,
+                'eta': 0,
+                'eta_finish_time': 0,
+                'overall_progress': (processed_frames / total_frames) * 100
+            }
+            
+            # Prepare prediction stores
+            prediction_store_dir = save_dir / 'predictions.zarr'
+            prediction_store = create_prediction_store(prediction_store_dir)
+            zarr_root = zarr.open_group(store=prediction_store, mode='a')
+            
+            # Process video frames
+            video = video_dict['video']
+            frame_times = []
+            
+            tracking_df_dict = {}
+            for frame_no, frame in enumerate(video):
+                frame_start = time.time()
+                
+                # Run tracking on this frame
+                results = model.track(
+                    source=frame, 
+                    persist=True,
+                    task='segment',
+                    tracker=tracker_yaml_path.as_posix(),
+                    project=save_dir.parent.as_posix(),
+                    name=save_dir.name,
+                    show=False,
+                    save=False,
+                    conf=float(conf),
+                    iou=float(iou),
+                    device=device, 
+                    retina_masks=True,
+                    show_boxes=False,
+                    save_txt=False,
+                    save_conf=False,
+                )
+                
+                
+                # Update timing information
+                frame_time = time.time() - frame_start
+                frame_times.append(frame_time)
+                
+                # Calculate rolling average FPS (last 10 frames)
+                recent_times = frame_times[-10:] if len(frame_times) > 10 else frame_times
+                avg_frame_time = sum(recent_times) / len(recent_times)
+                current_fps = 1.0 / avg_frame_time if avg_frame_time > 0 else 0
+                
+                # Calculate ETAs
+                frames_remaining_video = num_frames - frame_no - 1
+                eta_video = frames_remaining_video * avg_frame_time
+                
+                # Calculate overall progress
+                processed_frames += 1
+                overall_progress = (processed_frames / total_frames) * 100
+                
+                # Calculate overall ETA based on current processing rate
+                remaining_frames = total_frames - processed_frames
+                eta_overall = remaining_frames * avg_frame_time
+                eta_finish_time = time.time() + eta_overall
+                
+
+                yield {
+                    'stage': 'processing',
+                    'video_name': video_name,
+                    'video_index': video_index,
+                    'total_videos': total_videos,
+                    'frame': frame_no + 1,
+                    'total_frames': num_frames,
+                    'fps': current_fps,
+                    'eta': eta_video,
+                    'eta_finish_time': eta_finish_time,
+                    'overall_progress': overall_progress,
+                    'video_progress': ((frame_no + 1) / num_frames) * 100
+                }
+                
+                # Process results and save to zarr/CSV here
+                # Get the boxes and track IDs
+                
+                confidences = results[0].boxes.conf.cpu().numpy()
+                label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
+                try:
+                    masks_polys = results[0].masks.xy  
+                    track_ids = results[0].boxes.id.int().cpu().tolist()
+                except AttributeError:
+                    # Empty prediction
+                    continue
+               
+                
+                # Extract tracks 
+                for label, mask_poly, track_id, conf in zip(label_names, 
+                                                            masks_polys, 
+                                                            track_ids, 
+                                                            confidences
+                                                            ):
+                    # Initialize mask zarr array if needed
+                    if f'{track_id}_masks' not in list(zarr_root.array_keys()):
+                        video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
+                        mask_store = create_prediction_zarr(prediction_store, 
+                                        f'{track_id}_masks',
+                                        shape=video_shape,
+                                        chunk_size=50,     
+                                        fill_value=-1,
+                                        dtype='int8',                           
+                                        video_hash=''
+                                        )
+                        mask_store.attrs['label'] = label
+                        mask_store.attrs['classes'] = results[0].names
+                    else:
+                        mask_store = zarr_root[f'{track_id}_masks']
+                    # Initialize dataframe if needed
+                    if track_id not in tracking_df_dict:
+                        tracking_df = self.create_tracking_dataframe(video_dict)
+                        tracking_df.attrs['label'] = label
+                        tracking_df.attrs['track_id'] = track_id
+                        # Add to the dictionary
+                        tracking_df_dict[track_id] = tracking_df
+                    else:
+                        tracking_df = tracking_df_dict[track_id]
+                        assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
+                        assert tracking_df.attrs['label'] == label, "Label mismatch"    
+                    
+                    # Masks
+                    dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
+                    mask = polygon_to_mask(dummy_mask.astype('int8'), 
+                                                mask_poly, 
+                                                smooth_sigma=polygon_sigma,
+                                                )
+                    mask_store[frame_no,:,:] = mask
+                    
+                    # Get region properties and save them to the dataframe
+                    _, regions_props = find_objects_in_mask(mask, min_area=0)
+                    assert len(regions_props) == 1
+                    region_prop = regions_props[0]
+                    # ... extract all the properties we want to track
+                    centroid = region_prop.centroid
+                    area = region_prop.area
+                    eccentricity = region_prop.eccentricity
+                    orientation = region_prop.orientation
+                    solidity = region_prop.solidity 
+                    
+                    # Store data in DataFrame with flat column names
+                    tracking_df.loc[(frame_no, track_id), 'pos_x'] = centroid[1]  # x coordinate
+                    tracking_df.loc[(frame_no, track_id), 'pos_y'] = centroid[0]  # y coordinate
+                    tracking_df.loc[(frame_no, track_id), 'area'] = area
+                    tracking_df.loc[(frame_no, track_id), 'eccentricity'] = eccentricity
+                    tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
+                    tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
+                    tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
+            
+                
+                
+                
+                    
+                    
+            # VIDEO COMPLETE
+            
+            # Save each tracking DataFrame with a label column added
+            for track_id, tr_df in tracking_df_dict.items():
+                label = tr_df.attrs["label"]
+                df_to_save = tr_df.copy()
+                # Add the label column (will be filled with the same value for all rows)
+                df_to_save.insert(0, 'label', label)
+                # Save to CSV 
+                filename = f'{label}_track_{track_id}.csv'
+                csv_path = save_dir / filename
+                df_to_save.to_csv(csv_path)
+                print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
+            
+                
             
             
+            # Video complete, yield final statistics
+            video_time = time.time() - video_start_time
+            average_fps = num_frames / video_time if video_time > 0 else 0
+            
+            yield {
+                'stage': 'video_complete',
+                'video_name': video_name,
+                'video_index': video_index,
+                'total_videos': total_videos,
+                'total_frames': num_frames,
+                'processing_time': video_time,
+                'average_fps': average_fps,
+                'overall_progress': (processed_frames / total_frames) * 100
+            }
+        
+        # All videos processed
+        total_time = time.time() - start_time
+        
+        yield {
+            'stage': 'complete',
+            'total_videos': total_videos,
+            'total_frames': total_frames,
+            'total_processing_time': total_time,
+            'overall_fps': total_frames / total_time if total_time > 0 else 0,
+            'overall_progress': 100
+        }
+                
     
     def create_tracking_dataframe(self, video_dict):
         """
