@@ -878,18 +878,17 @@ class octron_widget(QWidget):
 
         # Deactivate the training data generation box 
         self.train_generate_groupbox.setEnabled(False)
-        # Otherwise, create a new worker and manage interruptions
-        if not hasattr(self, 'yolo_prediction_worker'):
-            self._create_yolo_predictor()
-            self.predict_start_btn.setStyleSheet('QPushButton { color: #e7a881;}')
-            self.predict_start_btn.setText(f'↯ Predicting')
-            self.yolo_prediction_worker.start()
-            self.predict_start_btn.setEnabled(False)
-            # Disable the annotation + training data generation tabs
-            self.toolBox.widget(1).setEnabled(False) # Annotation
-            self.toolBox.widget(2).setEnabled(False) # Training
-            # And the video dropbox
-            self.predict_video_drop_groupbox.setEnabled(False)
+        # Create new prediction worker
+        self._create_yolo_predictor()
+        self.predict_start_btn.setStyleSheet('QPushButton { color: #e7a881;}')
+        self.predict_start_btn.setText(f'↯ Predicting')
+        self.yolo_prediction_worker.start()
+        self.predict_start_btn.setEnabled(False)
+        # Disable the annotation + training data generation tabs
+        self.toolBox.widget(1).setEnabled(False) # Annotation
+        self.toolBox.widget(2).setEnabled(False) # Training
+        # And the video dropbox
+        self.predict_video_drop_groupbox.setEnabled(False)
             
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     

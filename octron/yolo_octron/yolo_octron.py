@@ -1055,18 +1055,7 @@ class YOLO_octron:
             - overall_progress: Overall progress as percentage (0-100)
         """
 
-        # Load model
-        try:
-
-            # Load the YOLO model for tracking
-            model = self.load_model(model_name_path=model_path)
-            if not model:
-                print(f"Failed to load model from {model_path}")
-                return
-            
-        except Exception as e:
-            print(f"Error during initialization: {e}")
-            return
+        
         
         # Calculate total frames across all videos
         total_videos = len(videos_dict)
@@ -1074,6 +1063,18 @@ class YOLO_octron:
         
         # Process each video
         for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), 1):
+            # Load model
+            try:
+
+                # Load the YOLO model for tracking
+                model = self.load_model(model_name_path=model_path)
+                if not model:
+                    print(f"Failed to load model from {model_path}")
+                    return
+                
+            except Exception as e:
+                print(f"Error during initialization: {e}")
+                return    
 
             video_path = Path(video_dict['video_file_path'])
             num_frames = video_dict['num_frames']
@@ -1117,7 +1118,6 @@ class YOLO_octron:
                     save_conf=False,
                 )
                 
-            
                 # Process results and save to zarr/CSV here
                 # Get the boxes and track IDs
                 
