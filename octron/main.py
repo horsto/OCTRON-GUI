@@ -809,8 +809,8 @@ class octron_widget(QWidget):
                                             model_path=self.model_predict_path,
                                             device=self.device_label,
                                             tracker_name=self.yolo_tracker_name,
-                                            iou=self.iou_thresh,
-                                            conf=self.conf_thresh,
+                                            iou_thresh=self.iou_thresh,
+                                            conf_thresh=self.conf_thresh,
                                             polygon_sigma=self.polygon_sigma,
                                             overwrite=self.overwrite_predictions, 
                                         ):
@@ -873,9 +873,6 @@ class octron_widget(QWidget):
         self.iou_thresh = float(self.predict_iou_thresh_spinbox.value())
         self.overwrite_predictions = self.overwrite_prediction_checkBox.isChecked()    
         
-        # LOAD YOLO MODEL 
-        print(f"Loading trained YOLO model {self.model_predict_path.as_posix()}")
-
         # Deactivate the training data generation box 
         self.train_generate_groupbox.setEnabled(False)
         # Create new prediction worker
@@ -961,7 +958,10 @@ class octron_widget(QWidget):
         
         if not trained_models:
             return
-        # Write the trained models to yolomodel_trained_list one by bon
+        # Clear the old list, and re-instantiate
+        self.yolomodel_trained_list.clear()
+        self.yolomodel_trained_list.addItem('Choose model ...')
+        # Write the trained models to yolomodel_trained_list one by one
         for model in trained_models:
             if model.stem not in self.trained_models:
                 self.trained_models[model.stem] = model
@@ -1228,13 +1228,13 @@ class octron_widget(QWidget):
         video_paths = [Path(v) for v in video_paths]
         for v_path in video_paths:
             if v_path.name in self.videos_to_predict:
-                show_warning(f"Video {v_path.name} already in prediction list.")
+                print(f"Video {v_path.name} already in prediction list.")
                 return
             if not v_path.exists():
-                show_error(f"File {v_path} does not exist.")
+                print(f"File {v_path} does not exist.")
                 return
             if not v_path.suffix == '.mp4':
-                show_error(f"File {v_path} is not an mp4 file.")
+                print(f"File {v_path} is not an mp4 file.")
                 return
             # Get video dictionary metadata
             # contains 'file_path', 'num_frames', 'height', 'width'

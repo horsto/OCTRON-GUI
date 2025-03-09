@@ -809,6 +809,7 @@ class Ui_octron_widgetui(object):
         self.yolomodel_tracker_list = QComboBox(self.layoutWidget8)
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.addItem("")
+        self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.setObjectName(u"yolomodel_tracker_list")
         self.yolomodel_tracker_list.setMinimumSize(QSize(110, 25))
         self.yolomodel_tracker_list.setMaximumSize(QSize(110, 25))
@@ -819,6 +820,7 @@ class Ui_octron_widgetui(object):
         self.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
+        self.open_when_finish_checkBox.setChecked(True)
 
         self.predict_grid_layout1.addWidget(self.open_when_finish_checkBox, 0, 2, 1, 1)
 
@@ -863,8 +865,8 @@ class Ui_octron_widgetui(object):
 
         self.predict_start_btn = QPushButton(self.layoutWidget9)
         self.predict_start_btn.setObjectName(u"predict_start_btn")
-        self.predict_start_btn.setMinimumSize(QSize(80, 25))
-        self.predict_start_btn.setMaximumSize(QSize(80, 25))
+        self.predict_start_btn.setMinimumSize(QSize(90, 25))
+        self.predict_start_btn.setMaximumSize(QSize(90, 25))
 
         self.predict_grid_layout2.addWidget(self.predict_start_btn, 1, 3, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTop)
 
@@ -902,8 +904,8 @@ class Ui_octron_widgetui(object):
         self.predict_conf_thresh_spinbox.setMinimumSize(QSize(90, 25))
         self.predict_conf_thresh_spinbox.setMaximumSize(QSize(90, 25))
         self.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
-        self.predict_conf_thresh_spinbox.setSingleStep(0.100000000000000)
-        self.predict_conf_thresh_spinbox.setValue(0.800000000000000)
+        self.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
+        self.predict_conf_thresh_spinbox.setValue(0.850000000000000)
 
         self.predict_grid_layout2.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
@@ -1106,7 +1108,8 @@ class Ui_octron_widgetui(object):
         self.yolomodel_trained_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"OCTRON user trained models that are found in the project path", None))
 #endif // QT_CONFIG(tooltip)
         self.yolomodel_tracker_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Tracker ...", None))
-        self.yolomodel_tracker_list.setItemText(1, QCoreApplication.translate("octron_widgetui", u"ByteTrack", None))
+        self.yolomodel_tracker_list.setItemText(1, QCoreApplication.translate("octron_widgetui", u"BoTSORT", None))
+        self.yolomodel_tracker_list.setItemText(2, QCoreApplication.translate("octron_widgetui", u"ByteTrack", None))
 
 #if QT_CONFIG(tooltip)
         self.yolomodel_tracker_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"OCTRON user trained models that are found in the project path", None))

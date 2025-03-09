@@ -126,7 +126,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="tabSpacing">
        <number>10</number>
@@ -2314,6 +2314,11 @@ Recommended are at least ~50.</string>
                </item>
                <item>
                 <property name="text">
+                 <string>BoTSORT</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
                  <string>ByteTrack</string>
                 </property>
                </item>
@@ -2338,6 +2343,9 @@ Recommended are at least ~50.</string>
                </property>
                <property name="text">
                 <string>View results</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -2467,13 +2475,13 @@ bounding boxes is allowed before they are considered to be detecting the same ob
               <widget class="QPushButton" name="predict_start_btn">
                <property name="minimumSize">
                 <size>
-                 <width>80</width>
+                 <width>90</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>80</width>
+                 <width>90</width>
                  <height>25</height>
                 </size>
                </property>
@@ -2587,10 +2595,10 @@ bounding boxes is allowed before they are considered to be detecting the same ob
                 <double>1.000000000000000</double>
                </property>
                <property name="singleStep">
-                <double>0.100000000000000</double>
+                <double>0.050000000000000</double>
                </property>
                <property name="value">
-                <double>0.800000000000000</double>
+                <double>0.850000000000000</double>
                </property>
               </widget>
              </item>

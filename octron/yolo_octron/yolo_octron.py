@@ -971,12 +971,52 @@ class YOLO_octron:
         found_models_project = natsorted(project_path.rglob(f'*{subfolder_route}/*.pt'))
         return found_models_project 
     
+    def write_bot_sort_yaml(self, output_path):
+        """
+        Write a BotSort tracker configuration to a YAML file
+        
+        """
+        
+        assert output_path.suffix == '.yaml', "Tracker yaml path must have a .yaml extension" 
+        output_path = Path(output_path)
+        assert output_path.parent.exists(), "Tracker output path parent directory does not exist"
+        
+        # Define the tracker configuration
+        tracker_config = {
+            'tracker_type': 'botsort',    # tracker type, ['botsort', 'bytetrack']
+            'track_high_thresh': 0.25,     # threshold for the first association
+            'track_low_thresh': 0.1,      # threshold for the second association
+            'new_track_thresh': 0.25,      # threshold for init new track if the detection does not match any tracks
+            'track_buffer': 30,         # buffer to calculate the time when to remove tracks
+            'match_thresh': 0.8,          # threshold for matching tracks
+            'fuse_score': True,           # Whether to fuse confidence scores with the iou distances before matching
+            # 'min_box_area': 10,         # threshold for min box areas(for tracker evaluation, not used for now)
+            # BoT-SORT settings
+            'gmc_method' : 'sparseOptFlow',
+            'downscale'  : 3,
+            # ReID model related thresh (not supported yet)
+            'proximity_thresh'  : 0.5,
+            'appearance_thresh' : 0.25,
+            'with_reid' : False,
+        }
+
+        # Add a header comment to the YAML file
+        header = """# Tracker configuration for BoT-SORT\n# For BoT-SORT source code see https://github.com/NirAharon/BoT-SORT\n"""
+
+        # Write the configuration to a YAML file with header
+        with open(output_path, 'w') as f:
+            f.write(header)
+            yaml.dump(tracker_config, f, default_flow_style=False, sort_keys=False)
+
+        print(f"BoT-SORT configuration written to {output_path.absolute()}")
+      
+      
+    
     def write_byte_tracker_yaml(self, output_path):
         """
         Write a ByteTrack tracker configuration to a YAML file
         
         """
-        import yaml
         
         assert output_path.suffix == '.yaml', "Tracker yaml path must have a .yaml extension" 
         output_path = Path(output_path)
@@ -987,7 +1027,7 @@ class YOLO_octron:
             'tracker_type': 'bytetrack',  # tracker type, ['botsort', 'bytetrack']
             'track_high_thresh': 0.25,    # threshold for the first association
             'track_low_thresh': 0.1,      # threshold for the second association
-            'new_track_thresh': 0.25,     # threshold for init new track if the detection does not match any tracks
+            'new_track_thresh': 0.85,     # threshold for init new track if the detection does not match any tracks
             'track_buffer': 30,           # buffer to calculate the time when to remove tracks
             'match_thresh': 0.8,          # threshold for matching tracks
             'fuse_score': True,           # Whether to fuse confidence scores with the iou distances before matching
@@ -1003,7 +1043,7 @@ class YOLO_octron:
             f.write(header)
             yaml.dump(tracker_config, f, default_flow_style=False, sort_keys=False)
 
-        print(f"Tracker configuration written to {output_path.absolute()}")
+        print(f"ByteTrack configuration written to {output_path.absolute()}")
       
       
     
@@ -1011,9 +1051,9 @@ class YOLO_octron:
                       videos_dict,
                       model_path,
                       device,
-                      tracker_name='bytetrack',
-                      iou=.9,
-                      conf=.8,
+                      tracker_name,
+                      iou_thresh=.9,
+                      conf_thresh=.8,
                       polygon_sigma=1.,
                       overwrite=True
                       ):
@@ -1030,9 +1070,9 @@ class YOLO_octron:
             Device to run prediction on ('cpu', 'cuda', etc.)
         tracker_name : str
             Name of the tracker to use ('bytetrack' or 'botsort')
-        iou : float
+        iou_thresh : float
             IOU threshold for detection
-        conf : float
+        conf_thresh : float
             Confidence threshold for detection
         polygon_sigma : float
             Sigma value for polygon smoothing
@@ -1055,17 +1095,18 @@ class YOLO_octron:
             - overall_progress: Overall progress as percentage (0-100)
         """
 
-        
+        available_trackers = ['bytetrack','botsort']
+        tracker_name = tracker_name.strip().lower()
+        assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
         
         # Calculate total frames across all videos
         total_videos = len(videos_dict)
         total_frames = sum(v['num_frames'] for v in videos_dict.values())
         
         # Process each video
-        for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), start=1):
+        for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), start=0):
             # Load model anew for every video since the tracker persists
             try:
-                # Load the YOLO model for tracking
                 model = self.load_model(model_name_path=model_path)
                 if not model:
                     print(f"Failed to load model from {model_path}")
@@ -1074,7 +1115,7 @@ class YOLO_octron:
                 print(f"Error during initialization: {e}")
                 return    
 
-            print(f'\nProcessing video {video_index}/{total_videos}: {video_name}')
+            print(f'\nProcessing video {video_index+1}/{total_videos}: {video_name}')
             video_path = Path(video_dict['video_file_path'])
             num_frames = video_dict['num_frames']
             
@@ -1085,8 +1126,11 @@ class YOLO_octron:
             # Set up tracker 
             tracker_yaml_path = save_dir / f'{tracker_name}.yaml'
             if not tracker_yaml_path.exists():
-                self.write_byte_tracker_yaml(tracker_yaml_path)
-            
+                if tracker_name == 'bytetrack':
+                    self.write_byte_tracker_yaml(tracker_yaml_path)
+                elif tracker_name == 'botsort':
+                    self.write_bot_sort_yaml(tracker_yaml_path)
+                    
             # Prepare prediction stores
             prediction_store_dir = save_dir / 'predictions.zarr'
             prediction_store = create_prediction_store(prediction_store_dir)
@@ -1108,14 +1152,17 @@ class YOLO_octron:
                     name=save_dir.name,
                     show=False,
                     save=False,
-                    conf=float(conf),
-                    iou=float(iou),
+                    verbose=False,
+                    stream_buffer=True,
+                    conf=conf_thresh,
+                    iou=iou_thresh,
                     device=device, 
                     retina_masks=True,
                     show_boxes=False,
                     save_txt=False,
                     save_conf=False,
                 )
+                #print(f'CONFIDENCE thresh: {conf_thresh}\nIOU thresh: {iou_thresh}')
                 
                 # Process results and save to zarr/CSV here
                 confidences = results[0].boxes.conf.cpu().numpy()
@@ -1312,7 +1359,7 @@ class YOLO_octron:
         # Check if video is present in the parent directory
         video = None
         for video_path in save_dir.parent.parent.glob('*.mp4'):
-            if video_path.stem in save_dir.name:
+            if video_path.stem == '_'.join(save_dir.name.split('_')[:-1]):
                 video = FastVideoReader(video_path, read_format='rgb24')
                 video_dict = probe_video(video_path)
                 break
@@ -1446,7 +1493,7 @@ class YOLO_octron:
             labels_layer = viewer.add_labels(
                 mask_zarr,
                 name=f'{label} - MASKS - id {track_id_to_plot}',  
-                opacity=0.1,
+                opacity=0.5,
                 blending='additive',  
                 colormap=color_dict[track_id_to_plot], 
                 visible=False,
