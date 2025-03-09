@@ -608,10 +608,10 @@ class YOLO_octron:
             model_name_path = self.models_dict[model_name_path]['model_path']
             model_name_path = self.models_yaml_path.parent / f'models/{model_name_path}'    
             
-        self.model = YOLO(model_name_path)
+        model = YOLO(model_name_path)
         print(f"Model loaded from '{model_name_path.as_posix()}'")
-        
-        return self.model
+        self.model = model
+        return model
     
 
     def train(self, 
@@ -1008,15 +1008,15 @@ class YOLO_octron:
       
     
     def predict_batch(self, 
-                    videos_dict,
-                    model_path,
-                    device,
-                    tracker_name='bytetrack',
-                    iou=.9,
-                    conf=.8,
-                    polygon_sigma=1.,
-                    overwrite=True
-                    ):
+                      videos_dict,
+                      model_path,
+                      device,
+                      tracker_name='bytetrack',
+                      iou=.9,
+                      conf=.8,
+                      polygon_sigma=1.,
+                      overwrite=True
+                      ):
         """
         Predict and track objects in multiple videos.
         
@@ -1062,20 +1062,19 @@ class YOLO_octron:
         total_frames = sum(v['num_frames'] for v in videos_dict.values())
         
         # Process each video
-        for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), 1):
-            # Load model
+        for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), start=1):
+            # Load model anew for every video since the tracker persists
             try:
-
                 # Load the YOLO model for tracking
                 model = self.load_model(model_name_path=model_path)
                 if not model:
                     print(f"Failed to load model from {model_path}")
                     return
-                
             except Exception as e:
                 print(f"Error during initialization: {e}")
                 return    
 
+            print(f'\nProcessing video {video_index}/{total_videos}: {video_name}')
             video_path = Path(video_dict['video_file_path'])
             num_frames = video_dict['num_frames']
             
@@ -1119,8 +1118,6 @@ class YOLO_octron:
                 )
                 
                 # Process results and save to zarr/CSV here
-                # Get the boxes and track IDs
-                
                 confidences = results[0].boxes.conf.cpu().numpy()
                 label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
                 
