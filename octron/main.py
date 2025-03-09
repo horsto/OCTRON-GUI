@@ -737,70 +737,54 @@ class octron_widget(QWidget):
         """
         stage = progress_info.get('stage', '')
         
-        if stage == 'initializing':
-            # Update UI for initialization phase
-            self.predict_current_videoname_label.setText(f"Initializing: {progress_info.get('message', '')}")
-            self.predict_overall_progressbar.setValue(0)
-            self.predict_current_video_progressbar.setValue(0)
-            return
-        
-        elif stage == 'processing':
+        if stage == 'processing':
             # Update UI for video processing
             video_name = progress_info.get('video_name', '')
             video_index = progress_info.get('video_index', 0)
             total_videos = progress_info.get('total_videos', 1)
             frame = progress_info.get('frame', 0)
             total_frames = progress_info.get('total_frames', 1)
-            fps = progress_info.get('fps', 0)
-            eta = progress_info.get('eta', 0)
-            eta_finish_time = progress_info.get('eta_finish_time', 0)
-            overall_progress = progress_info.get('overall_progress', 0)
-            video_progress = progress_info.get('video_progress', 0)
+            frame_time = progress_info.get('frame_time', 0) 
             
-            # Format the finish time (without year)
-            if eta_finish_time > 0:
-                finish_time_str = ' '.join(time.ctime(eta_finish_time).split()[:-1])
-            else:
-                finish_time_str = "calculating..."
-            
+            remaining_time = (total_frames * frame_time) - (frame * frame_time)
+            finish_time = time.time() + remaining_time
+            finish_time_str = ' '.join(time.ctime(finish_time).split()[:-1])
+
             # Update labels
-            self.predict_current_videoname_label.setText(f"{video_name}")
-            self.predict_finish_time_label.setText(f"↬ {finish_time_str}")
+            if len(video_name) > 21:
+                prefix = '...'
+            else:
+                prefix = ''
+            shortened_video_name = f'{prefix}{video_name[-21:]}'
+            
+            self.predict_current_videoname_label.setText(f"{shortened_video_name}")
+            self.predict_finish_time_label.setText(f"Current video will finish around {finish_time_str}")
             
             # Update progress bars
-            self.predict_overall_progressbar.setValue(int(overall_progress))
-            self.predict_current_video_progressbar.setValue(int(video_progress))
+            self.predict_overall_progressbar.setMaximum(total_videos)
+            self.predict_current_video_progressbar.setMaximum(total_frames)
+            self.predict_overall_progressbar.setValue(video_index)
+            self.predict_current_video_progressbar.setValue(frame)
             
-            # Print status to console
-            print(f"Video {video_index}/{total_videos} - {video_name}: Frame {frame}/{total_frames} ({fps:.1f} FPS)")
-            print(f"Estimated time remaining: {eta:.1f} seconds")
-            print(f"Estimated finish time: {finish_time_str}")
-        
         elif stage == 'video_complete':
-            # Update UI when a video is complete
-            video_name = progress_info.get('video_name', '')
-            video_index = progress_info.get('video_index', 0)
-            total_videos = progress_info.get('total_videos', 1)
-            processing_time = progress_info.get('processing_time', 0)
-            average_fps = progress_info.get('average_fps', 0)
+            # Show results? 
+            save_dir = progress_info.get('save_dir', '')
+            if self.view_prediction_resuts: 
+                self.yolo_octron.show_predictions(save_dir=save_dir)      
             
-            print(f"Completed video {video_index}/{total_videos} - {video_name}")
-            print(f"Processing time: {processing_time:.1f} seconds ({average_fps:.1f} FPS)")
-            
-            # Reset video progress bar for next video
-            self.predict_current_video_progressbar.setValue(100)
-        
         elif stage == 'complete':
-            # Update UI when all videos are complete
-            total_processing_time = progress_info.get('total_processing_time', 0)
-            overall_fps = progress_info.get('overall_fps', 0)
+            self.yolo_prediction_worker.quit()
+            # Reset video progress bar for next video
+            self.predict_current_video_progressbar.setValue(0)
+            self.predict_overall_progressbar.setValue(0)
+            self.predict_current_video_progressbar.setEnabled(False)
+            self.predict_overall_progressbar.setEnabled(False)
             
-            self.predict_current_videoname_label.setText("Processing complete!")
-            self.predict_finish_time_label.setText(f"✓ Done in {total_processing_time:.1f}s")
-            self.predict_overall_progressbar.setValue(100)
-            self.predict_current_video_progressbar.setValue(100)
             
-            print(f"All videos processed in {total_processing_time:.1f} seconds ({overall_fps:.1f} FPS)")
+            self.predict_current_videoname_label.setText('')
+            self.predict_finish_time_label.setText('')
+            self.predict_current_videoname_label.setEnabled(False)
+            self.predict_finish_time_label.setEnabled(False)
             
             # Re-enable UI elements
             self.predict_start_btn.setStyleSheet('QPushButton { color: #8ed634;}')
@@ -809,6 +793,7 @@ class octron_widget(QWidget):
             self.toolBox.widget(1).setEnabled(True)  # Re-enable Annotation tab
             self.toolBox.widget(2).setEnabled(True)  # Re-enable Training tab
             self.predict_video_drop_groupbox.setEnabled(True)
+                
             
     
     def _yolo_predictor(self):
@@ -827,7 +812,7 @@ class octron_widget(QWidget):
                                             iou=self.iou_thresh,
                                             conf=self.conf_thresh,
                                             polygon_sigma=self.polygon_sigma,
-                                            overwrite=True, # TODO integrate option here
+                                            overwrite=self.overwrite_predictions, 
                                         ):
 
             # Yield the progress info back to the GUI thread
@@ -886,7 +871,8 @@ class octron_widget(QWidget):
         self.polygon_sigma = float(self.predict_polygo_sigma_spinbox.value())
         self.conf_thresh = float(self.predict_conf_thresh_spinbox.value())
         self.iou_thresh = float(self.predict_iou_thresh_spinbox.value())
-
+        self.overwrite_predictions = self.overwrite_prediction_checkBox.isChecked()    
+        
         # LOAD YOLO MODEL 
         print(f"Loading trained YOLO model {self.model_predict_path.as_posix()}")
 

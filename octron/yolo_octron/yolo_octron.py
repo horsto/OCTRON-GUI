@@ -19,6 +19,14 @@ import numpy as np
 from natsort import natsorted
 import zarr 
 
+import napari
+from napari.utils import DirectLabelColormap
+# color handling
+from octron.sam2_octron.helpers.sam2_colors import (create_label_colors, 
+                                                    sample_maximally_different)
+
+from octron.sam2_octron.helpers.video_loader import probe_video
+
 from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
                                                  watershed_mask,
@@ -1006,7 +1014,7 @@ class YOLO_octron:
                     tracker_name='bytetrack',
                     iou=.9,
                     conf=.8,
-                    polygon_sigma=1,
+                    polygon_sigma=1.,
                     overwrite=True
                     ):
         """
@@ -1046,19 +1054,10 @@ class YOLO_octron:
             - eta_finish_time: Estimated finish time timestamp
             - overall_progress: Overall progress as percentage (0-100)
         """
-        
-        # Start timing for initialization
-        start_time = time.time()
-        
+
         # Load model
         try:
-            # Yield initializing stage
-            yield {
-                'stage': 'initializing',
-                'message': f'Model: {model_path.name}',
-                'overall_progress': 0
-            }
-            
+
             # Load the YOLO model for tracking
             model = self.load_model(model_name_path=model_path)
             if not model:
@@ -1072,11 +1071,10 @@ class YOLO_octron:
         # Calculate total frames across all videos
         total_videos = len(videos_dict)
         total_frames = sum(v['num_frames'] for v in videos_dict.values())
-        processed_frames = 0
         
         # Process each video
         for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), 1):
-            video_start_time = time.time()
+
             video_path = Path(video_dict['video_file_path'])
             num_frames = video_dict['num_frames']
             
@@ -1089,20 +1087,6 @@ class YOLO_octron:
             if not tracker_yaml_path.exists():
                 self.write_byte_tracker_yaml(tracker_yaml_path)
             
-            # Yield video start info
-            yield {
-                'stage': 'processing',
-                'video_name': video_name,
-                'video_index': video_index,
-                'total_videos': total_videos,
-                'frame': 0,
-                'total_frames': num_frames,
-                'fps': 0,
-                'eta': 0,
-                'eta_finish_time': 0,
-                'overall_progress': (processed_frames / total_frames) * 100
-            }
-            
             # Prepare prediction stores
             prediction_store_dir = save_dir / 'predictions.zarr'
             prediction_store = create_prediction_store(prediction_store_dir)
@@ -1110,10 +1094,8 @@ class YOLO_octron:
             
             # Process video frames
             video = video_dict['video']
-            frame_times = []
-            
             tracking_df_dict = {}
-            for frame_no, frame in enumerate(video):
+            for frame_no, frame in enumerate(video, start=0):
                 frame_start = time.time()
                 
                 # Run tracking on this frame
@@ -1135,30 +1117,18 @@ class YOLO_octron:
                     save_conf=False,
                 )
                 
+            
+                # Process results and save to zarr/CSV here
+                # Get the boxes and track IDs
                 
+                confidences = results[0].boxes.conf.cpu().numpy()
+                label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
+                
+                # Before processing the results, yield progress information 
+                # This is because we want this information regardless of whether there 
+                # were any detections in the frame
                 # Update timing information
                 frame_time = time.time() - frame_start
-                frame_times.append(frame_time)
-                
-                # Calculate rolling average FPS (last 10 frames)
-                recent_times = frame_times[-10:] if len(frame_times) > 10 else frame_times
-                avg_frame_time = sum(recent_times) / len(recent_times)
-                current_fps = 1.0 / avg_frame_time if avg_frame_time > 0 else 0
-                
-                # Calculate ETAs
-                frames_remaining_video = num_frames - frame_no - 1
-                eta_video = frames_remaining_video * avg_frame_time
-                
-                # Calculate overall progress
-                processed_frames += 1
-                overall_progress = (processed_frames / total_frames) * 100
-                
-                # Calculate overall ETA based on current processing rate
-                remaining_frames = total_frames - processed_frames
-                eta_overall = remaining_frames * avg_frame_time
-                eta_finish_time = time.time() + eta_overall
-                
-
                 yield {
                     'stage': 'processing',
                     'video_name': video_name,
@@ -1166,25 +1136,16 @@ class YOLO_octron:
                     'total_videos': total_videos,
                     'frame': frame_no + 1,
                     'total_frames': num_frames,
-                    'fps': current_fps,
-                    'eta': eta_video,
-                    'eta_finish_time': eta_finish_time,
-                    'overall_progress': overall_progress,
-                    'video_progress': ((frame_no + 1) / num_frames) * 100
+                    'frame_time': frame_time,
                 }
                 
-                # Process results and save to zarr/CSV here
-                # Get the boxes and track IDs
-                
-                confidences = results[0].boxes.conf.cpu().numpy()
-                label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
+                # Then process the results ...    
                 try:
                     masks_polys = results[0].masks.xy  
                     track_ids = results[0].boxes.id.int().cpu().tolist()
                 except AttributeError:
                     # Empty prediction
                     continue
-               
                 
                 # Extract tracks 
                 for label, mask_poly, track_id, conf in zip(label_names, 
@@ -1246,14 +1207,10 @@ class YOLO_octron:
                     tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
                     tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
                     tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
-            
+                
+                # A FRAME IS COMPLETE
                 
                 
-                
-                    
-                    
-            # VIDEO COMPLETE
-            
             # Save each tracking DataFrame with a label column added
             for track_id, tr_df in tracking_df_dict.items():
                 label = tr_df.attrs["label"]
@@ -1266,34 +1223,17 @@ class YOLO_octron:
                 df_to_save.to_csv(csv_path)
                 print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
             
-                
-            
-            
-            # Video complete, yield final statistics
-            video_time = time.time() - video_start_time
-            average_fps = num_frames / video_time if video_time > 0 else 0
-            
+            # A VIDEO IS COMPLETE
             yield {
-                'stage': 'video_complete',
-                'video_name': video_name,
-                'video_index': video_index,
-                'total_videos': total_videos,
-                'total_frames': num_frames,
-                'processing_time': video_time,
-                'average_fps': average_fps,
-                'overall_progress': (processed_frames / total_frames) * 100
-            }
-        
-        # All videos processed
-        total_time = time.time() - start_time
-        
+                    'stage': 'video_complete',
+                    'save_dir': save_dir,
+                }
+            
+        # ALL COMPLETE    
         yield {
             'stage': 'complete',
             'total_videos': total_videos,
             'total_frames': total_frames,
-            'total_processing_time': total_time,
-            'overall_fps': total_frames / total_time if total_time > 0 else 0,
-            'overall_progress': 100
         }
                 
     
@@ -1340,3 +1280,180 @@ class YOLO_octron:
         }
         
         return df
+
+    def show_predictions(self, 
+                         save_dir,
+                         sigmal_tracking_pos=1
+                         ):
+        """
+        Show the predictions in the current save directory in a 
+        new napari viewer.
+        
+        Parameters
+        ----------
+        save_dir : str or Path  
+            Path to the directory with the predictions
+        sigmal_tracking_pos : int
+            Sigma value for tracking position smoothing
+            CURRENTLY FIXED TO 1
+            
+        """
+        # Some heavy imports are hidden here
+        from scipy.ndimage import gaussian_filter1d
+        import pandas as pd 
+        # Napari PyAV reader 
+        from napari_pyav._reader import FastVideoReader
+
+        
+        def _find_class_by_name(classes, class_name):
+            return (next((k for k, v in classes.items() if v == class_name), None))
+        
+        save_dir = Path(save_dir)
+        if not save_dir.exists():
+            print(f"Save directory not found: {save_dir}")
+            return
+        # Check if video is present in the parent directory
+        video = None
+        for video_path in save_dir.parent.parent.glob('*.mp4'):
+            if video_path.stem in save_dir.name:
+                video = FastVideoReader(video_path, read_format='rgb24')
+                video_dict = probe_video(video_path)
+                break
+        if video is None:
+            print(f"No video found for {save_dir.name}")
+            return
+        
+        # Load the predictions
+        csvs = list(save_dir.rglob('*.csv'))
+        if not csvs:    
+            print(f"No tracking CSV files found in {save_dir}")
+            return
+        
+        print(f"Found {len(csvs)} tracking CSV files")
+        zarr_files = list(save_dir.rglob('*.zarr'))
+        assert len(zarr_files) == 1, "Expected exactly one predictions zarr file"
+        zarr_file = zarr_files[0]
+        print(f"Found predictions zarr file: {zarr_file}")
+        # Load zarr
+        store = zarr.storage.LocalStore(zarr_file, read_only=False)
+        root = zarr.open_group(store=store, mode='a')
+        print("Existing keys in zarr archive:", list(root.array_keys()))
+        
+        # Color handling
+        all_labels_submaps = create_label_colors(n_labels=10,
+                                                n_colors_submap=50
+                                                )
+        indices_max_diff_labels = sample_maximally_different(list(range(10)))
+        indices_max_diff_subcolors = sample_maximally_different(list(range(50)))
+        
+        track_df_dict = {}
+        color_dict = {}
+        label_trackid_dict = {}
+        label_counter_dict = {} # This is to find the right color in all_labels_submaps
+
+        # Load the tracking data
+        for csv in save_dir.glob('*.csv'):
+            track_df = pd.read_csv(csv)
+            assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
+            assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
+            label = track_df.iloc[0].label
+            track_id = track_df.iloc[0].track_id
+            label_trackid_dict[label] = track_id
+            
+            # Check zarr
+            assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
+            mask_zarr = root[f'{track_id}_masks']
+            classes = mask_zarr.attrs.get('classes', None) # These are the original classes from the model
+            original_class_id = _find_class_by_name(classes,label)
+            # Check if an index was already given for the current label
+            # This is to extract the right color from the colormap
+            if label not in label_counter_dict:
+                label_counter_dict[label] = {'track_counter' : 0}
+            else:
+                label_counter_dict[label]['track_counter'] += 1
+            # Find color 
+            obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]][indices_max_diff_subcolors[label_counter_dict[label]['track_counter']]]
+            
+            mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
+                                                    use_selection=True, 
+                                                    selection=1,
+                                                    )
+                
+                
+            color_dict[int(track_id)] = mask_colors
+            track_df_dict[int(track_id)] = track_df
+            assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
+            mask_zarr = root[f'{track_id}_masks']
+            
+        viewer = napari.Viewer()    
+        add_layer = getattr(viewer, "add_image")
+        layer_dict = {'name': video_path.stem,
+                      'metadata': video_dict,   
+                      }
+        add_layer(video, **layer_dict)
+        
+        min_frame = 0
+        max_frame = video_dict['num_frames'] 
+        # Loop over each track and add it to the viewer
+        for track_id_to_plot in track_df_dict.keys():
+            
+            label = track_df_dict[track_id_to_plot].iloc[0].label   
+
+            track_df_napari = track_df_dict[track_id_to_plot][['track_id','frame','pos_y','pos_x']].copy()
+            features_df_napari = track_df_dict[track_id_to_plot][['frame','confidence','area','eccentricity','orientation','solidity']].copy()
+
+            check_continuous = np.all(np.diff(track_df_napari['frame']) == 1)   
+            if not check_continuous:
+                print("Frames are not continuous ... interpolating")
+                complete_tracking   = pd.DataFrame({'frame': range(int(min_frame), int(max_frame))})
+                complete_features   = pd.DataFrame({'frame': range(int(min_frame), int(max_frame))})
+                # Merge with existing data to identify missing frames
+                merged_df_tracking = complete_tracking.merge(track_df_napari, on='frame', how='left')
+                merged_df_tracking['track_id'] = track_id_to_plot
+                merged_df_features = complete_features.merge(features_df_napari, on='frame', how='left')
+                merged_df_features.fillna(0, inplace=True)
+                # Make sure frame and track_id are the right types for interpolation
+                merged_df_tracking['frame'] = merged_df_tracking['frame'].astype(int)
+                merged_df_tracking['track_id'] = merged_df_tracking['track_id'].astype(int)
+
+                # Interpolate the position columns
+                pos_cols = ['pos_x', 'pos_y']
+                for col in pos_cols:
+                    merged_df_tracking[col] = merged_df_tracking[col].interpolate(method='linear')
+
+                # # For any remaining NaN values at the start or end, use forward/backward fill
+                merged_df_tracking = merged_df_tracking.ffill()
+                merged_df_tracking = merged_df_tracking.bfill()
+                
+                track_df_napari = merged_df_tracking.copy()
+                features_df_napari = merged_df_features.copy()
+                
+            # Smooth the positions
+            pos_cols = ['pos_x', 'pos_y']
+            for col in pos_cols:
+                track_df_napari[col] = gaussian_filter1d(track_df_napari[col], sigma=sigmal_tracking_pos)
+                
+            for col in features_df_napari.columns:
+                features_df_napari[col] = features_df_napari[col].astype(float)
+            features_dict = features_df_napari.to_dict(orient='list')
+            viewer.add_tracks(track_df_napari.values, 
+                            features=features_dict,
+                            name=f'{label} - id {track_id_to_plot}', 
+                            colormap='hsv',
+                        )
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 5
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 50
+            viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
+            # Add masks
+            mask_zarr = root[f'{track_id_to_plot}_masks']
+            labels_layer = viewer.add_labels(
+                mask_zarr,
+                name=f'{label} - MASKS - id {track_id_to_plot}',  
+                opacity=0.1,
+                blending='additive',  
+                colormap=color_dict[track_id_to_plot], 
+                visible=False,
+            )
+            
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 4
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 50
