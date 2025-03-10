@@ -918,7 +918,7 @@ class octron_gui_elements(QWidget):
 
         self.octron.overwrite_prediction_checkBox = QCheckBox(self.octron.layoutWidget8)
         self.octron.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
-        self.octron.overwrite_prediction_checkBox.setEnabled(False)
+        self.octron.overwrite_prediction_checkBox.setEnabled(True)
         self.octron.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
         self.octron.overwrite_prediction_checkBox.setMaximumSize(QSize(100, 25))
         self.octron.overwrite_prediction_checkBox.setChecked(True)
@@ -1199,7 +1199,7 @@ class octron_gui_elements(QWidget):
 #endif // QT_CONFIG(tooltip)
         self.octron.videos_for_prediction_list.setCurrentText(QCoreApplication.translate("self", u"Videos", None))
 #if QT_CONFIG(tooltip)
-        self.octron.overwrite_prediction_checkBox.setToolTip(QCoreApplication.translate("self", u"Overwrite previous results? ", None))
+        self.octron.overwrite_prediction_checkBox.setToolTip(QCoreApplication.translate("self", u"Overwrite previous analysis results? ", None))
 #endif // QT_CONFIG(tooltip)
         self.octron.overwrite_prediction_checkBox.setText(QCoreApplication.translate("self", u"Overwrite", None))
 #if QT_CONFIG(tooltip)

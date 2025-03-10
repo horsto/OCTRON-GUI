@@ -984,19 +984,19 @@ class YOLO_octron:
         # Define the tracker configuration
         tracker_config = {
             'tracker_type': 'botsort',    # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.25,     # threshold for the first association
-            'track_low_thresh': 0.1,      # threshold for the second association
-            'new_track_thresh': 0.25,      # threshold for init new track if the detection does not match any tracks
-            'track_buffer': 30,         # buffer to calculate the time when to remove tracks
-            'match_thresh': 0.8,          # threshold for matching tracks
-            'fuse_score': True,           # Whether to fuse confidence scores with the iou distances before matching
+            'track_high_thresh': 0.7,     # threshold for the first association
+            'track_low_thresh': 0.2,      # threshold for the second association
+            'new_track_thresh': 0.9,      # threshold for init new track if the detection does not match any tracks
+            'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
+            'match_thresh': 0.9,          # threshold for matching tracks
+            'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
             # 'min_box_area': 10,         # threshold for min box areas(for tracker evaluation, not used for now)
             # BoT-SORT settings
             'gmc_method' : 'sparseOptFlow',
             'downscale'  : 3,
             # ReID model related thresh (not supported yet)
             'proximity_thresh'  : 0.5,
-            'appearance_thresh' : 0.25,
+            'appearance_thresh' : 0.5,
             'with_reid' : False,
         }
 
@@ -1025,13 +1025,13 @@ class YOLO_octron:
         # Define the tracker configuration
         tracker_config = {
             'tracker_type': 'bytetrack',  # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.25,    # threshold for the first association
-            'track_low_thresh': 0.1,      # threshold for the second association
-            'new_track_thresh': 0.85,     # threshold for init new track if the detection does not match any tracks
-            'track_buffer': 30,           # buffer to calculate the time when to remove tracks
-            'match_thresh': 0.8,          # threshold for matching tracks
-            'fuse_score': True,           # Whether to fuse confidence scores with the iou distances before matching
-            # 'min_box_area': 10,         # threshold for min box areas(for tracker evaluation, not used for now)
+            'track_high_thresh': 0.7,     # threshold for the first association
+            'track_low_thresh': 0.2,      # threshold for the second association
+            'new_track_thresh': 0.9,      # threshold for init new track if the detection does not match any tracks
+            'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
+            'match_thresh': 0.9,          # threshold for matching tracks
+            'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
+            # 'min_box_area' : 100,       # (Seems like this parameter is not used )
         }
 
 
@@ -1121,6 +1121,11 @@ class YOLO_octron:
             
             # Set up prediction directory structure
             save_dir = video_path.parent / 'predictions' / f"{video_path.stem}_{tracker_name}"
+            if save_dir.exists() and overwrite:
+                shutil.rmtree(save_dir)
+            elif save_dir.exists() and not overwrite:
+                print(f"Prediction directory already exists at {save_dir}")
+                continue
             save_dir.mkdir(parents=True, exist_ok=True)
             
             # Set up tracker 
@@ -1466,11 +1471,22 @@ class YOLO_octron:
                     merged_df_tracking[col] = merged_df_tracking[col].interpolate(method='linear')
 
                 # # For any remaining NaN values at the start or end, use forward/backward fill
-                merged_df_tracking = merged_df_tracking.ffill()
-                merged_df_tracking = merged_df_tracking.bfill()
-                
+                #merged_df_tracking = merged_df_tracking.ffill()
+                #merged_df_tracking = merged_df_tracking.bfill()
+                # After interpolation, get the valid frame indices from the tracking DataFrame
+                valid_frames = merged_df_tracking.dropna()['frame'].values
+                # Use these valid frames to filter both DataFrames
+                merged_df_tracking = merged_df_tracking[merged_df_tracking['frame'].isin(valid_frames)].reset_index(drop=True)
+                merged_df_features = merged_df_features[merged_df_features['frame'].isin(valid_frames)].reset_index(drop=True)
+                # Double-check that the frames match
+                assert np.array_equal(merged_df_tracking['frame'].values, 
+                                      merged_df_features['frame'].values),\
+                                          "Frame mismatch between tracking and features"
+                   
                 track_df_napari = merged_df_tracking.copy()
                 features_df_napari = merged_df_features.copy()
+                # Before adding to Napari, change the column order
+                track_df_napari = track_df_napari[['track_id', 'frame', 'pos_y', 'pos_x' ]]
                 
             # Smooth the positions
             pos_cols = ['pos_x', 'pos_y']
@@ -1486,7 +1502,7 @@ class YOLO_octron:
                             colormap='hsv',
                         )
             viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 5
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 50
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 400
             viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
             # Add masks
             mask_zarr = root[f'{track_id_to_plot}_masks']

@@ -1244,6 +1244,11 @@ class octron_widget(QWidget):
             self.videos_to_predict[v_path.name]['video'] = video_reader
             # Add video to self.videos_for_prediction_list
             self.videos_for_prediction_list.addItem(v_path.name)
+            # Change the first entry of the list to "Choose video ..."
+            if len(self.videos_to_predict):
+                self.videos_for_prediction_list.setItemText(0, f"Videos (n={len(self.videos_to_predict)})")
+            else:
+                self.videos_for_prediction_list.setItemText(0, "Videos")
             print(f"Added video {v_path.name} to prediction list.")
         return
     
@@ -1274,6 +1279,11 @@ class octron_widget(QWidget):
                 self.videos_for_prediction_list.setCurrentIndex(0)
                 self.videos_to_predict.pop(selected_video)
                 print(f'Removed video "{selected_video}"')
+                # Change the first entry of the list to "Choose video ..."
+                if len(self.videos_to_predict):
+                    self.videos_for_prediction_list.setItemText(0, f"Videos (n={len(self.videos_to_predict)})")
+                else:
+                    self.videos_for_prediction_list.setItemText(0, "Videos")
             else:
                 self.videos_for_prediction_list.setCurrentIndex(0)
                 return

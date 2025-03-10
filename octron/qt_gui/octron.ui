@@ -126,7 +126,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <property name="tabSpacing">
        <number>10</number>
@@ -2402,7 +2402,7 @@ Recommended are at least ~50.</string>
              <item row="1" column="2">
               <widget class="QCheckBox" name="overwrite_prediction_checkBox">
                <property name="enabled">
-                <bool>false</bool>
+                <bool>true</bool>
                </property>
                <property name="minimumSize">
                 <size>
@@ -2417,7 +2417,7 @@ Recommended are at least ~50.</string>
                 </size>
                </property>
                <property name="toolTip">
-                <string>Overwrite previous results? </string>
+                <string>Overwrite previous analysis results? </string>
                </property>
                <property name="text">
                 <string>Overwrite</string>
