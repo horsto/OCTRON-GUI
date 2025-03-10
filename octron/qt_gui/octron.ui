@@ -2116,7 +2116,7 @@ Recommended are at least ~50.</string>
              <rect>
               <x>11</x>
               <y>193</y>
-              <width>387</width>
+              <width>381</width>
               <height>29</height>
              </rect>
             </property>
@@ -2256,10 +2256,10 @@ Recommended are at least ~50.</string>
            <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
-              <x>11</x>
-              <y>125</y>
+              <x>10</x>
+              <y>120</y>
               <width>381</width>
-              <height>61</height>
+              <height>73</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="predict_grid_layout2">
@@ -2453,13 +2453,13 @@ bounding boxes is allowed before they are considered to be detecting the same ob
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
               <x>10</x>
               <y>30</y>
               <width>381</width>
-              <height>86</height>
+              <height>81</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_2">
@@ -2570,7 +2570,7 @@ bounding boxes is allowed before they are considered to be detecting the same ob
                 </size>
                </property>
                <property name="toolTip">
-                <string>Overwrite previous analysis results? </string>
+                <string>Click this if you expect only one subject to be tracked across videos</string>
                </property>
                <property name="text">
                 <string>1 subject</string>

@@ -741,7 +741,7 @@ class Ui_octron_widgetui(object):
         self.predict_video_predict_groupbox.setMaximumSize(QSize(400, 280))
         self.layoutWidget_2 = QWidget(self.predict_video_predict_groupbox)
         self.layoutWidget_2.setObjectName(u"layoutWidget_2")
-        self.layoutWidget_2.setGeometry(QRect(11, 193, 387, 29))
+        self.layoutWidget_2.setGeometry(QRect(11, 193, 381, 29))
         self.predict_progress_bar_layout = QHBoxLayout(self.layoutWidget_2)
         self.predict_progress_bar_layout.setObjectName(u"predict_progress_bar_layout")
         self.predict_progress_bar_layout.setContentsMargins(0, 0, 0, 0)
@@ -793,7 +793,7 @@ class Ui_octron_widgetui(object):
 
         self.layoutWidget8 = QWidget(self.predict_video_predict_groupbox)
         self.layoutWidget8.setObjectName(u"layoutWidget8")
-        self.layoutWidget8.setGeometry(QRect(11, 125, 381, 61))
+        self.layoutWidget8.setGeometry(QRect(10, 120, 381, 73))
         self.predict_grid_layout2 = QGridLayout(self.layoutWidget8)
         self.predict_grid_layout2.setObjectName(u"predict_grid_layout2")
         self.predict_grid_layout2.setContentsMargins(0, 0, 0, 0)
@@ -863,13 +863,13 @@ class Ui_octron_widgetui(object):
 
         self.predict_grid_layout2.addWidget(self.predict_iou_thresh_spinbox, 0, 3, 1, 1, Qt.AlignmentFlag.AlignBottom)
 
-        self.widget = QWidget(self.predict_video_predict_groupbox)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(10, 30, 381, 86))
-        self.gridLayout_2 = QGridLayout(self.widget)
+        self.layoutWidget9 = QWidget(self.predict_video_predict_groupbox)
+        self.layoutWidget9.setObjectName(u"layoutWidget9")
+        self.layoutWidget9.setGeometry(QRect(10, 30, 381, 81))
+        self.gridLayout_2 = QGridLayout(self.layoutWidget9)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 10)
-        self.yolomodel_trained_list = QComboBox(self.widget)
+        self.yolomodel_trained_list = QComboBox(self.layoutWidget9)
         self.yolomodel_trained_list.addItem("")
         self.yolomodel_trained_list.setObjectName(u"yolomodel_trained_list")
         self.yolomodel_trained_list.setEnabled(True)
@@ -878,7 +878,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_trained_list, 0, 0, 2, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.yolomodel_tracker_list = QComboBox(self.widget)
+        self.yolomodel_tracker_list = QComboBox(self.layoutWidget9)
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.addItem("")
@@ -888,7 +888,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_tracker_list, 0, 1, 2, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.open_when_finish_checkBox = QCheckBox(self.widget)
+        self.open_when_finish_checkBox = QCheckBox(self.layoutWidget9)
         self.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
@@ -896,7 +896,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.open_when_finish_checkBox, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.single_subject_checkBox = QCheckBox(self.widget)
+        self.single_subject_checkBox = QCheckBox(self.layoutWidget9)
         self.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
         self.single_subject_checkBox.setEnabled(False)
         self.single_subject_checkBox.setMinimumSize(QSize(90, 25))
@@ -905,7 +905,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.single_subject_checkBox, 1, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.videos_for_prediction_list = QComboBox(self.widget)
+        self.videos_for_prediction_list = QComboBox(self.layoutWidget9)
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.setObjectName(u"videos_for_prediction_list")
@@ -919,7 +919,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.videos_for_prediction_list, 2, 0, 1, 2, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.overwrite_prediction_checkBox = QCheckBox(self.widget)
+        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget9)
         self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
         self.overwrite_prediction_checkBox.setEnabled(True)
         self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
@@ -1145,7 +1145,7 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.open_when_finish_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"View results", None))
 #if QT_CONFIG(tooltip)
-        self.single_subject_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Overwrite previous analysis results? ", None))
+        self.single_subject_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked across videos", None))
 #endif // QT_CONFIG(tooltip)
         self.single_subject_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"1 subject", None))
         self.videos_for_prediction_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Videos", None))
