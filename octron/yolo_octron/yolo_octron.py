@@ -988,7 +988,7 @@ class YOLO_octron:
             'track_low_thresh': 0.2,      # threshold for the second association
             'new_track_thresh': 0.9,      # threshold for init new track if the detection does not match any tracks
             'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
-            'match_thresh': 0.9,          # threshold for matching tracks
+            'match_thresh': 0.95,         # threshold for matching tracks
             'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
             # 'min_box_area': 10,         # threshold for min box areas(for tracker evaluation, not used for now)
             # BoT-SORT settings
@@ -1029,7 +1029,7 @@ class YOLO_octron:
             'track_low_thresh': 0.2,      # threshold for the second association
             'new_track_thresh': 0.9,      # threshold for init new track if the detection does not match any tracks
             'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
-            'match_thresh': 0.9,          # threshold for matching tracks
+            'match_thresh': 0.95,         # threshold for matching tracks
             'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
             # 'min_box_area' : 100,       # (Seems like this parameter is not used )
         }
@@ -1516,4 +1516,4 @@ class YOLO_octron:
             )
             
             viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 4
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 50
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 500

@@ -758,7 +758,7 @@ class octron_widget(QWidget):
             shortened_video_name = f'{prefix}{video_name[-21:]}'
             
             self.predict_current_videoname_label.setText(f"{shortened_video_name}")
-            self.predict_finish_time_label.setText(f"Current video will finish around {finish_time_str}")
+            self.predict_finish_time_label.setText(f"{frame_time:.2f}s per frame | Video completes ~ {finish_time_str}")
             
             # Update progress bars
             self.predict_overall_progressbar.setMaximum(total_videos)
@@ -1595,22 +1595,16 @@ class octron_widget(QWidget):
         
         self.create_projection_layer_btn.setEnabled(True) 
         
-            
-            
-            
-            
-               
-    # Example key binding with Napari built-in viewer functions 
-    # @viewer.bind_key('m')
-    # def print_message(viewer):
-    #    show_info('Test - pressed key m')
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
 ###############################################################################################################
 ###############################################################################################################
 ###############################################################################################################
