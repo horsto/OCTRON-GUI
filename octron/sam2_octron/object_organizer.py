@@ -283,38 +283,6 @@ class ObjectOrganizer(BaseModel):
             json.dump(serializable_data, f, indent=2)
         print(f"💾 Octron object organizer saved to {file_path.as_posix()}")
         
-    # TODO: Implement load_from_disk
-    #       -> This needs more careful handling of the annotation / ... layers
-    # @classmethod
-    # def load_from_disk(cls, file_path: Union[str, Path]) -> "ObjectOrganizer":
-    #     """
-    #     Load object organizer from disk
-    #     """
-    #     file_path = Path(file_path)
-    #     if not file_path.exists():
-    #         print(f"No organizer file found at {file_path}")
-    #         return cls()
-        
-    #     try:
-    #         with open(file_path, 'r') as f:
-    #             data = json.load(f)
-    #         organizer = cls()
-    #         # Reconstruct objects from serialized data
-    #         for obj_id, obj_data in data.get("entries", {}).items():
-    #             # Convert lists back to tuples for color
-    #             if "color" in obj_data and isinstance(obj_data["color"], list):
-    #                 obj_data["color"] = tuple(obj_data["color"])
-                
-    #             # Create Obj instance
-    #             obj = Obj(**obj_data)
-    #             organizer.entries[obj_id] = obj
-                
-    #         print(f"Object organizer loaded from {file_path}")
-    #         return organizer
-            
-    #     except Exception as e:
-    #         print(f"Error loading object organizer: {e}")
-    #         return cls()    
 
 
 

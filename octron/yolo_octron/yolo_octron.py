@@ -52,10 +52,12 @@ class YOLO_octron:
     
     This class encapsulates the full pipeline for preparing annotation data from OCTRON,
     generating training datasets, and training YOLO11 models for segmentation tasks.
+    It also contains visualization methods for (custom / trained) models.
+    
     """
     
     def __init__(self, 
-                 models_yaml_path,
+                 models_yaml_path=None,
                  project_path = None,
                  clean_training_dir=True
                  ):
@@ -80,16 +82,6 @@ class YOLO_octron:
         except ImportError:
             raise ImportError("YOLOv11 is required to run this class.")
         
-        self.models_yaml_path = Path(models_yaml_path) 
-        if not self.models_yaml_path.exists():
-            raise FileNotFoundError(f"Model YAML file not found: {self.models_yaml_path}")
-
-        # Check YOLO models, download if needed
-        self.models_dict = check_yolo_models(YOLO_BASE_URL=None,
-                                             models_yaml_path=self.models_yaml_path,
-                                             force_download=False
-                                             )
-        
         # Set up internal variables
         self._project_path = None  # Use private variable for property
         self.training_path = None
@@ -97,6 +89,20 @@ class YOLO_octron:
         self.model = None
         self.label_dict = None
         self.config_path = None
+        self.models_dict = {}
+        
+        if models_yaml_path is not None:
+            self.models_yaml_path = Path(models_yaml_path) 
+            if not self.models_yaml_path.exists():
+                raise FileNotFoundError(f"Model YAML file not found: {self.models_yaml_path}")
+
+            # Check YOLO models, download if needed
+            self.models_dict = check_yolo_models(YOLO_BASE_URL=None,
+                                                models_yaml_path=self.models_yaml_path,
+                                                force_download=False
+                                                )
+        else:
+            print("No models YAML path provided. Model dictionary will be empty.") 
         
         # If a project path was provided, set it through the property setter
         if project_path is not None:
@@ -104,6 +110,15 @@ class YOLO_octron:
             
             # Setup training directories after project_path is validated
             self._setup_training_directories(self.clean_training_dir)
+    
+    def __repr__(self):
+        """
+        Return a string representation of the YOLO_octron object
+
+        """
+        pr = f"YOLO_octron(project_path={self.project_path})"
+        models = [f"{k}: {v['model_path']}" for k, v in self.models_dict.items()]
+        return pr + f"\nModels: {models}"
     
     @property
     def project_path(self):
@@ -1259,7 +1274,7 @@ class YOLO_octron:
                 
                 # A FRAME IS COMPLETE
                 
-                
+            # A VIDEO IS COMPLETE 
             # Save each tracking DataFrame with a label column added
             for track_id, tr_df in tracking_df_dict.items():
                 label = tr_df.attrs["label"]
@@ -1272,7 +1287,6 @@ class YOLO_octron:
                 df_to_save.to_csv(csv_path)
                 print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
             
-            # A VIDEO IS COMPLETE
             yield {
                     'stage': 'video_complete',
                     'save_dir': save_dir,
@@ -1332,7 +1346,7 @@ class YOLO_octron:
 
     def show_predictions(self, 
                          save_dir,
-                         sigmal_tracking_pos=1
+                         sigma_tracking_pos=2
                          ):
         """
         Show the predictions in the current save directory in a 
@@ -1342,7 +1356,7 @@ class YOLO_octron:
         ----------
         save_dir : str or Path  
             Path to the directory with the predictions
-        sigmal_tracking_pos : int
+        sigma_tracking_pos : int
             Sigma value for tracking position smoothing
             CURRENTLY FIXED TO 1
             
@@ -1370,7 +1384,7 @@ class YOLO_octron:
                 break
         if video is None:
             print(f"No video found for {save_dir.name}")
-            return
+            
         
         # Load the predictions
         csvs = list(save_dir.rglob('*.csv'))
@@ -1389,6 +1403,11 @@ class YOLO_octron:
         print("Existing keys in zarr archive:", list(root.array_keys()))
         
         # Color handling
+        # Recreate the colors here for the masks 
+        # This is a bit of a hack, but it works if the n_labels and n_colors_submap 
+        # match the original parameters used to create the colormap. 
+        # So, if we don't change these parameters, the colors will be the same, because 
+        # we are looking up object IDs from the original model classes
         all_labels_submaps = create_label_colors(n_labels=10,
                                                 n_colors_submap=50
                                                 )
@@ -1412,8 +1431,10 @@ class YOLO_octron:
             # Check zarr
             assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
             mask_zarr = root[f'{track_id}_masks']
+            max_frame_number = mask_zarr.shape[0] # This should be the same across all masks
+            mask_shape = mask_zarr.shape[1:]
             classes = mask_zarr.attrs.get('classes', None) # These are the original classes from the model
-            original_class_id = _find_class_by_name(classes,label)
+            original_class_id = _find_class_by_name(classes, label)
             # Check if an index was already given for the current label
             # This is to extract the right color from the colormap
             if label not in label_counter_dict:
@@ -1421,13 +1442,13 @@ class YOLO_octron:
             else:
                 label_counter_dict[label]['track_counter'] += 1
             # Find color 
-            obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]][indices_max_diff_subcolors[label_counter_dict[label]['track_counter']]]
-            
+            obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]]\
+                [indices_max_diff_subcolors[label_counter_dict[label]['track_counter']]]
+           
             mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
                                                     use_selection=True, 
                                                     selection=1,
                                                     )
-                
                 
             color_dict[int(track_id)] = mask_colors
             track_df_dict[int(track_id)] = track_df
@@ -1435,14 +1456,18 @@ class YOLO_octron:
             mask_zarr = root[f'{track_id}_masks']
             
         viewer = napari.Viewer()    
-        add_layer = getattr(viewer, "add_image")
-        layer_dict = {'name': video_path.stem,
-                      'metadata': video_dict,   
-                      }
-        add_layer(video, **layer_dict)
+        if video is not None:
+            add_layer = getattr(viewer, "add_image")
+            layer_dict = {'name': video_path.stem,
+                        'metadata': video_dict,   
+                        }
+            add_layer(video, **layer_dict)
+        else:
+            add_layer = getattr(viewer, "add_image")
+            layer_dict = {'name': 'dummy mask'}
+            add_layer(np.zeros((mask_shape)), **layer_dict)
         
-        min_frame = 0
-        max_frame = video_dict['num_frames'] 
+        min_frame_number = 0
         # Loop over each track and add it to the viewer
         for track_id_to_plot in track_df_dict.keys():
             
@@ -1454,8 +1479,8 @@ class YOLO_octron:
             check_continuous = np.all(np.diff(track_df_napari['frame']) == 1)   
             if not check_continuous:
                 print("Frames are not continuous ... interpolating")
-                complete_tracking   = pd.DataFrame({'frame': range(int(min_frame), int(max_frame))})
-                complete_features   = pd.DataFrame({'frame': range(int(min_frame), int(max_frame))})
+                complete_tracking   = pd.DataFrame({'frame': range(int(min_frame_number), int(max_frame_number))})
+                complete_features   = pd.DataFrame({'frame': range(int(min_frame_number), int(max_frame_number))})
                 # Merge with existing data to identify missing frames
                 merged_df_tracking = complete_tracking.merge(track_df_napari, on='frame', how='left')
                 merged_df_tracking['track_id'] = track_id_to_plot
@@ -1490,30 +1515,31 @@ class YOLO_octron:
                 
             # Smooth the positions
             pos_cols = ['pos_x', 'pos_y']
-            for col in pos_cols:
-                track_df_napari[col] = gaussian_filter1d(track_df_napari[col], sigma=sigmal_tracking_pos)
+            if sigma_tracking_pos > 0:
+                for col in pos_cols:
+                    track_df_napari[col] = gaussian_filter1d(track_df_napari[col], sigma=sigma_tracking_pos)
                 
             for col in features_df_napari.columns:
                 features_df_napari[col] = features_df_napari[col].astype(float)
             features_dict = features_df_napari.to_dict(orient='list')
             viewer.add_tracks(track_df_napari.values, 
                             features=features_dict,
+                            blending='translucent', 
                             name=f'{label} - id {track_id_to_plot}', 
                             colormap='hsv',
                         )
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 5
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 400
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 4
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 5000
             viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
             # Add masks
             mask_zarr = root[f'{track_id_to_plot}_masks']
-            labels_layer = viewer.add_labels(
+            _ = viewer.add_labels(
                 mask_zarr,
                 name=f'{label} - MASKS - id {track_id_to_plot}',  
                 opacity=0.5,
-                blending='additive',  
+                blending='translucent',  
                 colormap=color_dict[track_id_to_plot], 
-                visible=False,
+                visible=[True if video is None else False][0],
             )
             
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 4
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 500
+            viewer.dims.set_point(0,0)

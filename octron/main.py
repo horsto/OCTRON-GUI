@@ -150,7 +150,7 @@ class octron_widget(QWidget):
                                              )
         # Model yaml for YOLO
         yolo_models_yaml_path = self.base_path / 'yolo_octron/yolo_models.yaml'
-        self.yolo_octron = YOLO_octron(models_yaml_path=yolo_models_yaml_path)
+        self.yolo_octron = YOLO_octron(models_yaml_path=yolo_models_yaml_path) # Feeding in yaml to initiate models dict
         self.yolomodels_dict = self.yolo_octron.models_dict 
         
         # Initialize all UI components
