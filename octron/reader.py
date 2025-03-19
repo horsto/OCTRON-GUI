@@ -47,13 +47,36 @@ def read_octron_file(path: "PathOrPaths") -> List["LayerData"]:
     return [(None,)]
 
 def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
-    print(
-        f"🐙 Checking putative OCTRON project folder: {path}"
-    )
-    # Check if the folder contains the necessary files
+    path = Path(path)
+    # Check what kind of folder you are dealing with.
+    # There are three options:
+    # A. Octron project folder
+    # B. Octron video (annotation) folder
+    # C. Octron prediction (results) folder
+    
+    # Case A 
     
     
     
+    
+    
+    
+    # Case C 
+    # Check if the folder has .csv files AND a predictions.zarr 
+    csvs = list(path.glob("*.csv"))
+    prediction_zarr = list(path.glob("predictions.zarr"))
+    if csvs and prediction_zarr:
+        print(
+            f"🐙 Detected OCTRON prediction folder: {path}"
+        )
+        # Load predictions
+        from octron.yolo_octron.yolo_octron import YOLO_octron
+        yolo_octron = YOLO_octron()
+        yolo_octron.show_predictions(
+            save_dir = path,
+            sigma_tracking_pos = 2, # Fixed for now 
+        )
+        return [(None,)]
     
     
     return [(None,)]
