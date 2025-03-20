@@ -62,7 +62,7 @@ from octron.sam2_octron.helpers.sam2_zarr import (
 )
 
 # YOLO specific 
-from octron.yolo_octron.helpers.training import collect_labels
+from octron.yolo_octron.helpers.training import collect_labels, load_object_organizer
 from octron.yolo_octron.yolo_octron import YOLO_octron
 
 # Annotation layer creation tools
@@ -271,8 +271,12 @@ class octron_widget(QWidget):
         self.predict_next_oneframe_btn.setText('▷')
         self.predict_next_oneframe_btn.setEnabled(True)
         self.predict_next_batch_btn.setEnabled(True)
-
+        
+        # Check if you can create a zarr store for video
+        # Creating a zarr store for the video is only possible if a video has been loaded
+        # AND a model has been loaded
         self.init_zarr_prefetcher_threaded()
+        
         
     def reset_predictor(self):
         """
@@ -322,6 +326,7 @@ class octron_widget(QWidget):
         """
         Thread worker for predicting the next batch of images
         """
+        
         # Before doing anything, make sure, some input has been provided
         valid = False
         if (self.predictor.inference_state['point_inputs_per_obj'] or 
@@ -939,7 +944,7 @@ class octron_widget(QWidget):
             # Configure the table appearance
             self.existing_data_table.horizontalHeader().setStretchLastSection(False)
             self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-            # Connect double-click event
+            # Connect double-click event on table rows 
             self.existing_data_table.doubleClicked.connect(self.on_label_table_double_clicked)
         
         # Update the table with new data
@@ -971,13 +976,48 @@ class octron_widget(QWidget):
         """
         # Get the full folder path from the model
         folder_path = self.label_table_model.get_folder_path(index)
-        if folder_path:
-            print(f"Double-clicked on folder: {folder_path}")
+        if not folder_path:
+            return
 
-            # Start loading the data 
+        # Load the video from the folder path
+        video_file_path = Path(self.label_table_model.label_dict[folder_path].get('video_file_path'))
+        if not video_file_path.exists():
+            show_warning("No video file found in folder.")
+            return
+        
+        # Use the file drop method to load the video
+        self.on_mp4_file_dropped_area([video_file_path])
+        
+        # Re-instantiate all layers
+        # Find .json 
+        folder_path = Path(folder_path)
+        json_files = list(folder_path.glob('*.json'))
+        if not json_files:
+            show_warning("No .json files found in folder.")
+            return
+        if len(json_files) > 1:
+            show_warning("More than one .json file found in folder.")
+            return
+        json_file = json_files[0]
+        # Load the object organizer from the .json file
+        object_organizer_data = load_object_organizer(json_file)
+        if not object_organizer_data:
+            show_warning("Could not load object organizer data.")
+            return
+        # ... take care of layers, etc.
+        for obj_id, obj_data in object_organizer_data['entries'].items():
+            print(f"Loading object with ID {obj_id}")
+            print(obj_data)
+            
+            
+            
+            
+            
 
-
-
+                
+        
+        # Switch to the Annotation tab
+        self.toolBox.setCurrentIndex(1)  # Switch to annotations tab
 
     def refresh_trained_model_list(self):
         """
@@ -1215,8 +1255,12 @@ class octron_widget(QWidget):
         self.current_video_hash = video_metadata['hash'][-8:] # Save it globally for quick access       
         self.video_layer = video_layer
         self._viewer.dims.set_point(0,0)
+        
         # Check if you can create a zarr store for video
+        # Creating a zarr store for the video is only possible if a video has been loaded
+        # AND a model has been loaded
         self.init_zarr_prefetcher_threaded()
+        
         print(f"VIDEO LAYER >>> {layer_name}")
         self.toolBox.widget(1).setEnabled(True) 
 
@@ -1369,6 +1413,34 @@ class octron_widget(QWidget):
         else:
             pass
         
+    def init_sam2_model(self):
+        """
+        Initialize the SAM2 model for the current session.
+        This function requires a video to be loaded AND a model to be selected / loaded. 
+        It is called only once from within the prefetcher worker.
+        
+        """
+        if not self.video_layer:
+            print("No video layer found.")
+            return
+        # Check if a SAM2 model has been loaded by the user (from dropdown)
+        if not self.predictor:
+            show_warning("Please select a SAM2 model first.")
+            return
+
+        # Prewarm SAM2 predictor (model)
+        # This needs the zarr store to be initialized first
+        # -> that happens when either the model is loaded or a video layer is found
+        # -> on_changed_layer() and load_sam2model() take care of this
+        if not self.predictor.is_initialized:
+            self.predictor.init_state(video_data=self.video_layer.data, 
+                                      zarr_store=self.video_zarr,
+                                      )
+            self.hard_reset_layer_btn.setEnabled(True)
+            self.predictor.is_initialized = True
+            
+        return
+    
         
     def init_zarr_prefetcher_threaded(self):
         """
@@ -1531,25 +1603,14 @@ class octron_widget(QWidget):
 
         
         """
-        # First check if a model has been loaded
-        if not self.predictor:
-            show_warning("Please load a SAM2 model first.")
-            return
+        # Check if a video layer is loaded
         if not self.video_layer:
             show_warning("No video layer found.")
             return
+        if not self.video_zarr: 
+            show_warning("No zarr store found.")
+            return
         
-        # Prewarm SAM2 predictor (model)
-        # This needs the zarr store to be initialized first
-        # -> that happens when either the model is loaded or a video layer is found
-        # -> on_changed_layer() and load_sam2model() take care of this
-        if not self.predictor.is_initialized:
-            self.predictor.init_state(video_data=self.video_layer.data, 
-                                      zarr_store=self.video_zarr,
-                                     )
-            self.hard_reset_layer_btn.setEnabled(True)
-            self.predictor.is_initialized = True
-            
         # Get the selected label and layer type
         label = self.label_list_combobox.currentText().strip()
         # Get text from label suffix box

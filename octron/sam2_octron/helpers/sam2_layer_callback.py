@@ -208,7 +208,7 @@ class sam2_octron_callbacks():
         """
         predictor = self.octron.predictor
         assert predictor, "No model loaded."
-        assert predictor.is_initialized, "Model not initialized."
+        self.octron.init_sam2_model() # This initializes the model if it is not yet initialized
         
         viewer = self.octron._viewer    
         video_layer = self.octron.video_layer   

@@ -111,4 +111,4 @@ class ExistingDataTable(QAbstractTableModel):
         """Return the full folder path for the given index"""
         if not index.isValid() or not (0 <= index.row() < len(self._data)):
             return None
-        return self._data[index.row()][3]
+        return self._data[index.row()][4]
