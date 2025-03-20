@@ -236,6 +236,7 @@ def collect_labels(project_path,
         # video_file_path is generated anew for every object, however, 
         # we are making sure above that all videos are the same.
         video = FastVideoReader(video_file_path)
+        labels['video_file_path'] = video_file_path
         labels['video'] = video
         label_dict[object_organizer.parent.as_posix()] = labels
     
@@ -245,7 +246,7 @@ def collect_labels(project_path,
     label_idnames = []    
     for labels in label_dict.values():
         for label_id in labels:
-            if label_id == 'video':
+            if label_id == 'video' or label_id == 'video_file_path':
                 continue
             label_ids.append(label_id)
             label_idnames.append(f'{label_id}-{labels[label_id]["label"]}')    
@@ -302,7 +303,7 @@ def draw_polygons(labels,
     print(f'Max {max_to_plot} frame(s) per label will be plotted.')
     # Draw the polygons on the video frames
     for entry in labels:
-        if entry == 'video':
+        if entry == 'video' or entry == 'video_file_path':
             continue
         
         label = labels[entry]['label']

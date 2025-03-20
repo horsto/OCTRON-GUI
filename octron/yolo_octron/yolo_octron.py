@@ -289,7 +289,7 @@ class YOLO_octron:
             min_area = None
 
             for entry in labels:
-                if entry == 'video':
+                if entry == 'video' or entry == 'video_file_path':
                     continue
                 label = labels[entry]['label']
                 frames = labels[entry]['frames']
@@ -371,7 +371,7 @@ class YOLO_octron:
         
         for labels in self.label_dict.values():
             for entry in labels:
-                if entry == 'video':
+                if entry == 'video' or entry == 'video_file_path':
                     continue    
                 # label = labels[entry]['label']
                 frames = labels[entry]['frames']   
@@ -427,7 +427,7 @@ class YOLO_octron:
         # Completeness checks
         for labels in self.label_dict.values(): 
             for entry in labels:
-                if entry == 'video':
+                if entry == 'video' or entry == 'video_file_path':
                     continue
                 assert 'frames' in labels[entry], "No frame indices (frames) found in labels"
                 assert 'polygons' in labels[entry], "No polygons found in labels, run prepare_polygons() first"
@@ -458,6 +458,7 @@ class YOLO_octron:
         for no_entry, (path, labels) in enumerate(self.label_dict.items(), start=1):  
             path_prefix = Path(path).name   
             video_data = labels.pop('video')
+            video_file_path = labels.pop('video_file_path')
             
             for entry in tqdm(labels,
                             total=len(labels),
@@ -557,7 +558,7 @@ class YOLO_octron:
         label_id_label_dict = {}
         for labels in self.label_dict.values():
             for entry in labels:
-                if entry == 'video':
+                if entry == 'video' or entry == 'video_file_path':
                     continue   
                 if entry in label_id_label_dict:
                     assert label_id_label_dict[entry] == labels[entry]['label'],\

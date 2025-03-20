@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import datetime
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, Union, Dict, List, Any
@@ -200,21 +201,21 @@ class ObjectOrganizer(BaseModel):
                 return id_
         return None
 
-    def get_entry(self, id_: int) -> Obj:
+    def get_entry(self, id_: int) -> Optional[Obj]:
         """
         Return the entry for the given id.
         """
         if id_ not in self.entries:
-            raise ValueError(f"ID {id_} does not exist.")
+            return None
         return self.entries[id_]
 
-    def remove_entry(self, id_: int) -> Obj:
+    def remove_entry(self, id_: int) -> Optional[Obj]:
         """
         Remove the entry for the given id and return it.
         Raises KeyError if id is not found.
         """
         if id_ not in self.entries:
-            raise KeyError(f"ID {id_} does not exist.")
+            return None
         return self.entries.pop(id_)
     
     def save_to_disk(self, file_path: Union[str, Path]):
@@ -224,7 +225,8 @@ class ObjectOrganizer(BaseModel):
         file_path = Path(file_path)
         # Create a copy of the data without non-serializable objects
         serializable_data = {
-            "entries": {}
+            "entries": {},
+            "time_last_changed": datetime.datetime.now().isoformat()  # Add current timestamp in ISO format
         }
         for obj_id, obj in self.entries.items():
             # Create a serializable version without the layers

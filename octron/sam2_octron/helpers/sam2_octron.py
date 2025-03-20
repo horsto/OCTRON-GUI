@@ -358,7 +358,11 @@ class SAM2_octron(SAM2VideoPredictor):
         Remove an object id from the tracking state. If strict is True, we check whether
         the object id actually exists and raise an error if it doesn't exist.
         """
-        old_obj_idx_to_rm = self.inference_state["obj_id_to_idx"].get(obj_id, None)
+        try:
+            old_obj_idx_to_rm = self.inference_state["obj_id_to_idx"].get(obj_id, None)
+        except AttributeError as e:
+            print(e)
+            return
         updated_frames = []
         # Check whether this object_id to remove actually exists and possibly raise an error.
         if old_obj_idx_to_rm is None:

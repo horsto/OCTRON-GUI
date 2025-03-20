@@ -129,7 +129,8 @@ class octron_widget(QWidget):
         self.trained_models = {}
         self.videos_to_predict = {}
         # ... and some parameters
-        self.chunk_size = 20 # Global parameter valid for both creation of zarr array and batch prediction 
+        self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
+                             # For zarr arrays I set the minimum to ~50 frames for now
         self.skip_frames = 1 # Skip frames for prefetching images
         
         # Device label?
@@ -188,7 +189,7 @@ class octron_widget(QWidget):
         
         # Global layer removal callback
         self._viewer.layers.events.removing.connect(self.on_layer_removing)
-        self._viewer.layers.events.removed.connect(self._on_layer_removed)
+        self._viewer.layers.events.removed.connect(self.on_layer_removed)
         
         # Buttons 
         # ... project 
@@ -309,6 +310,10 @@ class octron_widget(QWidget):
         self.batch_predict_progressbar.setValue(0)
         
         # Save the object organizer and also refresh the table view
+        # TODO: Make this more efficient. This slows down everything a lot since 
+        # what we are doing here is creating a video hash from scratch twice (?) and 
+        # load the video data, plus we find out which indices have annotation data in the 
+        # video. So, that is a lot of processing for just refreshing the table view for example 
         self.save_object_organizer()
         self.refresh_label_table_list() # This is the table in the project tab
             
@@ -935,7 +940,7 @@ class octron_widget(QWidget):
             self.existing_data_table.horizontalHeader().setStretchLastSection(False)
             self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
             # Connect double-click event
-            self.existing_data_table.doubleClicked.connect(self.on_table_double_clicked)
+            self.existing_data_table.doubleClicked.connect(self.on_label_table_double_clicked)
         
         # Update the table with new data
         self.label_table_model.update_data(label_dict)
@@ -947,15 +952,17 @@ class octron_widget(QWidget):
         self.generate_training_data_btn.setText(f'▷ Generate')
         
         # Enable training tab if data is available
-        if label_dict and any(v for k, v in label_dict.items() if k != 'video'):
+        if label_dict and any(v for k, v in label_dict.items() if k != 'video' and k != 'video_file_path'):
+            print("Data available, enabling training tab.")
             self.toolBox.widget(2).setEnabled(True)  # Training
             self.train_generate_groupbox.setEnabled(True)
             self.train_train_groupbox.setEnabled(True)
 
 
-    def on_table_double_clicked(self, index):
+    def on_label_table_double_clicked(self, index):
         """
-        Handle double-click events on the existing data table
+        Handle double-click events on the existing data table.
+        This is the ExistingDataTable() instance.
         
         Parameters
         ----------
@@ -966,6 +973,10 @@ class octron_widget(QWidget):
         folder_path = self.label_table_model.get_folder_path(index)
         if folder_path:
             print(f"Double-clicked on folder: {folder_path}")
+
+            # Start loading the data 
+
+
 
 
     def refresh_trained_model_list(self):
@@ -1021,21 +1032,47 @@ class octron_widget(QWidget):
         return 
     
 
-    def remove_all_layers(self):
+    def remove_all_layers(self, spare=[]):
         """
         Remove all layers from the napari viewer.
+        
+        Parameters
+        ----------
+        spare : list
+            List of layers that should not be removed
         """
-        if len(self._viewer.layers):
-            self._viewer.layers.select_all()
-            self._viewer.layers.remove_selected()
-            print("💀 Auto-deleted all old layers")
+        if not isinstance(spare, list):
+            spare = [spare]
+        print(f'🗑️ Deleting all layers except "{spare}"')
+        # First remove mask layers (to avoid dependencies with annotation layers)
+        mask_layers = []
+        other_layers = []
+        
+        # Categorize layers
+        for layer in list(self._viewer.layers):
+            if layer in spare:
+                continue
+            elif 'masks' in layer.name.lower():
+                mask_layers.append(layer)
+            else:
+                other_layers.append(layer)
+        # Remove mask layers first
+        for layer in mask_layers:
+            if layer in self._viewer.layers:
+                self._viewer.layers.remove(layer)
+        # Then remove other layers
+        for layer in other_layers:
+            if layer in self._viewer.layers:
+                self._viewer.layers.remove(layer)
+        print(f"💀 Auto-deleted {len(mask_layers) + len(other_layers)} layers")
 
-
-    def _on_layer_removed(self, event):
+    def on_layer_removed(self, event):
         """
         Callback triggered from within the layer removal event.
         (self.on_layer_removing() is called first)
         This gives the user a chance to cancel the removal of the layer.
+        It also organizes the removal process according to which layer type is being removed. 
+        
         """        
         if not self.remove_current_layer:
             # TODO: This is a bit of a hack, seems ugly. Is there a better way?
@@ -1048,38 +1085,62 @@ class octron_widget(QWidget):
             # Two cases:
             # 1. The layer is a mask layer
             # 2. The layer is an annotation layer
-            # 3. The layer is a video layer (not yet implemented - just deletes)
+            # 3. The layer is a video layer 
             
             # 1. Mask layer
             if self.layer_to_remove._basename() == 'Labels' \
                 and 'mask' in self.layer_to_remove.metadata['_name']:
                 # Remove the zarr zip file containing the layer data
-                zarr_file_path = self.project_path / self.layer_to_remove.metadata['_zarr']
-                if Path(zarr_file_path).exists():
-                    shutil.rmtree(zarr_file_path)
-                    print(f'Removed Zarr file {zarr_file_path}')
+                # zarr_file_path = self.project_path / self.layer_to_remove.metadata['_zarr']
+                # if Path(zarr_file_path).exists():
+                #     shutil.rmtree(zarr_file_path)
+                #     print(f'Removed Zarr file {zarr_file_path}')
                 # Get the object entry from the object organizer
                 obj_id = self.layer_to_remove.metadata['_obj_id']
                 organizer_entry = self.object_organizer.get_entry(obj_id)
-                # Remove the annotation layer
                 annotation_layer = organizer_entry.annotation_layer
-                if annotation_layer is not None:
-                    self._viewer.layers.remove(annotation_layer)
-                # Finally, remove the object entry from the object organizer
+                # Remove the object entry from the object organizer
                 self.object_organizer.remove_entry(obj_id)
                 # Remove obj_id from current SAM2 predictor
-                self.predictor.remove_object(obj_id, strict=True)
-                print(f"Removed object {obj_id} from viewer, organizer and predictor")
+                try:
+                    self.predictor.remove_object(obj_id, strict=True)
+                except RuntimeError as e:
+                    print(f"Error when removing object from SAM2 predictor: {e}")
+                print(f"Removed object with ID{obj_id} from organizer and predictor")
+                # Finally, trigger removal of the annotation layer
+                if annotation_layer is not None:
+                    self._viewer.layers.remove(annotation_layer)
             # 2. Annotation layer
             elif self.layer_to_remove._basename() in ['Shapes', 'Points']:
                 # Get the object entry from the object organizer
                 obj_id = self.layer_to_remove.metadata['_obj_id']
                 organizer_entry = self.object_organizer.get_entry(obj_id)
-                organizer_entry.annotation_layer = None
-                print(f'Removed annotation layer {self.layer_to_remove.name}')
+                if organizer_entry is not None:
+                    organizer_entry.annotation_layer = None
             # 3. Video layer
-            # This should trigger a couple of things ... 
-            
+            # This has more drastic consequences ...
+            elif self.layer_to_remove._basename() == 'Image' and 'VIDEO' in self.layer_to_remove.name:
+                # What to do: 
+                # Remove all layers and reset SAM predictor
+                self.remove_all_layers(spare=self.layer_to_remove)
+                # Also re-instantiate variables
+                self.project_path_video = None
+                self.video_layer = None 
+                self.current_video_hash = None
+                self.video_zarr = None
+                if hasattr(self, 'prefetcher_worker') and self.prefetcher_worker is not None:
+                    self.prefetcher_worker.quit()
+                self.prefetcher_worker = None
+                self.all_zarrs = []
+                # Make sure the SAM model is refreshed for the next annotation session
+                self.load_sam2model() # This returns nothing if no model is selected (That's correct!)
+                                      # However, when a new video is added on an existing session,
+                                      # This makes sure that the same model is loaded (and thereby refreshed)
+            # Reset the flag 
+            self.remove_current_layer = False
+    
+        return
+    
     
     def on_layer_removing(self, event):
         """ 
@@ -1091,26 +1152,28 @@ class octron_widget(QWidget):
         self.layer_to_remove_idx = event.index  
         # Not sure if possible to delete more than one at once.
         # If so, then take care of it ... event.sources is a list.
-        
-        if self.layer_to_remove._basename() in ['Shapes', 'Points']:
+        if self.layer_to_remove._basename() in ['Shapes', 'Points', 'Image', 'Labels']:
             # Silent removal of annotation layers
             self.remove_current_layer = True
-        elif self.layer_to_remove._basename() == 'Image' and 'VIDEO' not in self.layer_to_remove.name:
-            # Silent removal of image layers (visualizations)
-            self.remove_current_layer = True
-        else:
-            # Ask for confirmation for other layers, i.e. video and mask layers
-            reply = QMessageBox.question(
-                None, 
-                "Confirmation", 
-                f"Are you sure you want to delete layer\n'{self.layer_to_remove}'",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            if reply == QMessageBox.No:
-                self.remove_current_layer = False
-            else:
-                self.remove_current_layer = True
+        # elif self.layer_to_remove._basename() == 'Image': #and 'VIDEO' not in self.layer_to_remove.name:
+        #     # Silent removal of image layers (visualizations)
+        #     self.remove_current_layer = True
+        
+        
+        # LEAVE THIS IN HERE, it can be useful in the future. 
+        # else:
+        #     # Ask for confirmation for other layers, i.e. mask layers
+        #     reply = QMessageBox.question(
+        #         None, 
+        #         "Confirmation", 
+        #         f"Are you sure you want to delete layer\n'{self.layer_to_remove}'",
+        #         QMessageBox.Yes | QMessageBox.No,
+        #         QMessageBox.No
+        #     )
+        #     if reply == QMessageBox.No:
+        #         self.remove_current_layer = False
+        #     else:
+        #         self.remove_current_layer = True
         return
           
     
@@ -1121,13 +1184,12 @@ class octron_widget(QWidget):
         
         Takes care of defining video layers.
         Searches for video layers with a basename of "Image" and "VIDEO" in
-        the name. If more than one is found, it removes the most recently added one.
-        If one video layer is found and it contains metadata for num_frames, height,
-        and width, it attaches a dummy mask to its metadata.
+        the name. 
+
         """
         
         layer_name = event.value
-        print(f"New layer added >>> {layer_name}")
+        
         # Search through viewer layers for video layers with the expected criteria
         # Starting here as an example with video layers, but 
         # this could be anything in the future ... let's see if we need it 
@@ -1140,38 +1202,37 @@ class octron_widget(QWidget):
             except Exception as e:
                 show_error(f"💀 Error when checking layer: {e}")
 
-        if self.video_layer:
-            # The video layer was already set previously 
-            # Currently only one shot is allowed 
-            # If the video were to be "refreshed", we need some additional logic here
-            return
-
         if len(video_layers) > 1:
-            # TODO:For some reason this runs into an error when trying to remove the layer
-            show_error("💀 More than one video layer found; Remove the extra one.")
-            # Remove the most recently added video layer (or adjust as desired)
-            #self._viewer.layers.remove(video_layers[-1])
-        elif len(video_layers) == 1:
-            video_layer = video_layers[0]     
-            video_metadata = video_layer.metadata
-            self.current_video_hash = video_metadata['hash'][-8:] # Save it globally for quick access       
-            self.video_layer = video_layer
-            self._viewer.dims.set_point(0,0)
-            # Check if you can create a zarr store for video
-            self.init_zarr_prefetcher_threaded()
-            self.toolBox.widget(1).setEnabled(True) 
-        else:
-            pass
+            # This should never happen
+            show_warning("🙀 More than one video layer found. Skipping.")
+            return
+        if not video_layers:
+            return
         
+
+        # If there is only one video layer, set it as the current video layer
+        video_layer = video_layers[0]     
+        video_metadata = video_layer.metadata
+        self.current_video_hash = video_metadata['hash'][-8:] # Save it globally for quick access       
+        self.video_layer = video_layer
+        self._viewer.dims.set_point(0,0)
+        # Check if you can create a zarr store for video
+        self.init_zarr_prefetcher_threaded()
+        print(f"VIDEO LAYER >>> {layer_name}")
+        self.toolBox.widget(1).setEnabled(True) 
+
         return
         
     def on_mp4_file_dropped_area(self, video_paths):
         """
         Adds video layer on freshly dropped mp4 file.
-        Callback function for the file drop area. 
+        Callback function for the file drop area in the project management tab.
         The area itself (a widget) is already filtering for mp4 files.
         """
         # Check if project path is set
+        if self.video_layer is not None:
+            show_warning("Video layer already exists. Please remove it first.")
+            return
         if not self.project_path:
             show_error("Please select a project directory first.")
             return

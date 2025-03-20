@@ -25,7 +25,7 @@ class ExistingDataTable(QAbstractTableModel):
     def __init__(self, label_dict=None):
         super().__init__()
         self.label_dict = label_dict or {}
-        self.headers = ["Folder name", "# Labels", "# Frames"]
+        self.headers = ["Folder name", "Video name", "# Labels", "# Frames"]
         self._data = []
         self.refresh_data()
     
@@ -46,6 +46,9 @@ class ExistingDataTable(QAbstractTableModel):
             for label_id, label_data in labels.items():
                 if label_id == 'video':
                     continue
+                if label_id == 'video_file_path':
+                    video_file_path = label_data.stem[-7:]   
+                    continue 
                 total_labels += 1
                 if 'frames' in label_data:
                     total_frames += len(label_data['frames'])
@@ -54,9 +57,10 @@ class ExistingDataTable(QAbstractTableModel):
             shortened_folder_name = Path(folder_name).name
             self._data.append(
                              [shortened_folder_name, 
-                               total_labels, 
-                               total_frames,
-                               folder_name,  # folder_name is hidden in display
+                              video_file_path,
+                              total_labels, 
+                              total_frames,
+                              folder_name,  # folder_name is hidden in display
                                ]
                               )
     
