@@ -1,8 +1,8 @@
 # QT Table views
 # This is used in OCTRON for example in the project data view to display the label data in a table view
 from pathlib import Path        
-from qtpy.QtCore import Qt, QAbstractTableModel, QModelIndex
-from qtpy.QtGui import QFont
+from qtpy.QtCore import Qt, QAbstractTableModel, Signal
+#from qtpy.QtGui import QFont # Skip for now since font is unchanged (see commented )
 
 class ExistingDataTable(QAbstractTableModel):
     """
@@ -18,6 +18,9 @@ class ExistingDataTable(QAbstractTableModel):
     
     
     """
+    # Add a signal for double-click events
+    doubleClicked = Signal(str)
+    
     
     def __init__(self, label_dict=None):
         super().__init__()
@@ -33,11 +36,8 @@ class ExistingDataTable(QAbstractTableModel):
         # No data case
         if not self.label_dict:
             return
-        
         # Process each video folder entry
         for folder_name, labels in self.label_dict.items():
-            if folder_name == 'video':
-                continue
                 
             total_labels = 0
             total_frames = 0
@@ -52,7 +52,13 @@ class ExistingDataTable(QAbstractTableModel):
             
             # Create a row for this folder
             shortened_folder_name = Path(folder_name).name
-            self._data.append([shortened_folder_name, total_labels, total_frames])
+            self._data.append(
+                             [shortened_folder_name, 
+                               total_labels, 
+                               total_frames,
+                               folder_name,  # folder_name is hidden in display
+                               ]
+                              )
     
     def update_data(self, new_label_dict):
         """Update the model with new data"""
@@ -77,15 +83,18 @@ class ExistingDataTable(QAbstractTableModel):
         if role == Qt.DisplayRole:
             return str(self._data[row][col])
             
-        elif role == Qt.FontRole and col == 0:
-            # Option to make column bold
-            font = QFont()
-            font.setBold(False)
-            return font
+        # elif role == Qt.FontRole and col == 0:
+        #     # Option to make column bold
+        #     #font = QFont()
+        #     #font.setBold(False)
+        #     #return font
             
         elif role == Qt.TextAlignmentRole and col > 0:
             # Center-align numeric columns
             return Qt.AlignCenter
+        
+        elif role == Qt.UserRole:
+            return self._data[row][3]  # Return full folder path
             
         return None
     
@@ -93,3 +102,9 @@ class ExistingDataTable(QAbstractTableModel):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self.headers[section]
         return None
+    
+    def get_folder_path(self, index):
+        """Return the full folder path for the given index"""
+        if not index.isValid() or not (0 <= index.row() < len(self._data)):
+            return None
+        return self._data[index.row()][3]

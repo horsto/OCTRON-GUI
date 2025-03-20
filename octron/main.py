@@ -310,7 +310,7 @@ class octron_widget(QWidget):
         
         # Save the object organizer and also refresh the table view
         self.save_object_organizer()
-        self.refresh_label_list() # This is the table in the project tab
+        self.refresh_label_table_list() # This is the table in the project tab
             
 
     def init_prediction_threaded(self):
@@ -917,7 +917,7 @@ class octron_widget(QWidget):
         organizer_path = self.project_path_video  / "object_organizer.json"
         self.object_organizer.save_to_disk(organizer_path)
 
-    def refresh_label_list(self):
+    def refresh_label_table_list(self):
         """
         Refresh the label list combobox with the current labels in the object organizer
         """
@@ -925,6 +925,7 @@ class octron_widget(QWidget):
         label_dict = collect_labels(self.project_path, min_num_frames=0)  
         if not label_dict:
             return
+        
         # Initialize the table model if not already done
         if not hasattr(self, 'label_table_model'):
             self.label_table_model = ExistingDataTable()
@@ -933,7 +934,9 @@ class octron_widget(QWidget):
             # Configure the table appearance
             self.existing_data_table.horizontalHeader().setStretchLastSection(False)
             self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-            
+            # Connect double-click event
+            self.existing_data_table.doubleClicked.connect(self.on_table_double_clicked)
+        
         # Update the table with new data
         self.label_table_model.update_data(label_dict)
         
@@ -948,6 +951,22 @@ class octron_widget(QWidget):
             self.toolBox.widget(2).setEnabled(True)  # Training
             self.train_generate_groupbox.setEnabled(True)
             self.train_train_groupbox.setEnabled(True)
+
+
+    def on_table_double_clicked(self, index):
+        """
+        Handle double-click events on the existing data table
+        
+        Parameters
+        ----------
+        index : QModelIndex
+            The index of the clicked cell
+        """
+        # Get the full folder path from the model
+        folder_path = self.label_table_model.get_folder_path(index)
+        if folder_path:
+            print(f"Double-clicked on folder: {folder_path}")
+
 
     def refresh_trained_model_list(self):
         """
@@ -994,7 +1013,7 @@ class octron_widget(QWidget):
             
             self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
-            self.refresh_label_list()
+            self.refresh_label_table_list()
             self.refresh_trained_model_list()
             
         else:
