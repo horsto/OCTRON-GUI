@@ -12,6 +12,11 @@ from torchvision.transforms import Resize
 import warnings 
 warnings.simplefilter("ignore")
 
+
+MIN_ZARR_CHUNK_SIZE = 50 # Setting minimum chunk size for zarr arrays
+                         # to avoid excessive chunking for small arrays
+
+
 def create_image_zarr(zarr_path, 
                       num_frames, 
                       image_height,
@@ -76,6 +81,7 @@ def create_image_zarr(zarr_path,
     # Assuming local store on fast SSD, so no compression employed for now 
     store = zarr.storage.LocalStore(zarr_path, read_only=False)  
   
+    chunk_size = max(chunk_size, MIN_ZARR_CHUNK_SIZE)
     if num_ch is not None: 
         image_zarr = zarr.create_array(store=store,
                                     name='masks',
@@ -171,13 +177,13 @@ def load_image_zarr(zarr_path,
         print(f"Shape mismatch: expected {expected_shape}, got {image_zarr.shape}")
         return None, False
     
-    if num_ch is not None:
-        expected_chunks = (chunk_size, num_ch, image_height, image_width)
-    else:
-        expected_chunks = (chunk_size, image_height, image_width)
-    if image_zarr.chunks != expected_chunks:
-        print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
-        return None, False
+    # if num_ch is not None:
+    #     expected_chunks = (chunk_size, num_ch, image_height, image_width)
+    # else:
+    #     expected_chunks = (chunk_size, image_height, image_width)
+    # if image_zarr.chunks != expected_chunks:
+    #     print(f"Chunk size mismatch: expected {expected_chunks}, got {image_zarr.chunks}")
+    #     return None, False
     
     # Check video hash if provided
     if video_hash_abrrev is not None:

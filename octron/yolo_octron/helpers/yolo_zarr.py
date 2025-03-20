@@ -4,6 +4,9 @@ from datetime import datetime
 from pathlib import Path
 import zarr
 
+MIN_ZARR_CHUNK_SIZE = 50 # Setting minimum chunk size for zarr arrays
+                         # to avoid excessive chunking for small arrays
+
 def create_prediction_store(zarr_path, 
                             verbose=False,
                             ):
@@ -82,7 +85,7 @@ def create_prediction_zarr(store,
     image_zarr = zarr.create_array(store=store,
                                    name=array_name,
                                    shape=shape,  
-                                   chunks=chunks, 
+                                   chunks=max(chunks, MIN_ZARR_CHUNK_SIZE), 
                                    fill_value=fill_value,
                                    dtype=dtype,
                                    overwrite=True,
