@@ -4,8 +4,8 @@ Main GUI file
 
 """
 import os, sys
-import gc
 import time
+from typing import List, Optional
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import shutil
@@ -898,9 +898,6 @@ class octron_widget(QWidget):
         """
         Callback for the Napari viewer close event
         """
-        # Save object organizer to json before closing
-        if self.project_path:
-            self.save_object_organizer()
         
         for zarr_store in self.all_zarrs:
             if zarr_store is not None:
@@ -911,6 +908,9 @@ class octron_widget(QWidget):
         # Clean up the prefetcher worker
         if self.prefetcher_worker is not None:
             self.prefetcher_worker.quit()
+        # Lastly, save object organizer to json 
+        if self.project_path:
+            self.save_object_organizer()
             
     def save_object_organizer(self):
         """
@@ -1209,7 +1209,6 @@ class octron_widget(QWidget):
         if not video_layers:
             return
         
-
         # If there is only one video layer, set it as the current video layer
         video_layer = video_layers[0]     
         video_metadata = video_layer.metadata
@@ -1231,7 +1230,7 @@ class octron_widget(QWidget):
         """
         # Check if project path is set
         if self.video_layer is not None:
-            show_warning("Video layer already exists. Please remove it first.")
+            show_warning("A video layer already exists. Please remove it first.")
             return
         if not self.project_path:
             show_error("Please select a project directory first.")
@@ -1519,11 +1518,17 @@ class octron_widget(QWidget):
             print(f'Selected label {current_text}')   
    
    
-    def create_annotation_layers(self):
+    def create_annotation_layers(self,
+                                 label: str = "",
+                                 layer_type: str = "",
+                                 label_suffix: str = "",
+                                 obj_id: Optional[int] = None,
+                                 obj_color: List[float] = [],
+                                 ):
         """
         Callback function for the create annotation layer button.
         Creates a new annotation layer based on the selected label and layer type.
-        TODO: Outsouce these routines to sam2_layers.py
+
         
         """
         # First check if a model has been loaded
@@ -1655,7 +1660,7 @@ class octron_widget(QWidget):
         
         
         ######## Start prefetching images #####################################################################
-        self.prefetcher_worker.start()
+        self.prefetcher_worker.start() # Prefetch some images already ... 
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 

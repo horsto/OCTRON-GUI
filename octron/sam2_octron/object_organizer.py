@@ -1,4 +1,5 @@
 from pathlib import Path
+from shutil import rmtree
 import json
 import datetime
 import numpy as np
@@ -228,6 +229,14 @@ class ObjectOrganizer(BaseModel):
             "entries": {},
             "time_last_changed": datetime.datetime.now().isoformat()  # Add current timestamp in ISO format
         }
+        if not self.entries:
+            print("⚠️ No entries to save. Deleting object organizer file and zarr files.")
+            if file_path.exists():
+                file_path.unlink()
+            for zarr_file in file_path.parent.rglob('*.zarr'):
+                rmtree(zarr_file)
+            return
+        
         for obj_id, obj in self.entries.items():
             # Create a serializable version without the layers
             serializable_obj = obj.model_dump(exclude={"annotation_layer", "prediction_layer"})

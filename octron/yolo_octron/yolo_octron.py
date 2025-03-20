@@ -464,7 +464,7 @@ class YOLO_octron:
                             total=len(labels),
                             position=0,
                             leave=True,
-                            desc=f'Exporting {len(labels)} labels'
+                            desc=f'Exporting {len(labels)} label(s)'
                             ):
                 current_label_id = entry
                 label = labels[entry]['label']  

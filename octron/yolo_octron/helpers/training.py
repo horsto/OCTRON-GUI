@@ -232,7 +232,7 @@ def collect_labels(project_path,
                 assert no_frames_label >= min_num_frames,\
                     f'Not enough frames for label "{label}" in "{path}": {no_frames_label} < {min_num_frames}'
         
-        # Add the video data to the dictionary      
+        # Add the video file path and data to the dictionary      
         # video_file_path is generated anew for every object, however, 
         # we are making sure above that all videos are the same.
         video = FastVideoReader(video_file_path)
