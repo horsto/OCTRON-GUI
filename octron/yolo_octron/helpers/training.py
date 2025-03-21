@@ -190,25 +190,49 @@ def collect_labels(project_path,
     assert project_path.is_dir(), f'Project path should be a directory, not file'
 
     label_dict = {}
+    # Create a (new) global mapping of label names to IDs for consistency across directories
+    # This is important since the user might decide to add multiple labels with the same name
+    # but in different orders across video projects. I.e. a label "worm" might have ID 0 in one
+    # project and ID 1 in another. We want to make sure that the label ID to label name association
+    # is consistent across all projects.
+    label_id_map = {}
+    current_label_id = 0
+    
     for object_organizer in find_files_with_depth_limit(project_path, 'object_organizer.json', 1):
         if verbose: print(object_organizer.parent)
         organizer_dict = load_object_organizer(object_organizer)  
         labels = {}
         video_hash_dict = {}   
+        
         for entry in organizer_dict['entries'].values():
-            label_id = int(entry['label_id'] )
+            original_label_id = int(entry['label_id'] )
             label    = entry['label'] 
             color    = entry['color']
+            
+            # Check if label already exists in labels
+            if label in label_id_map:
+                # Use existing ID for consistency
+                label_id = label_id_map[label]
+                if verbose: print(f'Using existing ID {label_id} for label {label}')
+            else:
+                # Assign a new ID and update mapping
+                label_id = current_label_id
+                label_id_map[label] = label_id
+                current_label_id += 1
+                if verbose: print(f'Created new ID {label_id} for label {label}')
+            
             if verbose: print(f'Found label {label} with id {label_id}')   
             if label_id in labels:
                 assert labels[label_id]['label'] == label, 'Label name vs. id do not match'
             else:
                 # First time we see this label
                 labels[label_id] = {'label':  label, 
+                                    'original_id': original_label_id,
                                     'frames': [],
                                     'masks':  [], 
                                     'color': color,
                                     } 
+            
             # Find out which frames were annotated
             zarr_path_relative = Path(entry['prediction_layer_metadata']['zarr_path'])
             zarr_path = project_path / zarr_path_relative
