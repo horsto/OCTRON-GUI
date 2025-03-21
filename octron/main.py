@@ -931,7 +931,7 @@ class octron_widget(QWidget):
         Refresh the label list combobox with the current labels in the object organizer
         """
         # Check this folder for existing project data
-        label_dict = collect_labels(self.project_path, min_num_frames=0)  
+        label_dict = collect_labels(self.project_path, prune_empty_labels=False,  min_num_frames=0)  
         if not label_dict:
             return
         
