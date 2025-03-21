@@ -157,7 +157,21 @@ class ObjectOrganizer(BaseModel):
             if entry.label == label and entry.suffix == suffix:
                 return entry
         return None
-
+    
+    def get_annotation_layers(self) -> list:
+        """
+        Return a list of all annotation layers in the object organizer.
+        Returns
+        -------
+        list
+            List of annotation layers (napari Shapes or Points layers)
+        """
+        layers = []
+        for _, obj in self.entries.items():
+            if obj.annotation_layer is not None:
+                layers.append(obj.annotation_layer)
+        return layers
+    
     def add_entry(self, id_: int, entry: Obj) -> bool:
         if id_ in self.entries:
             raise ValueError(f"ID {id_} already exists.")

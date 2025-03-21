@@ -43,6 +43,10 @@ class sam2_octron_callbacks():
         to SAM2 instead of creating an input mask.
         
         """
+        shapes_layer = event.source
+        if not len(shapes_layer.data):
+            # This happens when the SAM2 predictor is reset by the user
+            return
         if not self.octron.predictor:
             show_warning('No model loaded.')
             return
@@ -53,7 +57,6 @@ class sam2_octron_callbacks():
         action = event.action
         if action in ['added','removed','changed']:
             frame_idx = self.viewer.dims.current_step[0] 
-            shapes_layer = event.source
             obj_id = shapes_layer.metadata['_obj_id']
             
             # Get the corresponding mask layer 
@@ -138,7 +141,10 @@ class sam2_octron_callbacks():
         This function is called whenever changes are made to annotation points.
 
         """
-        
+        points_layer = event.source
+        if not len(points_layer.data):
+            # This happens when the SAM2 predictor is reset by the user
+            return
         if not self.octron.predictor:
             show_warning('No model loaded.')
             return
@@ -149,7 +155,6 @@ class sam2_octron_callbacks():
         action = event.action
         predictor = self.octron.predictor
         frame_idx  = self.viewer.dims.current_step[0] 
-        points_layer = event.source
         obj_id = points_layer.metadata['_obj_id']
         
         # Get the corresponding mask layer 

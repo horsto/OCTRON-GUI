@@ -281,12 +281,11 @@ class octron_widget(QWidget):
         Reset the predictor and all layers.
         """
         self.predictor.reset_state()
-        # Go through all annotation layers and delete their data (polygons / points ...)
-        # for layer in self._viewer.layers:
-        #     if layer.name.startswith('Annotation'):
-        #         layer.data = None
-        
+        annotation_layers = self.object_organizer.get_annotation_layers()
+        for layer in annotation_layers:
+            layer.data = []
         show_info("SAM2 predictor was reset.")
+        
     
     def _batch_predict_yielded(self, value):
         """
@@ -992,9 +991,9 @@ class octron_widget(QWidget):
         # This triggers a bunch of things -> check function for details
         if self.video_layer is not None:
             self._viewer.layers.remove(self.video_layer)
+            
         # Reset variables for a clean start
         self.object_organizer = ObjectOrganizer()
-        
         # SAM2 
         self.sam2model_list.setEnabled(True)
         self.load_sam2model_btn.setEnabled(True)
@@ -1127,7 +1126,6 @@ class octron_widget(QWidget):
             self.project_video_drop_groupbox.setEnabled(True)
             self.refresh_label_table_list()
             self.refresh_trained_model_list()
-            
         else:
             print("No folder selected.")
         return 
@@ -1248,6 +1246,7 @@ class octron_widget(QWidget):
                 self.predict_next_oneframe_btn.setText('')
                 self.predict_next_oneframe_btn.setEnabled(False)
                 self.predict_next_batch_btn.setEnabled(False)
+                # Object organizer
                 self.object_organizer = ObjectOrganizer()
             # Reset the flag 
             self.remove_current_layer = False
@@ -1626,6 +1625,7 @@ class octron_widget(QWidget):
         # Set up thread worker to deal with prefetching batches of images
         self.prefetcher_worker = create_worker(self.octron_sam2_callbacks.prefetch_images)
         self.prefetcher_worker.setAutoDelete(False)
+        self.prefetcher_worker.start()
         
     
     def on_label_change(self):
@@ -1704,9 +1704,7 @@ class octron_widget(QWidget):
         if not self.video_layer:
             show_warning("No video layer found.")
             return
-        if not self.prefetcher_worker:
-            show_warning("No prefetcher worker found.")
-            return
+
 
         if not recreate:
             # Sanity check for dropdown 
@@ -1820,9 +1818,6 @@ class octron_widget(QWidget):
             # Reserved space for anchor point layer here ... 
             pass
            
-        # Start prefetching images
-        # ... this also initializes the SAM2 model
-        self.prefetcher_worker.start()
            
         # Reset the dropdowns
         self.label_list_combobox.setCurrentIndex(0)
