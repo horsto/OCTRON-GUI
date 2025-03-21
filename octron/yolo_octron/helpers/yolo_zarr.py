@@ -77,7 +77,7 @@ def create_prediction_zarr(store,
     """
     assert chunk_size > 0, f'chunk_size must be > 0, not {chunk_size}'
     assert isinstance(store, zarr.storage.LocalStore), 'store must be a zarr.storage.LocalStore object'
-    
+    chunk_size = max(chunk_size, MIN_ZARR_CHUNK_SIZE)
     # Create chunks tuple based on shape dimensions
     # First dimension uses chunk_size, remaining dimensions use their full size
     chunks = (chunk_size,) + shape[1:] if len(shape) > 1 else (chunk_size,)
@@ -85,7 +85,7 @@ def create_prediction_zarr(store,
     image_zarr = zarr.create_array(store=store,
                                    name=array_name,
                                    shape=shape,  
-                                   chunks=max(chunks, MIN_ZARR_CHUNK_SIZE), 
+                                   chunks=chunks, 
                                    fill_value=fill_value,
                                    dtype=dtype,
                                    overwrite=True,
