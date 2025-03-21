@@ -259,7 +259,6 @@ class octron_widget(QWidget):
         # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(False)
         self.load_sam2model_btn.setEnabled(False)
-        self.load_sam2model_btn.setStyleSheet('QPushButton { color: #8ed634;}')
         self.load_sam2model_btn.setText(f'{model_name} ✓')
 
         # Enable the predict next batch button
@@ -906,7 +905,7 @@ class octron_widget(QWidget):
         
         for zarr_store in self.all_zarrs:
             if zarr_store is not None:
-                store = self.video_zarr.store
+                store = zarr_store.store
                 if hasattr(store, 'close'):
                     store.close()
                     print(f"Zarr {zarr_store} store closed.")
@@ -985,6 +984,23 @@ class octron_widget(QWidget):
             show_warning("No video file found in folder.")
             return
         
+        # Remove the current video layer
+        # This triggers a bunch of things -> check function for details
+        if self.video_layer is not None:
+            self._viewer.layers.remove(self.video_layer)
+        # Reset variables for a clean start
+        self.object_organizer = ObjectOrganizer()
+        
+        # SAM2 
+        # Deactivate the dropdown menu upon successful model loading
+        self.sam2model_list.setEnabled(True)
+        self.load_sam2model_btn.setEnabled(True)
+        self.load_sam2model_btn.setText(f'Load model')
+        self.predict_next_batch_btn.setText('')
+        self.predict_next_oneframe_btn.setText('')
+        self.predict_next_oneframe_btn.setEnabled(False)
+        self.predict_next_batch_btn.setEnabled(False)
+            
         # Use the file drop method to load the video
         self.on_mp4_file_dropped_area([video_file_path])
         
@@ -1004,21 +1020,56 @@ class octron_widget(QWidget):
         if not object_organizer_data:
             show_warning("Could not load object organizer data.")
             return
-        # ... take care of layers, etc.
+        
+        # Clear the label list combobox and re-initialize it
+        self.label_list_combobox.clear()
+        self.label_list_combobox.addItem("Label ...")
+        self.label_list_combobox.addItem(u"\u2295 Create")
+        self.label_list_combobox.addItem(u"\u2296 Remove")
+        
+        # Track unique labels to avoid duplicates
+        unique_labels = set()
+        # Loop over all objects in the object organizer data
+        # and re-create the layers
         for obj_id, obj_data in object_organizer_data['entries'].items():
             print(f"Loading object with ID {obj_id}")
-            print(obj_data)
+            obj_id = int(obj_id)
+            label = obj_data.get('label', '')
+            suffix = obj_data.get('suffix', '')
+            obj_color = obj_data.get('color', [0.7, 0.7, 0.7, 1])
+            
+            # Add label to combobox if not already added
+            if label and label not in unique_labels:
+                unique_labels.add(label)
+                self.label_list_combobox.addItem(label)
+            
+            # Determine layer type from metadata
+            layer_type = None
+            if 'annotation_layer_metadata' in obj_data:
+                annotation_type = obj_data['annotation_layer_metadata'].get('type')
+                if annotation_type == 'Shapes':
+                    layer_type = 'Shapes'
+                elif annotation_type == 'Points':
+                    layer_type = 'Points'
+            if not layer_type:  
+                layer_type = 'Points' # Default to Points if not specified
+             # Create layers with the reconstructed information
+            print(f"Recreating layer: {label} {suffix} (ID: {obj_id}, Type: {layer_type})")
+            self.create_annotation_layers(
+                recreate=True,
+                label=label,
+                layer_type=layer_type,
+                label_suffix=suffix,
+                obj_id=obj_id,
+                obj_color=obj_color
+            )
             
             
-            
-            
-            
-
-                
-        
-        # Switch to the Annotation tab
-        self.toolBox.setCurrentIndex(1)  # Switch to annotations tab
-
+        # Reset the combobox to the first item
+        self.label_list_combobox.setCurrentIndex(0)    
+        return
+    
+    
     def refresh_trained_model_list(self):
         """
         Refresh the trained model list combobox with the current models in the project directory
@@ -1057,6 +1108,13 @@ class octron_widget(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Select Base Folder", str(Path.home()))
         if folder:
             print(f"Project base folder selected: {folder}")
+            
+            # Remove the current video layer
+            # This triggers a bunch of things -> check function for details
+            if self.video_layer is not None:
+                self._viewer.layers.remove(self.video_layer)
+            # Reset variables for a clean start
+            self.object_organizer = ObjectOrganizer()
             
             folder = Path(folder)
             self.project_folder_path_label.setEnabled(False)
@@ -1144,9 +1202,11 @@ class octron_widget(QWidget):
                 # Remove obj_id from current SAM2 predictor
                 try:
                     self.predictor.remove_object(obj_id, strict=True)
-                except RuntimeError as e:
+                    print(f"Removed object with ID{obj_id} from organizer and predictor")
+                except (RuntimeError, AttributeError) as e:
                     print(f"Error when removing object from SAM2 predictor: {e}")
-                print(f"Removed object with ID{obj_id} from organizer and predictor")
+                    print("This is likely due to the SAM2 model not being loaded and can be ignored.")
+                
                 # Finally, trigger removal of the annotation layer
                 if annotation_layer is not None:
                     self._viewer.layers.remove(annotation_layer)
@@ -1176,6 +1236,7 @@ class octron_widget(QWidget):
                 self.load_sam2model() # This returns nothing if no model is selected (That's correct!)
                                       # However, when a new video is added on an existing session,
                                       # This makes sure that the same model is loaded (and thereby refreshed)
+                self.object_organizer = ObjectOrganizer()
             # Reset the flag 
             self.remove_current_layer = False
     
@@ -1198,7 +1259,6 @@ class octron_widget(QWidget):
         # elif self.layer_to_remove._basename() == 'Image': #and 'VIDEO' not in self.layer_to_remove.name:
         #     # Silent removal of image layers (visualizations)
         #     self.remove_current_layer = True
-        
         
         # LEAVE THIS IN HERE, it can be useful in the future. 
         # else:
@@ -1226,6 +1286,21 @@ class octron_widget(QWidget):
         Searches for video layers with a basename of "Image" and "VIDEO" in
         the name. 
 
+
+        Sets
+        ----
+        self.video_layer : napari.layers.Image
+            The current video layer
+        self.current_video_hash : str   
+            The hash of the current video layer
+        self.video_zarr : zarr.storage
+            The zarr storage for the video layer (via the prefetcher)
+        self.all_zarrs : list
+            List of all zarr stores for the video layer (via the prefetcher)
+        self.prefetcher_worker : QThread
+            The worker thread for the prefetcher (via the prefetcher)
+        self.project_path_video : Path
+            The path to the video project directory
         """
         
         layer_name = event.value
@@ -1250,19 +1325,23 @@ class octron_widget(QWidget):
             return
         
         # If there is only one video layer, set it as the current video layer
-        video_layer = video_layers[0]     
-        video_metadata = video_layer.metadata
-        self.current_video_hash = video_metadata['hash'][-8:] # Save it globally for quick access       
-        self.video_layer = video_layer
-        self._viewer.dims.set_point(0,0)
-        
-        # Check if you can create a zarr store for video
-        # Creating a zarr store for the video is only possible if a video has been loaded
-        # AND a model has been loaded
-        self.init_zarr_prefetcher_threaded()
-        
-        print(f"VIDEO LAYER >>> {layer_name}")
-        self.toolBox.widget(1).setEnabled(True) 
+        video_layer = video_layers[0]    
+        if self.video_layer == video_layer:
+            return
+        else:
+            self.video_layer = video_layer 
+            video_metadata = video_layer.metadata
+            self.current_video_hash = video_metadata['hash'][-8:] # Save it globally for quick access       
+            self.project_path_video = self.project_path / self.current_video_hash
+            self._viewer.dims.set_point(0,0)
+            
+            # Check if you can create a zarr store for video
+            # Creating a zarr store for the video is only possible if a video has been loaded
+            # AND a model has been loaded
+            self.init_zarr_prefetcher_threaded()
+            
+            print(f"VIDEO LAYER >>> {layer_name}")
+            self.toolBox.widget(1).setEnabled(True) 
 
         return
         
@@ -1482,7 +1561,7 @@ class octron_widget(QWidget):
         print(f'📐 Resized video dimensions: {resized_height}x{resized_width}')
         
         # Create zarr store for video layer
-        self.project_path_video = self.project_path / self.current_video_hash
+        
         video_zarr_path = self.project_path_video / 'video data.zarr'
         status = False
         
@@ -1591,6 +1670,7 @@ class octron_widget(QWidget):
    
    
     def create_annotation_layers(self,
+                                 recreate : bool = False,
                                  label: str = "",
                                  layer_type: str = "",
                                  label_suffix: str = "",
@@ -1598,31 +1678,32 @@ class octron_widget(QWidget):
                                  obj_color: List[float] = [],
                                  ):
         """
-        Callback function for the create annotation layer button.
-        Creates a new annotation layer based on the selected label and layer type.
-
+        This is the main callback function for the create annotation layer button.
+        Creates a new annotation layer based on the selected label 
+        and layer type (recreate=False).
+        It is also utilized to re-create layers from the object organizer when the user 
+        double clicks on a table row (recreate=True). 
+        
         
         """
         # Check if a video layer is loaded
         if not self.video_layer:
             show_warning("No video layer found.")
             return
-        if not self.video_zarr: 
-            show_warning("No zarr store found.")
-            return
-        
-        # Get the selected label and layer type
-        label = self.label_list_combobox.currentText().strip()
-        # Get text from label suffix box
-        label_suffix = self.label_suffix_lineedit.text()
-        label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified    
-        
-        layer_type = self.layer_type_combobox.currentText().strip()
-        label_idx_ = self.label_list_combobox.currentIndex()
-        layer_idx_ = self.layer_type_combobox.currentIndex()     
-        if layer_idx_ == 0 or label_idx_ <= 2:
-            show_warning("Please select a layer type and a label.")
-            return
+
+        if not recreate:
+            # Sanity check for dropdown 
+            # ... exclude the first entries (Choose, Add, Remove)
+            label_idx_ = self.label_list_combobox.currentIndex()
+            layer_idx_ = self.layer_type_combobox.currentIndex()     
+            if layer_idx_ == 0 or label_idx_ <= 2:
+                show_warning("Please select a layer type and a label.")
+                return
+            # Get the selected label and layer type from dropdowns
+            label = self.label_list_combobox.currentText().strip()
+            label_suffix = self.label_suffix_lineedit.text()
+            label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified    
+            layer_type = self.layer_type_combobox.currentText().strip()
         
         # Check if the object organizer already has an entry for this label and suffix 
         organizer_entry = self.object_organizer.get_entry_by_label_suffix(label, label_suffix)
@@ -1640,7 +1721,8 @@ class octron_widget(QWidget):
         else:
             # No entry found, so create a new prediction and annotation layer from scratch
             create_prediction_layer = True
-            obj_id = self.object_organizer.min_available_id()
+            if obj_id is None:
+                obj_id = self.object_organizer.min_available_id()
             status = self.object_organizer.add_entry(obj_id, Obj(label=label, suffix=label_suffix))
             if not status: 
                 show_error("Error when adding new entry to object organizer.")
@@ -1649,7 +1731,9 @@ class octron_widget(QWidget):
         
         ######### Create new layers #############################################################################
         
-        obj_color = organizer_entry.color
+        if not obj_color:
+            obj_color = organizer_entry.color # Get the color from the organizer entry
+
         layer_name = f"{label} {label_suffix}".strip() # This is used in all layer names
         
         ######### Create a new prediction (mask) layer  ######################################################### 
@@ -1695,7 +1779,7 @@ class octron_widget(QWidget):
             organizer_entry.annotation_layer = annotation_layer
             # Connect callback
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_shapes_changed)
-            show_info(f"Created new mask + annotation layer '{layer_name}'")
+            print(f"Created new mask + annotation layer '{layer_name}'")
             
             
         elif layer_type == 'Points':
@@ -1712,20 +1796,21 @@ class octron_widget(QWidget):
             # Connect callback
             annotation_layer.mouse_drag_callbacks.append(self.octron_sam2_callbacks.on_mouse_press)
             annotation_layer.events.data.connect(self.octron_sam2_callbacks.on_points_changed)
-            show_info(f"Created new mask + annotation layer '{layer_name}'")
+            print(f"Created new mask + annotation layer '{layer_name}'")
             
             
         else: 
             # Reserved space for anchor point layer here ... 
             pass
-        
-        
-        ######## Start prefetching images #####################################################################
-        self.prefetcher_worker.start() # Prefetch some images already ... 
+           
+        # Reset the dropdowns
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
-
+        return
+    
+    
+    
     def create_annotation_projections(self):
         """
         Create a projection layer for annotated label.

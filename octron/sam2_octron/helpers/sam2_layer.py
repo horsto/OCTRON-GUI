@@ -30,7 +30,7 @@ def add_sam2_mask_layer(viewer,
     project_path : str or Path
         Path to the project directory.
     color : str or list
-        Color of the mask layer.
+        Color of the mask layer. w
     video_hash_abbrev : str, optional
         Abbreviated hash of the video file. This is used as 
         a unique identifier for the corresponding video file throughout.
@@ -67,7 +67,7 @@ def add_sam2_mask_layer(viewer,
                                                 video_hash_abrrev=video_hash_abrrev,
                                                 )
             if status:
-                show_info(f"Prediction (mask) layer data found at {zarr_file_path.as_posix()}")
+                print(f"Prediction (mask) layer data found at {zarr_file_path.as_posix()}")
             else:
                 show_error(f"Failed to load Zarr array from {zarr_file_path.as_posix()}")
         if not zarr_file_path.exists() or not status:
