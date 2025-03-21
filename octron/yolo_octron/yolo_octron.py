@@ -335,11 +335,15 @@ class YOLO_octron:
                     for mask_array in mask_arrays:
                         mask_current_array = mask_array[f]
                         # Watershed
-                        _, water_masks = watershed_mask(mask_current_array,
-                                                        footprint_diameter=median_obj_diameter,
-                                                        min_size_ratio=0.1,    
-                                                        plot=False
-                                                    )
+                        try:
+                            _, water_masks = watershed_mask(mask_current_array,
+                                                            footprint_diameter=median_obj_diameter,
+                                                            min_size_ratio=0.1,    
+                                                            plot=False
+                                                        )
+                        except AssertionError:
+                            # The mask is empty at this frame or the object spans the whole frame
+                            continue
                         # Loop over watershedded masks
                         for mask in water_masks:
                             try:
