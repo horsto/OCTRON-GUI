@@ -1,9 +1,10 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=62.3.0,<75.9",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+build-options = { no-isolation = true }  # This is an experimental feature
 
 [project]
 name = "octron"
@@ -29,7 +30,7 @@ dependencies = [
     "numpy>=2.1.1",
     "PyQt5>=5.15.0",
     "qtpy>=2.4.2",
-    "torch==2.6.0",
+    "torch>=2.6.0",
     "torchvision",
     "av>=14.1.0",
     "tqdm>=4.67.1",
@@ -66,6 +67,12 @@ octron-gui = "octron.main:octron_gui"
 where = ["."]
 include = ["octron*", "qt_gui"]
 exclude = ["pics", "sample_data"]
+
+[tool.setuptools]
+# Add settings that ensure compatibility with no-build-isolation
+zip-safe = false
+# Include this to minimize build isolation issues
+include-package-data = true
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.svg", "*.md"]
