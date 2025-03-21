@@ -1,14 +1,14 @@
 # OCTRON SAM2 related callbacks
 import time
 import numpy as np
-from napari.utils.notifications import (
-    show_info, 
-    show_error,
-)
 from octron.sam2_octron.helpers.sam2_octron import (
     SAM2_octron,
     run_new_pred,
 )
+from napari.utils.notifications import (
+    show_warning,
+)
+
 import warnings 
 warnings.simplefilter("ignore")
 
@@ -43,7 +43,12 @@ class sam2_octron_callbacks():
         to SAM2 instead of creating an input mask.
         
         """
-        
+        if not self.octron.predictor:
+            show_warning('No model loaded.')
+            return
+        if not self.octron.prefetcher_worker:
+            show_warning('Prefetcher worker not initialized.')
+            return
         
         action = event.action
         if action in ['added','removed','changed']:
@@ -56,7 +61,7 @@ class sam2_octron_callbacks():
             prediction_layer = organizer_entry.prediction_layer
             if prediction_layer is None:
                 # That should actually never happen 
-                self.octron.show_error('No corresponding prediction layer found.')
+                print('No corresponding prediction layer found.')
                 return   
             
             video_height = self.octron.video_layer.metadata['height']    
@@ -136,6 +141,14 @@ class sam2_octron_callbacks():
         This function is called whenever changes are made to annotation points.
 
         """
+        
+        if not self.octron.predictor:
+            show_warning('No model loaded.')
+            return
+        if not self.octron.prefetcher_worker:
+            show_warning('Prefetcher worker not initialized.')
+            return
+        
         action = event.action
         predictor = self.octron.predictor
         frame_idx  = self.viewer.dims.current_step[0] 
@@ -149,7 +162,7 @@ class sam2_octron_callbacks():
         
         if prediction_layer is None:
             # That should actually never happen 
-            self.octron.show_error('No corresponding prediction (mask) layer found.')
+            print('No corresponding prediction (mask) layer found.')
             return    
         
         if action == 'added':
@@ -278,9 +291,7 @@ class sam2_octron_callbacks():
         
         self.octron.chunk_size = chunk_size_real
         return
-    
-    
-    
+
     
     def batch_predict(self):
         """
@@ -288,7 +299,6 @@ class sam2_octron_callbacks():
         Uses SAM2 => propagate_in_video function.
         
         """
-        
 
         skip_frames = self.octron.skip_frames_spinbox.value()
         if skip_frames < 1:
