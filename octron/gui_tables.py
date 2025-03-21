@@ -40,7 +40,7 @@ class ExistingDataTable(QAbstractTableModel):
         for folder_name, labels in self.label_dict.items():
                 
             total_labels = 0
-            total_frames = 0
+            unique_frames = set()  # Use a set to track unique frame indices
             
             # Count labels and frames
             for label_id, label_data in labels.items():
@@ -50,8 +50,9 @@ class ExistingDataTable(QAbstractTableModel):
                     video_file_path = label_data.stem[-7:]   
                     continue 
                 total_labels += 1
+                # Add frame indices to the set of unique frames
                 if 'frames' in label_data:
-                    total_frames += len(label_data['frames'])
+                    unique_frames.update(label_data['frames'])
             
             # Create a row for this folder
             shortened_folder_name = Path(folder_name).name
@@ -59,7 +60,7 @@ class ExistingDataTable(QAbstractTableModel):
                              [shortened_folder_name, 
                               video_file_path,
                               total_labels, 
-                              total_frames,
+                              len(unique_frames),
                               folder_name,  # folder_name is hidden in display
                                ]
                               )
