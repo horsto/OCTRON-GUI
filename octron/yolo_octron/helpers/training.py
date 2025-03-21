@@ -374,16 +374,25 @@ def draw_polygons(labels,
             
             current_frame = video_data[frame].copy()
             polys = labels[entry]['polygons'][frame]  
-            frame_and_polys = cv2.polylines(img=current_frame, 
-                                            pts=polys, 
-                                            isClosed=True, 
-                                            color=color.tolist(), 
-                                            thickness=5,
-                                            )
+            
+            # # cv2.polylines() is fine but introduces some nasty artefacts in 
+            # # cases where the polygons are not closed.
+            # frame_and_polys = cv2.polylines(img=current_frame, 
+            #                                 pts=polys, 
+            #                                 isClosed=True, 
+            #                                 color=color.tolist(), 
+            #                                 thickness=5,
+            #                                 )
             
             # Draw
             _, ax = plt.subplots(1,1)    
-            ax.imshow(frame_and_polys)
+            ax.imshow(current_frame)
+            
+            # Draw polys as dots
+            for p in polys:
+                ax.scatter(p[:,0], p[:,1], c='w', s=2, alpha=.5, marker='s')
+                ax.scatter(p[:,0], p[:,1], c='k', s=.5, alpha=.5, marker='.')
+    
             ax.set_xticks([])   
             ax.set_yticks([])
             ax.set_title(f'Label: "{label}" - frame {frame} {len(polys)}')
