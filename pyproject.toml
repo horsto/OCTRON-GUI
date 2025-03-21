@@ -43,9 +43,9 @@ dependencies = [
     "ultralytics>=8.3.94",
     "tensorboard>=2.19.0",
     "lap>=0.5.12",
-    "opencv-python>=4.11.0",
+    "opencv-python>=4.11.0",       
     "natsort>=8.4.0",   
-    "sam-2 @ git+https://github.com/facebookresearch/sam2.git",
+    "sam-2 @ git+https://github.com/horsto/sam2.git",
     "napari-pyav @ git+https://github.com/horsto/napari-pyav.git"
 ]
 
