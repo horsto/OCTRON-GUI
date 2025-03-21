@@ -2,7 +2,41 @@
 from pathlib import Path
 import json
 import numpy as np                                         
-                                                 
+                
+def find_files_with_depth_limit(base_path, pattern, max_depth=1):
+    """
+    Find files matching a pattern with a maximum depth limit.
+    
+    Parameters
+    ----------
+    base_path : Path
+        Base directory to start the search
+    pattern : str
+        File pattern to match (e.g., '*.json')
+    max_depth : int
+        Maximum directory depth to search (0 = base_path only)
+        
+    Returns
+    -------
+    list
+        List of Path objects matching the pattern within the depth limit
+    """
+    results = []
+    
+    # Process base directory (depth 0)
+    for path in base_path.glob(pattern):
+        if path.is_file():
+            results.append(path)
+    
+    # Process subdirectories up to max_depth
+    if max_depth > 0:
+        for path in base_path.iterdir():
+            if path.is_dir():
+                # Recursively search subdirectories with reduced depth
+                results.extend(find_files_with_depth_limit(path, pattern, max_depth - 1))
+    
+    return results
+                                 
 def load_object_organizer(file_path):
     """
     Load object organizer .json from disk and return
@@ -156,7 +190,7 @@ def collect_labels(project_path,
     assert project_path.is_dir(), f'Project path should be a directory, not file'
 
     label_dict = {}
-    for object_organizer in project_path.rglob('object_organizer.json'):
+    for object_organizer in find_files_with_depth_limit(project_path, 'object_organizer.json', 1):
         if verbose: print(object_organizer.parent)
         organizer_dict = load_object_organizer(object_organizer)  
         labels = {}
