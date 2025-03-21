@@ -125,10 +125,7 @@ class sam2_octron_callbacks():
 
             prediction_layer.data[frame_idx] = mask
             prediction_layer.refresh()
-            # Prefetch next batch of images
-            if not self.octron.prefetcher_worker.is_running:
-                self.octron.prefetcher_worker.run()
-                
+  
         else:
             # Catching all above with ['added','removed','changed']
             pass
@@ -218,6 +215,9 @@ class sam2_octron_callbacks():
     def prefetch_images(self):
         """
         Thread worker for prefetching images for fast processing in the viewer
+        This also initializes the SAM2 model if it is not yet initialized.
+        WHY? Because we need the SAM2 model to register the fetched images in its inference state.
+        TODO: There might be a more elegant way to handle this. 
         """
         predictor = self.octron.predictor
         assert predictor, "No model loaded."

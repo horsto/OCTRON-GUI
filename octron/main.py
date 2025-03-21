@@ -159,7 +159,6 @@ class octron_widget(QWidget):
         octron_gui.setupUi(base_path=base_path_parent) # base_path is important for .svg files
         
         # (De)activate certain functionality while WIP 
-        # TODO
         last_index = self.layer_type_combobox.count() - 1
         self.layer_type_combobox.model().item(last_index).setEnabled(False)
         
@@ -282,6 +281,11 @@ class octron_widget(QWidget):
         Reset the predictor and all layers.
         """
         self.predictor.reset_state()
+        # Go through all annotation layers and delete their data (polygons / points ...)
+        # for layer in self._viewer.layers:
+        #     if layer.name.startswith('Annotation'):
+        #         layer.data = None
+        
         show_info("SAM2 predictor was reset.")
     
     def _batch_predict_yielded(self, value):
@@ -992,7 +996,6 @@ class octron_widget(QWidget):
         self.object_organizer = ObjectOrganizer()
         
         # SAM2 
-        # Deactivate the dropdown menu upon successful model loading
         self.sam2model_list.setEnabled(True)
         self.load_sam2model_btn.setEnabled(True)
         self.load_sam2model_btn.setText(f'Load model')
@@ -1162,7 +1165,11 @@ class octron_widget(QWidget):
         for layer in other_layers:
             if layer in self._viewer.layers:
                 self._viewer.layers.remove(layer)
-        print(f"💀 Auto-deleted {len(mask_layers) + len(other_layers)} layers")
+                
+        total_deleted = len(mask_layers) + len(other_layers)
+        if total_deleted:
+            print(f"💀 Auto-deleted {total_deleted} layers")
+
 
     def on_layer_removed(self, event):
         """
@@ -1232,10 +1239,15 @@ class octron_widget(QWidget):
                     self.prefetcher_worker.quit()
                 self.prefetcher_worker = None
                 self.all_zarrs = []
-                # Make sure the SAM model is refreshed for the next annotation session
-                self.load_sam2model() # This returns nothing if no model is selected (That's correct!)
-                                      # However, when a new video is added on an existing session,
-                                      # This makes sure that the same model is loaded (and thereby refreshed)
+                # SAM2 
+                self.predictor = None   
+                self.sam2model_list.setEnabled(True)
+                self.load_sam2model_btn.setEnabled(True)
+                self.load_sam2model_btn.setText(f'Load model')
+                self.predict_next_batch_btn.setText('')
+                self.predict_next_oneframe_btn.setText('')
+                self.predict_next_oneframe_btn.setEnabled(False)
+                self.predict_next_batch_btn.setEnabled(False)
                 self.object_organizer = ObjectOrganizer()
             # Reset the flag 
             self.remove_current_layer = False
@@ -1499,14 +1511,16 @@ class octron_widget(QWidget):
         It is called only once from within the prefetcher worker.
         
         """
-        if not self.video_layer:
-            print("No video layer found.")
-            return
-        # Check if a SAM2 model has been loaded by the user (from dropdown)
         if not self.predictor:
             show_warning("Please select a SAM2 model first.")
             return
-
+        if not self.video_layer:
+            print("No video layer found.")
+            return
+        if not self.video_zarr:
+            show_warning("No video zarr store found.")
+            return
+        
         # Prewarm SAM2 predictor (model)
         # This needs the zarr store to be initialized first
         # -> that happens when either the model is loaded or a video layer is found
@@ -1531,7 +1545,7 @@ class octron_widget(QWidget):
         Create a zarr store for the video layer.
         This will only work if a video layer is found and a sam2 model is loaded, 
         since both video and model information are required to create the zarr store.
-        # TODO: Tie this into project management
+
         """
         if not self.project_path:
             return
@@ -1690,6 +1704,9 @@ class octron_widget(QWidget):
         if not self.video_layer:
             show_warning("No video layer found.")
             return
+        if not self.prefetcher_worker:
+            show_warning("No prefetcher worker found.")
+            return
 
         if not recreate:
             # Sanity check for dropdown 
@@ -1803,14 +1820,17 @@ class octron_widget(QWidget):
             # Reserved space for anchor point layer here ... 
             pass
            
+        # Start prefetching images
+        # ... this also initializes the SAM2 model
+        self.prefetcher_worker.start()
+           
         # Reset the dropdowns
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
         return
     
-    
-    
+
     def create_annotation_projections(self):
         """
         Create a projection layer for annotated label.
