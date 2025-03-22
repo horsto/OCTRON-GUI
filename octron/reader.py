@@ -135,7 +135,7 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
         
         # CRF value option
         crf_layout = QHBoxLayout()
-        crf_layout.addWidget(QLabel("| CRF (lower is better):"))
+        crf_layout.addWidget(QLabel(" CRF (lower is better):"))
         crf_spin = QSpinBox()
         crf_spin.setRange(0, 51)
         crf_spin.setValue(23)  # Default CRF value
@@ -228,7 +228,7 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
                     size_reduction = 100 * (1 - output_size / input_size) if input_size > 0 else 0
                     
                     print(f"✅ Successfully transcoded in {elapsed_time:.2f} seconds")
-                    print(f"   Input: {input_size:.2f} MB, Output: {output_size:.2f} MB ({size_reduction:.1f}% reduction)")
+                    print(f"   Input: {input_size:.2f} MB, Output: {output_size:.2f} MB ({size_reduction:.1f}%)")
                     successful += 1
                 except subprocess.CalledProcessError as e:
                     print(f"❌ Failed: {str(e)}")
