@@ -1776,7 +1776,14 @@ class octron_widget(QWidget):
             prediction_layer.metadata['_obj_id'] = obj_id # This corresponds to organizer entry id
             prediction_layer.metadata['_zarr'] = zarr_file_path.relative_to(self.project_path)
             prediction_layer.metadata['_hash'] = self.current_video_hash
-            prediction_layer.metadata['_video_file_path'] = Path(self.video_layer.metadata['video_file_path']).relative_to(self.project_path)
+            try:
+                # By default, try to extract a relative file path. 
+                # This enables users to move the project folder around without breaking the link.
+                prediction_layer.metadata['_video_file_path'] = Path(self.video_layer.metadata['video_file_path']).relative_to(self.project_path)
+            except ValueError:
+                # If the video file is not in a subdirectory of the project folder,
+                # save the absolute path instead.
+                prediction_layer.metadata['_video_file_path'] = Path(self.video_layer.metadata['video_file_path'])
             organizer_entry.prediction_layer = prediction_layer
 
         ######### Create a new annotation layer ###############################################################
