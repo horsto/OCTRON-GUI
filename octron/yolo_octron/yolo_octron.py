@@ -306,8 +306,8 @@ class YOLO_octron:
                         else:
                             if min_area is None:
                                 # Determine area threshold once
-                                # threshold at 0.1 percent of the image area
-                                min_area = 0.001*sample_mask.shape[0]*sample_mask.shape[1]
+                                # threshold at 0.01 percent of the image area
+                                min_area = 0.0001*sample_mask.shape[0]*sample_mask.shape[1]
                             l, r = find_objects_in_mask(sample_mask, 
                                                     min_area=min_area
                                                     ) 
@@ -323,7 +323,10 @@ class YOLO_octron:
                 # Now we can make assumptions about the median diameter of the objects
                 # I use this for "optimal" watershed parameters 
                 median_obj_diameter = np.nanmedian(obj_diameters)
-
+                if np.isnan(median_obj_diameter):
+                    median_obj_diameter = 5 # Pretty arbitrary, but should work for most cases
+                if median_obj_diameter < 1:
+                    median_obj_diameter = 5
                 ##################################################################################
                 polys = {} # Collected polygons over frame indices
                 for f_no, f in tqdm(enumerate(frames, start=1), 
