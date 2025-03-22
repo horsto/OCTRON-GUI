@@ -96,21 +96,34 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
         # Create a dialog for transcoding options
         from qtpy.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                    QCheckBox, QSpinBox, QPushButton, QListWidget,
+                                   QDialogButtonBox, QAbstractItemView,
                                    )
         from qtpy.QtCore import QSize
         
         dialog = QDialog()
-        dialog.setWindowTitle("Transcode Videos")
+        dialog.setWindowTitle("Transcode videos to mp4")
+        dialog.resize(300, 400)  # Slightly larger dialog for better visibility
         layout = QVBoxLayout()
         
         # Add description
-        layout.addWidget(QLabel(f"Found {len(video_files)} videos to transcode to MP4:"))
+        layout.addWidget(QLabel(f"Found {len(video_files)} videos. Select which to transcode to mp4:"))
         
-        # Add file list
+        # Add file list with multi-selection
         file_list = QListWidget()
+        file_list.setSelectionMode(QAbstractItemView.MultiSelection)  # Allow multiple selection
         for video in video_files:
-            file_list.addItem(video.name)
+            item = file_list.addItem(video.name)
+            # Pre-select all videos by default
+            file_list.item(file_list.count() - 1).setSelected(True)
         layout.addWidget(file_list)
+        
+        # Add selection helpers
+        selection_layout = QHBoxLayout()
+        select_all_btn = QPushButton("Select All")
+        deselect_all_btn = QPushButton("Deselect All")
+        selection_layout.addWidget(select_all_btn)
+        selection_layout.addWidget(deselect_all_btn)
+        layout.addLayout(selection_layout)
         
         # Add options
         options_layout = QHBoxLayout()
@@ -122,7 +135,7 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
         
         # CRF value option
         crf_layout = QHBoxLayout()
-        crf_layout.addWidget(QLabel("CRF (lower is better):"))
+        crf_layout.addWidget(QLabel("| CRF (lower is better):"))
         crf_spin = QSpinBox()
         crf_spin.setRange(0, 51)
         crf_spin.setValue(23)  # Default CRF value
@@ -135,30 +148,44 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
         layout.addLayout(options_layout)
         
         # Add buttons
-        button_layout = QHBoxLayout()
-        ok_button = QPushButton("OK")
-        cancel_button = QPushButton("Cancel")
-        button_layout.addWidget(ok_button)
-        button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        layout.addWidget(button_box)
         
         dialog.setLayout(layout)
         
         # Connect buttons
-        ok_button.clicked.connect(dialog.accept)
-        cancel_button.clicked.connect(dialog.reject)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        
+        # Select/deselect all helpers
+        def select_all():
+            for i in range(file_list.count()):
+                file_list.item(i).setSelected(True)
+        
+        def deselect_all():
+            for i in range(file_list.count()):
+                file_list.item(i).setSelected(False)
+        
+        select_all_btn.clicked.connect(select_all)
+        deselect_all_btn.clicked.connect(deselect_all)
         
         # Show dialog and wait for user input
         if dialog.exec_():
             # User clicked OK, process videos
             import subprocess
-            import os
-            from concurrent.futures import ThreadPoolExecutor
-            from tqdm import tqdm
+            import time
             
             # Get options
             create_subfolder = subfolder_check.isChecked()
             crf_value = crf_spin.value()
+            
+            # Get selected videos
+            selected_indices = [i.row() for i in file_list.selectedIndexes()]
+            selected_videos = [video_files[i] for i in selected_indices]
+            
+            if not selected_videos:
+                print("No videos selected for transcoding.")
+                return [(None,)]
             
             # Create output folder if needed
             if create_subfolder:
@@ -167,11 +194,15 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
             else:
                 output_folder = path
                 
-            print(f"🔄 Transcoding {len(video_files)} videos to MP4 (CRF: {crf_value})...")
+            print(f"🔄 Transcoding {len(selected_videos)} videos to MP4 (CRF: {crf_value})...")
             
-            # Function to transcode a single video
-            def transcode_video(video_path):
+            # Process one video at a time
+            successful = 0
+            for i, video_path in enumerate(selected_videos, 1):
+                print(f"Processing {i}/{len(selected_videos)}: {video_path.name}")
                 output_path = output_folder / f"{video_path.stem}.mp4"
+                
+                # Define FFmpeg command
                 cmd = [
                     "ffmpeg", "-i", str(video_path), 
                     "-c:v", "libx264", "-preset", "superfast", 
@@ -181,6 +212,8 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
                     "-y"  # Overwrite output if it exists
                 ]
                 
+                # Time the transcoding process
+                start_time = time.time()
                 try:
                     subprocess.run(
                         cmd, 
@@ -188,28 +221,20 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
                         stderr=subprocess.PIPE, 
                         check=True
                     )
-                    return (True, video_path, output_path)
+                    elapsed_time = time.time() - start_time
+                    # Calculate file sizes for comparison
+                    input_size = video_path.stat().st_size / (1024 * 1024)  # MB
+                    output_size = output_path.stat().st_size / (1024 * 1024)  # MB
+                    size_reduction = 100 * (1 - output_size / input_size) if input_size > 0 else 0
+                    
+                    print(f"✅ Successfully transcoded in {elapsed_time:.2f} seconds")
+                    print(f"   Input: {input_size:.2f} MB, Output: {output_size:.2f} MB ({size_reduction:.1f}% reduction)")
+                    successful += 1
                 except subprocess.CalledProcessError as e:
-                    return (False, video_path, str(e))
+                    print(f"❌ Failed: {str(e)}")
             
-            # Process videos in parallel
-            results = []
-            with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-                for result in tqdm(
-                    executor.map(transcode_video, video_files),
-                    total=len(video_files),
-                    desc="Transcoding videos"
-                ):
-                    results.append(result)
-            
-            # Report results
-            successful = sum(1 for r in results if r[0])
-            print(f"✅ Successfully transcoded {successful}/{len(video_files)} videos")
-            
-            # Show any errors
-            for success, video_path, error in results:
-                if not success:
-                    print(f"❌ Failed to transcode {video_path.name}: {error}")
+            # Report final results
+            print(f"✅ Successfully transcoded {successful}/{len(selected_videos)} videos")
         
         return [(None,)]
     
