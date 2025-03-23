@@ -15,7 +15,7 @@ from qtpy.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor, QIcon, QPa
 from qtpy.QtCore import QRectF
 
 
-class DropArea(QFrame):  # Changed from QWidget to QFrame
+class DropArea(QFrame): 
     """Widget that accepts file drops."""
     
     def __init__(self, parent=None):
@@ -95,7 +95,13 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
 
 
 class MP4ToGifConverter(QMainWindow):
-    """Main application window."""
+    """
+    Main application window.
+    The goal is to provide a simple interface to convert MP4, MOV, and AVI files to GIFs.
+    This is a task that is often useful when compressing / sharing short video clips.
+       
+    
+    """
     
     def __init__(self):
         super().__init__()
