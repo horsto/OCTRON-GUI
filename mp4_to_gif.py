@@ -361,7 +361,7 @@ class MP4ToGifConverter(QMainWindow):
                         total_frames = 0
                         duration = 0
                     
-                    print(f"Video has {total_frames} frames, duration {duration}s")
+                    print(f"Video duration {duration}s")
                 except Exception as e:
                     print(f"Error getting video info: {e}")
                     total_frames = 0
