@@ -28,7 +28,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         # Set up a frame with a border - this approach works more reliably
         # than just using stylesheets on custom widgets
         self.setFrameStyle(QFrame.Panel | QFrame.Raised)
-        self.setLineWidth(2)  # Border width
+        self.setLineWidth(6)  # Border width
         
         # Set background color
         palette = self.palette()
@@ -100,8 +100,8 @@ class MP4ToGifConverter(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MP4 to GIF Converter 🐙")  # Keep octopus emoji in window title
-        self.setMinimumSize(500, 500)
+        self.setWindowTitle("MP4 to GIF Converter") 
+        self.setMinimumSize(300, 500)
         
         # Create central widget and layout
         central_widget = QWidget()
@@ -156,7 +156,7 @@ class MP4ToGifConverter(QMainWindow):
         skip_layout = QHBoxLayout()
         skip_layout.addWidget(QLabel("Skip Frames:"))
         self.skip_spinner = QSpinBox()
-        self.skip_spinner.setRange(0, 5000)
+        self.skip_spinner.setRange(0, 10000)
         self.skip_spinner.setValue(0)  # Default: don't skip any frames
         self.skip_spinner.setToolTip("Skip N frames between each captured frame (0 = no skipping).\n"
                                     "Higher values create smaller files but choppier animations.")
@@ -204,7 +204,7 @@ class MP4ToGifConverter(QMainWindow):
         # Control buttons
         control_layout = QHBoxLayout()
         self.start_button = QPushButton("Start Conversion")
-        self.start_button.setMinimumSize(QSize(150, 40))
+        self.start_button.setMinimumSize(QSize(100, 50))
         control_layout.addWidget(self.start_button)
         main_layout.addLayout(control_layout)
         
