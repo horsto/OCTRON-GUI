@@ -25,6 +25,7 @@ sys.path.append(cur_path.as_posix())
 import torch
 
 # Napari plugin QT components
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QWidget,
     QDialog,
@@ -88,6 +89,11 @@ from octron.gui_dialog_elements import (
 
 # If there's already a QApplication instance (as may be the case when running as a napari plugin),
 # then set its style explicitly:
+# Enable high DPI support
+if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 app = QApplication.instance()
 if app is not None:
     # This is a hack to get the style to look similar on darwin and windows systems
