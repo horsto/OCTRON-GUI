@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import os
-import sys
 import subprocess
 import time
 from pathlib import Path
@@ -14,7 +12,7 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt, QSize
 from qtpy.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor, QIcon, QPainter, QPixmap, QPainterPath, QPen
-from qtpy.QtCore import QRectF, QPointF
+from qtpy.QtCore import QRectF
 
 
 class DropArea(QFrame):  # Changed from QWidget to QFrame
@@ -39,7 +37,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         self.setAutoFillBackground(True)
         
         layout = QVBoxLayout()
-        self.label = QLabel("Drop MP4 files here")
+        self.label = QLabel("Drop MP4/MOV files here")
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("color: white; font-size: 14px;")
         layout.addWidget(self.label)
@@ -49,7 +47,8 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         """Handle drag enter events."""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
-            if all(url.toLocalFile().lower().endswith('.mp4') for url in urls):
+            # Accept both MP4 and MOV files
+            if all(url.toLocalFile().lower().endswith(('.mp4', '.mov')) for url in urls):
                 event.acceptProposedAction()
                 
                 # Change border color to green when active using palette
@@ -75,7 +74,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         file_paths = []
         for url in event.mimeData().urls():
             file_path = url.toLocalFile()
-            if file_path.lower().endswith('.mp4'):
+            if file_path.lower().endswith(('.mp4', '.mov')):
                 file_paths.append(file_path)
         
         # Make sure we access the main window properly
@@ -92,7 +91,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         palette.setColor(QPalette.Dark, Qt.white)
         self.setPalette(palette)
         
-        self.label.setText("Drop MP4 files here")
+        self.label.setText("Drop MP4/MOV files here")
 
 
 class MP4ToGifConverter(QMainWindow):
@@ -100,7 +99,7 @@ class MP4ToGifConverter(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MP4 to GIF Converter") 
+        self.setWindowTitle("MP4/MOV to GIF Converter") 
         self.setMinimumSize(300, 500)
         
         # Create central widget and layout
@@ -222,22 +221,22 @@ class MP4ToGifConverter(QMainWindow):
     
     def add_files(self, file_paths: List[str]):
         """Add files to the list."""
-        # Filter to only include .mp4 files
-        mp4_files = [path for path in file_paths if path.lower().endswith('.mp4')]
+        # Filter to only include supported video files
+        video_files = [path for path in file_paths if path.lower().endswith(('.mp4', '.mov'))]
         
-        for file_path in mp4_files:
+        for file_path in video_files:
             # Check if file already exists in the list
             existing_items = self.file_list.findItems(file_path, Qt.MatchExactly)
             if not existing_items:
                 self.file_list.addItem(file_path)
                 self.files_to_process.append(file_path)
         
-        self.status_label.setText(f"Added {len(mp4_files)} files. Ready to convert.")
+        self.status_label.setText(f"Added {len(video_files)} files. Ready to convert.")
     
     def browse_files(self):
-        """Open a file dialog to select MP4 files."""
+        """Open a file dialog to select video files."""
         files, _ = QFileDialog.getOpenFileNames(
-            self, "Select MP4 Files", "", "MP4 Files (*.mp4)"
+            self, "Select Video Files", "", "Video Files (*.mp4 *.mov)"
         )
         if files:
             self.add_files(files)
@@ -531,8 +530,12 @@ def create_emoji_icon(emoji, size=64, bg_color=None):
     painter.end()
     return QIcon(pixmap)
 
-# Then update the main section to use this icon:
-if __name__ == "__main__":
+def main():
+    """Entry point for the converter tool."""
+    import sys
+    from qtpy.QtWidgets import QApplication
+    from qtpy.QtCore import Qt
+    
     # Enable high DPI support
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -549,3 +552,6 @@ if __name__ == "__main__":
     window.setWindowIcon(app_icon)  # Also set it on the main window
     window.show()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()

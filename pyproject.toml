@@ -61,6 +61,7 @@ octron = "octron:napari.yaml"
 [project.scripts]
 octron = "octron:napari.yaml"
 octron-gui = "octron.main:octron_gui"
+octron-converter = "octron.tools.mp4_to_gif:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
