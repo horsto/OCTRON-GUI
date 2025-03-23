@@ -37,7 +37,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         self.setAutoFillBackground(True)
         
         layout = QVBoxLayout()
-        self.label = QLabel("Drop MP4/MOV files here")
+        self.label = QLabel("Drop MP4/MOV/AVI files here")
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("color: white; font-size: 14px;")
         layout.addWidget(self.label)
@@ -47,14 +47,14 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         """Handle drag enter events."""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
-            # Accept both MP4 and MOV files
-            if all(url.toLocalFile().lower().endswith(('.mp4', '.mov')) for url in urls):
+            # Accept MP4, MOV and AVI files
+            if all(url.toLocalFile().lower().endswith(('.mp4', '.mov', '.avi')) for url in urls):
                 event.acceptProposedAction()
                 
                 # Change border color to green when active using palette
                 palette = self.palette()
-                palette.setColor(QPalette.Light, QColor("#4CAF50"))
-                palette.setColor(QPalette.Dark, QColor("#4CAF50"))
+                palette.setColor(QPalette.Light, QColor("#83ffa3"))
+                palette.setColor(QPalette.Dark, QColor("#83ffa3"))
                 self.setPalette(palette)
                 
                 self.label.setText("Drop to add files")
@@ -74,7 +74,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         file_paths = []
         for url in event.mimeData().urls():
             file_path = url.toLocalFile()
-            if file_path.lower().endswith(('.mp4', '.mov')):
+            if file_path.lower().endswith(('.mp4', '.mov', '.avi')):
                 file_paths.append(file_path)
         
         # Make sure we access the main window properly
@@ -91,7 +91,7 @@ class DropArea(QFrame):  # Changed from QWidget to QFrame
         palette.setColor(QPalette.Dark, Qt.white)
         self.setPalette(palette)
         
-        self.label.setText("Drop MP4/MOV files here")
+        self.label.setText("Drop MP4/MOV/AVI files here")
 
 
 class MP4ToGifConverter(QMainWindow):
@@ -99,7 +99,7 @@ class MP4ToGifConverter(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MP4/MOV to GIF Converter") 
+        self.setWindowTitle("Video to GIF Converter") 
         self.setMinimumSize(300, 500)
         
         # Create central widget and layout
@@ -222,7 +222,7 @@ class MP4ToGifConverter(QMainWindow):
     def add_files(self, file_paths: List[str]):
         """Add files to the list."""
         # Filter to only include supported video files
-        video_files = [path for path in file_paths if path.lower().endswith(('.mp4', '.mov'))]
+        video_files = [path for path in file_paths if path.lower().endswith(('.mp4', '.mov', '.avi'))]
         
         for file_path in video_files:
             # Check if file already exists in the list
@@ -236,7 +236,7 @@ class MP4ToGifConverter(QMainWindow):
     def browse_files(self):
         """Open a file dialog to select video files."""
         files, _ = QFileDialog.getOpenFileNames(
-            self, "Select Video Files", "", "Video Files (*.mp4 *.mov)"
+            self, "Select Video Files", "", "Video Files (*.mp4 *.mov *.avi)"
         )
         if files:
             self.add_files(files)
