@@ -1007,9 +1007,9 @@ class YOLO_octron:
         # Define the tracker configuration
         tracker_config = {
             'tracker_type': 'botsort',    # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.7,     # threshold for the first association
+            'track_high_thresh': 0.6,     # threshold for the first association
             'track_low_thresh': 0.2,      # threshold for the second association
-            'new_track_thresh': 0.9,      # threshold for init new track if the detection does not match any tracks
+            'new_track_thresh': 0.8,      # threshold for init new track if the detection does not match any tracks
             'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
             'match_thresh': 0.95,         # threshold for matching tracks
             'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
@@ -1048,9 +1048,9 @@ class YOLO_octron:
         # Define the tracker configuration
         tracker_config = {
             'tracker_type': 'bytetrack',  # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.7,     # threshold for the first association
+            'track_high_thresh': 0.6,     # threshold for the first association
             'track_low_thresh': 0.2,      # threshold for the second association
-            'new_track_thresh': 0.9,      # threshold for init new track if the detection does not match any tracks
+            'new_track_thresh': 0.8,      # threshold for init new track if the detection does not match any tracks
             'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
             'match_thresh': 0.95,         # threshold for matching tracks
             'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
