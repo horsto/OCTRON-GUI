@@ -368,7 +368,7 @@ def draw_polygons(labels,
         frames = labels[entry]['frames']
         if randomize:
             frames = pick_random_frames(frames, n=max_to_plot)
-        color = np.array(labels[entry]['color'])[:-1]*255
+        #color = np.array(labels[entry]['color'])[:-1]*255
         counter = 1
         for frame in frames:
             
@@ -389,9 +389,22 @@ def draw_polygons(labels,
             ax.imshow(current_frame)
             
             # Draw polys as dots
-            for p in polys:
+            for no_p, p in enumerate(polys):
                 ax.scatter(p[:,0], p[:,1], c='w', s=2, alpha=.5, marker='s')
                 ax.scatter(p[:,0], p[:,1], c='k', s=.5, alpha=.5, marker='.')
+                center_coord = p.mean(axis=0)
+                ax.text(center_coord[0], center_coord[1], str(no_p), 
+                        color='w',  # Text color
+                        fontsize=10,
+                        bbox=dict(
+                            facecolor='black',  # Background color
+                            alpha=0.7,          # Transparency
+                            edgecolor='none',   # No edge color
+                            boxstyle='round,pad=0.3'  # Rounded corners with padding
+                        ),
+                        ha='center',  # Horizontal alignment
+                        va='center'   # Vertical alignment
+                    )
     
             ax.set_xticks([])   
             ax.set_yticks([])
