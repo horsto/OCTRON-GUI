@@ -1706,11 +1706,14 @@ class octron_widget(QWidget):
         
         
         """
+        if not self.predictor:
+            show_warning("Load a SAM2 model first.")
+            return
         # Check if a video layer is loaded
         if not self.video_layer:
             show_warning("No video layer found.")
             return
-
+        
 
         if not recreate:
             # Sanity check for dropdown 
