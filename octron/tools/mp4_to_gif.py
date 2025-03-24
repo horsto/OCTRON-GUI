@@ -21,12 +21,12 @@ class DropArea(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
-        self.setMinimumSize(300, 150)
+        self.setMinimumSize(100, 150)
         
         # Set up a frame with a border - this approach works more reliably
         # than just using stylesheets on custom widgets
         self.setFrameStyle(QFrame.Panel | QFrame.Raised)
-        self.setLineWidth(6)  # Border width
+        self.setLineWidth(7)  # Border width
         
         # Set background color
         palette = self.palette()
@@ -53,8 +53,8 @@ class DropArea(QFrame):
                 
                 # Change border color to green when active using palette
                 palette = self.palette()
-                palette.setColor(QPalette.Light, QColor("#83ffa3"))
-                palette.setColor(QPalette.Dark, QColor("#83ffa3"))
+                palette.setColor(QPalette.Light, QColor("#259e62"))
+                palette.setColor(QPalette.Dark, QColor("#259e62"))
                 self.setPalette(palette)
                 
                 self.label.setText("Drop to add files")
@@ -106,7 +106,7 @@ class MP4ToGifConverter(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Video to GIF Converter") 
-        self.setMinimumSize(300, 500)
+        self.setMinimumSize(300, 700)  # Increased from 300, 500 to 500, 650
         
         # Create central widget and layout
         central_widget = QWidget()
@@ -121,13 +121,13 @@ class MP4ToGifConverter(QMainWindow):
         main_layout.addWidget(QLabel("Files to convert:"))
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.file_list.setMinimumHeight(150)
+        self.file_list.setMinimumHeight(120)
         main_layout.addWidget(self.file_list)
         
         # File controls
         file_controls = QHBoxLayout()
-        self.add_button = QPushButton("Add Files")
-        self.remove_button = QPushButton("Remove Selected")
+        self.add_button = QPushButton(u"\u2295 Add")
+        self.remove_button = QPushButton(u"\u2296 Remove")
         self.clear_button = QPushButton("Clear All")
         file_controls.addWidget(self.add_button)
         file_controls.addWidget(self.remove_button)
@@ -143,7 +143,7 @@ class MP4ToGifConverter(QMainWindow):
         fps_layout.addWidget(QLabel("Frame Rate:"))
         self.fps_spinner = QSpinBox()
         self.fps_spinner.setRange(1, 60)
-        self.fps_spinner.setValue(15)  # Default value
+        self.fps_spinner.setValue(20)  
         self.fps_spinner.setSuffix(" fps")
         fps_layout.addWidget(self.fps_spinner)
         options_layout.addLayout(fps_layout)
@@ -164,7 +164,7 @@ class MP4ToGifConverter(QMainWindow):
         self.skip_spinner.setRange(0, 10000)
         self.skip_spinner.setValue(0)  # Default: don't skip any frames
         self.skip_spinner.setToolTip("Skip N frames between each captured frame (0 = no skipping).\n"
-                                    "Higher values create smaller files but choppier animations.")
+                                     "Higher values create smaller files but choppier animations.")
         # Remove the explanatory text label
         skip_layout.addWidget(self.skip_spinner)
         # Remove this line:
@@ -180,17 +180,17 @@ class MP4ToGifConverter(QMainWindow):
         self.resize_spinner.setSuffix(" px")
         self.resize_spinner.setSpecialValueText("No resize")  # Show text when value is 0
         self.resize_spinner.setToolTip("Resize output GIF to this maximum width (0 = original size).\n"
-                                      "Height will be adjusted to maintain aspect ratio.")
+                                       "Height will be adjusted to maintain aspect ratio.")
         resize_layout.addWidget(self.resize_spinner)
         options_layout.addLayout(resize_layout)
         
         # Output folder
         folder_layout = QHBoxLayout()
         folder_layout.addWidget(QLabel("Output:"))
-        self.same_folder_check = QCheckBox("Same folder as video")
+        self.same_folder_check = QCheckBox("Same as video")
         self.same_folder_check.setChecked(True)
         folder_layout.addWidget(self.same_folder_check)
-        self.output_folder_button = QPushButton("Select Output Folder...")
+        self.output_folder_button = QPushButton("Select Folder ...")
         self.output_folder_button.setEnabled(False)
         folder_layout.addWidget(self.output_folder_button)
         options_layout.addLayout(folder_layout)
