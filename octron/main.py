@@ -223,6 +223,9 @@ class octron_widget(QWidget):
         self.toolBox.widget(2).setEnabled(False) # Training
         self.toolBox.widget(3).setEnabled(False) # Prediction
         
+        # Disable layer annotation until SAM2 model is loaded
+        self.annotate_layer_create_groupbox.setEnabled(False)
+        
         # And ... 
         self.train_generate_groupbox.setEnabled(False)
         self.train_train_groupbox.setEnabled(False)
@@ -280,6 +283,8 @@ class octron_widget(QWidget):
         # Creating a zarr store for the video is only possible if a video has been loaded
         # AND a model has been loaded
         self.init_zarr_prefetcher_threaded()
+        # Enable the annotation layer creation tab
+        self.annotate_layer_create_groupbox.setEnabled(True)
         
         
     def reset_predictor(self):
@@ -322,13 +327,13 @@ class octron_widget(QWidget):
         self.batch_predict_progressbar.setValue(0)
         
         # Save the object organizer and also refresh the table view
-        # TODO: Make this more efficient. This slows down everything a lot since 
+        # ! TODO: Make this more efficient. This slows down everything a lot since 
         # what we are doing here is creating a video hash from scratch twice (?) and 
         # load the video data, plus we find out which indices have annotation data in the 
         # video. So, that is a lot of processing for just refreshing the table view for example 
         self.save_object_organizer()
         self.refresh_label_table_list() # This is the table in the project tab
-            
+        self.batch_predict_progressbar.setMaximum(self.chunk_size)    
 
     def init_prediction_threaded(self):
         """
@@ -358,6 +363,7 @@ class octron_widget(QWidget):
             self.prediction_worker.finished.connect(self._on_prediction_finished)
             self.prediction_worker.start()
         elif sender == self.predict_next_oneframe_btn:
+            self.batch_predict_progressbar.setMaximum(1)
             self.prediction_worker_one = create_worker(self.octron_sam2_callbacks.next_predict)
             self.prediction_worker_one.setAutoDelete(True)
             self.prediction_worker_one.yielded.connect(self._batch_predict_yielded)
@@ -970,7 +976,7 @@ class octron_widget(QWidget):
             self.toolBox.widget(2).setEnabled(True)  # Training
             self.train_generate_groupbox.setEnabled(True)
             self.train_train_groupbox.setEnabled(True)
-
+            
 
     def on_label_table_double_clicked(self, index):
         """
@@ -1254,6 +1260,8 @@ class octron_widget(QWidget):
                 self.predict_next_batch_btn.setEnabled(False)
                 # Object organizer
                 self.object_organizer = ObjectOrganizer()
+                # Disable the layer annotation box until SAM2 is loaded 
+                self.annotate_layer_create_groupbox.setEnabled(False)
             # Reset the flag 
             self.remove_current_layer = False
     
@@ -1706,20 +1714,13 @@ class octron_widget(QWidget):
         
         
         """
-        # if not self.predictor:
-        #     show_warning("Load a SAM2 model first.")
-        #     return
-        if not self.project_path_video:
-            show_warning("No project video path found.")
-            return
-        if not self.project_path_video.exists():
-            show_warning("Load SAM2 model first") # This is correct! 
-            return
         # Check if a video layer is loaded
         if not self.video_layer:
             show_warning("No video layer found.")
             return
-        
+        if not self.project_path_video:
+            show_warning("No project video path found.")
+            return
 
         if not recreate:
             # Sanity check for dropdown 
