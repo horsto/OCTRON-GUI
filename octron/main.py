@@ -1706,8 +1706,14 @@ class octron_widget(QWidget):
         
         
         """
-        if not self.predictor:
-            show_warning("Load a SAM2 model first.")
+        # if not self.predictor:
+        #     show_warning("Load a SAM2 model first.")
+        #     return
+        if not self.project_path_video:
+            show_warning("No project video path found.")
+            return
+        if not self.project_path_video.exists():
+            show_warning("Load SAM2 model first") # This is correct! 
             return
         # Check if a video layer is loaded
         if not self.video_layer:
