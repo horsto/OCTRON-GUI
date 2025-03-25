@@ -121,7 +121,7 @@ class SAM2_octron(SAM2VideoPredictor):
         #self.fill_hole_area = 200
         # For morphological operations 
         self.disk_size = 2
-        self.perform_morphological_operations = True
+        self.perform_morphological_operations = False
         if self.perform_morphological_operations:
             self.closing_kernel = torch_tensor(disk(self.disk_size).tolist()).to(compute_device)
                     
