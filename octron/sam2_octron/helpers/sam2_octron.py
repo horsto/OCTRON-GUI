@@ -38,7 +38,7 @@ class SAM2_octron(SAM2VideoPredictor):
         clear_non_cond_mem_around_input=True,
         # if `add_all_frames_to_correct_as_cond` is True, we also append to the conditioning frame list any frame that receives a later correction click
         # if `add_all_frames_to_correct_as_cond` is False, we conditioning frame list to only use those initial conditioning frames
-        add_all_frames_to_correct_as_cond=False,
+        add_all_frames_to_correct_as_cond=True,
         #self.fill_hole_area = fill_hole_area
         self.non_overlap_masks = non_overlap_masks
         self.clear_non_cond_mem_around_input = clear_non_cond_mem_around_input
