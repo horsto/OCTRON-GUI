@@ -256,6 +256,13 @@ def collect_labels(project_path,
             # Extract annotated frame indices
             # The fill value of the zarr array is -1, so we can use this to find annotated frames
             annotated_indices = np.where(loaded_masks[:,0,0] >= 0)[0]
+            if prune_empty_labels:
+                # Also get rid of frames where the mask is all zeros
+                # Why? 
+                # Because frames that are not annotated and accidentally skipped contribute to 
+                # "background" masks in YOLO. This will just spoil the actual training success.
+                summed = np.sum(loaded_masks, axis=(1,2))
+                annotated_indices = np.intersect1d(annotated_indices, np.where(summed > 0)[0])
             labels[label_id]['frames'].extend(annotated_indices) 
             
             expected_video_hash_zarr = loaded_masks.attrs.get('video_hash', None)
