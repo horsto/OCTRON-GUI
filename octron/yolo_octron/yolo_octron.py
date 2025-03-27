@@ -1537,7 +1537,7 @@ class YOLO_octron:
                             colormap='hsv',
                         )
             viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 3
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = 500
+            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = len(track_df_napari)
             viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
             # Add masks
             mask_zarr = root[f'{track_id_to_plot}_masks']
