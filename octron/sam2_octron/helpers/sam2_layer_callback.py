@@ -201,15 +201,16 @@ class sam2_octron_callbacks():
                     label = 0
                 labels.append(label)
                 point_data.append(pt[1:][::-1]) # index 0 is the frame number
-                
-            # Then run the actual prediction
-            mask = run_new_pred(predictor=predictor,
-                                frame_idx=frame_idx,
-                                obj_id=obj_id,
-                                labels=labels,
-                                points=point_data,
-                                )
-            prediction_layer.data[frame_idx,:,:] = mask
+            
+            if point_data:
+                # Then run the actual prediction
+                mask = run_new_pred(predictor=predictor,
+                                    frame_idx=frame_idx,
+                                    obj_id=obj_id,
+                                    labels=labels,
+                                    points=point_data,
+                                    )
+                prediction_layer.data[frame_idx,:,:] = mask
             prediction_layer.refresh()  
         else:
             # Catching all above with ['added','removed','changed']
