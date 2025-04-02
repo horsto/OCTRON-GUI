@@ -192,7 +192,6 @@ def add_sam2_points_layer(
                                  ndim=3,
                                  name=name, 
                                  scale=(1,1),
-                                 size=40,
                                  border_color=[.7, .7, .7, 1],
                                  border_width=.2,
                                  opacity=.6,
