@@ -27,8 +27,8 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "napari>=0.5.6",
     "numpy>=2.1.1",
-    "PyQt5>=5.15.0",
-    "qtpy>=2.4.2",
+    "PyQt5>=5.15.14",
+    "qtpy>=2.4.3",
     "torch>=2.5.1",
     "torchvision>=0.20.1",
     "av>=14.1.0",
