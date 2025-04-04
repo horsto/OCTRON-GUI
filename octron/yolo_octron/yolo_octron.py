@@ -206,7 +206,7 @@ class YOLO_octron:
     ##### TRAINING DATA PREPARATION ###########################################################################    
     def prepare_labels(self, 
                        prune_empty_labels=True, 
-                       min_num_frames=10, 
+                       min_num_frames=5, 
                        verbose=False, 
                        ):
         """ 

@@ -601,7 +601,7 @@ class octron_widget(QWidget):
             # available .json files in the project directory
             self.yolo_octron.prepare_labels(
                         prune_empty_labels=prune, 
-                        min_num_frames=10, # hardcoded ... less than 10 frames are not useful
+                        min_num_frames=5, # hardcoded ... less than 5 frames are not useful
                         verbose=False, 
             )
       

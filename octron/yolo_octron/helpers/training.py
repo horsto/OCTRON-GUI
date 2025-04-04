@@ -133,7 +133,7 @@ def pick_random_frames(frames, n=20):
     
 def collect_labels(project_path, 
                    prune_empty_labels=True, 
-                   min_num_frames=10,
+                   min_num_frames=5,
                    verbose=False,
                    ):
     """
