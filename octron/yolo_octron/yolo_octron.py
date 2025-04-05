@@ -338,6 +338,7 @@ class YOLO_octron:
                 for f_no, f in tqdm(enumerate(frames, start=1), 
                             desc=f'Polygons for label {label}', 
                             total=len(frames),
+                            unit='frames',
                             leave=True
                             ):    
                     mask_polys = [] # List of polygons for the current frame
@@ -485,6 +486,7 @@ class YOLO_octron:
             for entry in tqdm(labels,
                             total=len(labels),
                             position=0,
+                            unit='labels',
                             leave=True,
                             desc=f'Exporting {len(labels)} label(s)'
                             ):
@@ -501,6 +503,7 @@ class YOLO_octron:
                                                     total=len(current_indices), 
                                                     desc=f'Exporting {split} frames', 
                                                     position=1,    
+                                                    unit='frames',
                                                     leave=False,
                                                     ):
                         frame = video_data[frame_id]
@@ -1090,6 +1093,7 @@ class YOLO_octron:
                       model_path,
                       device,
                       tracker_name,
+                      one_object_per_label,
                       iou_thresh=.9,
                       conf_thresh=.8,
                       polygon_sigma=1.,
@@ -1108,6 +1112,11 @@ class YOLO_octron:
             Device to run prediction on ('cpu', 'cuda', etc.)
         tracker_name : str
             Name of the tracker to use ('bytetrack' or 'botsort')
+        one_object_per_label : bool
+            Whether to track only one object per label.
+            If True, only the first detected object of each label will be tracked
+            and if more than one object is detected, only the first one with the highest confidence
+            will be kept.
         iou_thresh : float
             IOU threshold for detection
         conf_thresh : float
@@ -1136,6 +1145,9 @@ class YOLO_octron:
         available_trackers = ['bytetrack','botsort']
         tracker_name = tracker_name.strip().lower()
         assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
+        
+        if one_object_per_label:
+            print("⚠ Tracking only one object per label.")
         
         # Calculate total frames across all videos
         total_videos = len(videos_dict)
@@ -1182,6 +1194,7 @@ class YOLO_octron:
             # Process video frames
             video = video_dict['video']
             tracking_df_dict = {}
+            track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
             for frame_no, frame in enumerate(video, start=0):
                 frame_start = time.time()
                 
@@ -1235,11 +1248,36 @@ class YOLO_octron:
                     continue
                 
                 # Extract tracks 
-                for label, mask_poly, track_id, conf in zip(label_names, 
+                for label, track_id, conf, mask_poly in zip(label_names, 
+                                                            track_ids,
+                                                            confidences,
                                                             masks_polys, 
-                                                            track_ids, 
-                                                            confidences
                                                             ):
+                    
+                    if one_object_per_label:
+                        # ! Use 'label' as keys in track_id_label_dict
+                        # There is only one object/track ID per label
+                        if label in track_id_label_dict:
+                            # Overwrite whatever current track ID is assigned to this label
+                            track_id = track_id_label_dict[label]
+                        else:
+                            # Assign a new, custom track ID
+                            track_id = max(track_id_label_dict.values(), default=0) + 1
+                            track_id_label_dict[label] = track_id
+                    else: 
+                        # ! Use 'track_id' as keys in track_id_label_dict
+                        # There can be multiple objects/track IDs per label
+                        if track_id in track_id_label_dict:
+                            label_ = track_id_label_dict[track_id]
+                            if label_ != label: 
+                                # This happens in rare cases 
+                                # if the same track ID is assigned to different labels over time 
+                                # Assign a new track ID
+                                track_id = max(track_id_label_dict.keys(), default=0) + 1
+                                track_id_label_dict[track_id] = label
+                        else:
+                            track_id_label_dict[track_id] = label   
+                        
                     # Initialize mask zarr array if needed
                     if f'{track_id}_masks' not in list(zarr_root.array_keys()):
                         video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
@@ -1255,19 +1293,26 @@ class YOLO_octron:
                         mask_store.attrs['classes'] = results[0].names
                     else:
                         mask_store = zarr_root[f'{track_id}_masks']
-                    # Initialize dataframe if needed
+                        
+                    # Initialize tracking dataframe if needed
                     if track_id not in tracking_df_dict:
                         tracking_df = self.create_tracking_dataframe(video_dict)
                         tracking_df.attrs['label'] = label
                         tracking_df.attrs['track_id'] = track_id
-                        # Add to the dictionary
                         tracking_df_dict[track_id] = tracking_df
                     else:
                         tracking_df = tracking_df_dict[track_id]
                         assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
                         assert tracking_df.attrs['label'] == label, "Label mismatch"    
-                    
-                    # Masks
+
+                    # Check if a row already exists and compare current confidence with existing one
+                    # This happens if one_object_per_label is True and there are multiple detections
+                    if (frame_no, track_id) in tracking_df.index:
+                        existing_conf = tracking_df.loc[(frame_no, track_id), 'confidence']
+                        if conf <= existing_conf:
+                            # Skip this detection
+                            continue
+                    # Otherwise, continue to create masks and extract properties
                     dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
                     mask = polygon_to_mask(dummy_mask.astype('int8'), 
                                                 mask_poly, 

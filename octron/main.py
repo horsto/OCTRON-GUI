@@ -831,12 +831,14 @@ class octron_widget(QWidget):
         else:
             show_info(f"Predicting on device: {self.device_label}")
         
+        one_object_per_label = self.single_subject_checkBox.isChecked()
         # Call the training function which yields progress info
         for progress_info in self.yolo_octron.predict_batch(
                                             videos_dict=self.videos_to_predict,
                                             model_path=self.model_predict_path,
                                             device=self.device_label,
                                             tracker_name=self.yolo_tracker_name,
+                                            one_object_per_label=one_object_per_label,
                                             iou_thresh=self.iou_thresh,
                                             conf_thresh=self.conf_thresh,
                                             polygon_sigma=self.polygon_sigma,
