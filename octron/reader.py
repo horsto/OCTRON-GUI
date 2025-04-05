@@ -73,7 +73,7 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
         # Load predictions
         from octron.yolo_octron.yolo_octron import YOLO_octron
         yolo_octron = YOLO_octron()
-        for label, track_id, _ in yolo_octron.show_predictions(
+        for label, track_id, _, _ in yolo_octron.show_predictions(
             save_dir = path,
             sigma_tracking_pos = 2, # Fixed for now 
         ):

@@ -798,7 +798,7 @@ class octron_widget(QWidget):
             # Show results? 
             save_dir = progress_info.get('save_dir', '')
             if self.view_prediction_resuts: 
-                for label, track_id, _ in self.yolo_octron.show_predictions(save_dir=save_dir):
+                for label, track_id, _, _ in self.yolo_octron.show_predictions(save_dir=save_dir):
                     print(f"Adding tracking result to viewer | Label: {label}, Track ID: {track_id}")     
             
         elif stage == 'complete':

@@ -1428,6 +1428,18 @@ class YOLO_octron:
             Sigma value for tracking position smoothing
             CURRENTLY FIXED TO 1
             
+        Yields
+        -------
+        label : str
+            Label of the tracked object
+        track_id : int
+            Track ID of the tracked object
+        track_df_napari : pd.DataFrame
+            DataFrame with tracking data for the object (xy coordinates)
+        features_df_napari: pd.DataFrame
+            DataFrame with features for the object (area, eccentricity, etc.)
+                    
+            
         """
         # Some heavy imports are hidden here
         from scipy.ndimage import gaussian_filter1d
@@ -1611,4 +1623,4 @@ class YOLO_octron:
             )
             
             viewer.dims.set_point(0,0)
-            yield label, track_id, track_df_napari
+            yield label, track_id, track_df_napari, features_df_napari
