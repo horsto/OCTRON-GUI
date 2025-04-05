@@ -167,7 +167,7 @@ class Ui_octron_widgetui(object):
 
         icon = QIcon()
         icon.addFile(u"icons/noun-project-7158867.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toolBox.addItem(self.project_tab, icon, u"Project")
+        self.toolBox.addItem(self.project_tab, icon, u"Manage project")
         self.annotate_tab = QWidget()
         self.annotate_tab.setObjectName(u"annotate_tab")
         self.annotate_tab.setGeometry(QRect(0, 0, 405, 414))
@@ -402,7 +402,7 @@ class Ui_octron_widgetui(object):
         self.train_tab.setSizePolicy(sizePolicy1)
         self.verticalLayoutWidget_4 = QWidget(self.train_tab)
         self.verticalLayoutWidget_4.setObjectName(u"verticalLayoutWidget_4")
-        self.verticalLayoutWidget_4.setGeometry(QRect(0, 0, 402, 355))
+        self.verticalLayoutWidget_4.setGeometry(QRect(0, 0, 402, 371))
         self.train_vertical_layout = QVBoxLayout(self.verticalLayoutWidget_4)
         self.train_vertical_layout.setObjectName(u"train_vertical_layout")
         self.train_vertical_layout.setContentsMargins(0, 0, 0, 0)
@@ -526,7 +526,7 @@ class Ui_octron_widgetui(object):
 
         self.layoutWidget3 = QWidget(self.train_generate_groupbox)
         self.layoutWidget3.setObjectName(u"layoutWidget3")
-        self.layoutWidget3.setGeometry(QRect(10, 120, 381, 31))
+        self.layoutWidget3.setGeometry(QRect(10, 120, 381, 37))
         self.train_folder_btn_horizontalLayout = QHBoxLayout(self.layoutWidget3)
         self.train_folder_btn_horizontalLayout.setObjectName(u"train_folder_btn_horizontalLayout")
         self.train_folder_btn_horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -593,7 +593,7 @@ class Ui_octron_widgetui(object):
         self.num_epochs_input.setMinimum(1)
         self.num_epochs_input.setMaximum(900)
         self.num_epochs_input.setSingleStep(10)
-        self.num_epochs_input.setValue(60)
+        self.num_epochs_input.setValue(200)
 
         self.train_grid_layout.addWidget(self.num_epochs_input, 0, 1, 1, 1, Qt.AlignmentFlag.AlignRight)
 
@@ -608,7 +608,7 @@ class Ui_octron_widgetui(object):
         self.save_period_input.setMinimum(2)
         self.save_period_input.setMaximum(100)
         self.save_period_input.setSingleStep(15)
-        self.save_period_input.setValue(20)
+        self.save_period_input.setValue(50)
 
         self.train_grid_layout.addWidget(self.save_period_input, 1, 1, 1, 1, Qt.AlignmentFlag.AlignRight)
 
@@ -860,7 +860,7 @@ class Ui_octron_widgetui(object):
         self.predict_conf_thresh_spinbox.setMaximumSize(QSize(90, 25))
         self.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
         self.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
-        self.predict_conf_thresh_spinbox.setValue(0.800000000000000)
+        self.predict_conf_thresh_spinbox.setValue(0.750000000000000)
 
         self.predict_grid_layout2.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
@@ -909,7 +909,7 @@ class Ui_octron_widgetui(object):
 
         self.single_subject_checkBox = QCheckBox(self.layoutWidget9)
         self.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
-        self.single_subject_checkBox.setEnabled(False)
+        self.single_subject_checkBox.setEnabled(True)
         self.single_subject_checkBox.setMinimumSize(QSize(90, 25))
         self.single_subject_checkBox.setMaximumSize(QSize(100, 25))
         self.single_subject_checkBox.setChecked(False)
@@ -932,7 +932,7 @@ class Ui_octron_widgetui(object):
 
         self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget9)
         self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
-        self.overwrite_prediction_checkBox.setEnabled(True)
+        self.overwrite_prediction_checkBox.setEnabled(False)
         self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
         self.overwrite_prediction_checkBox.setMaximumSize(QSize(100, 25))
         self.overwrite_prediction_checkBox.setChecked(True)
@@ -971,7 +971,7 @@ class Ui_octron_widgetui(object):
         self.video_file_drop_widget.setToolTip(QCoreApplication.translate("octron_widgetui", u"Drag and drop one .mp4 file here", None))
 #endif // QT_CONFIG(tooltip)
         self.project_existing_data_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Existing data", None))
-        self.toolBox.setItemText(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Project", None))
+        self.toolBox.setItemText(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Manage project", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.project_tab), QCoreApplication.translate("octron_widgetui", u"Create new octron projects or load existing ones", None))
 #endif // QT_CONFIG(tooltip)
@@ -1162,7 +1162,7 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.open_when_finish_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"View results", None))
 #if QT_CONFIG(tooltip)
-        self.single_subject_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked across videos", None))
+        self.single_subject_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked per label", None))
 #endif // QT_CONFIG(tooltip)
         self.single_subject_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"1 subject", None))
         self.videos_for_prediction_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Videos", None))

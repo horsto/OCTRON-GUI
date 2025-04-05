@@ -151,7 +151,7 @@
          <normaloff>icons/noun-project-7158867.svg</normaloff>icons/noun-project-7158867.svg</iconset>
        </attribute>
        <attribute name="label">
-        <string>Project</string>
+        <string>Manage project</string>
        </attribute>
        <attribute name="toolTip">
         <string>Create new octron projects or load existing ones</string>
@@ -1160,7 +1160,7 @@ batch prediction?</string>
           <x>0</x>
           <y>0</y>
           <width>402</width>
-          <height>355</height>
+          <height>371</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="train_vertical_layout" stretch="0,0">
@@ -1514,7 +1514,7 @@ but should be separate entities in the training data.</string>
               <x>10</x>
               <y>120</y>
               <width>381</width>
-              <height>31</height>
+              <height>37</height>
              </rect>
             </property>
             <layout class="QHBoxLayout" name="train_folder_btn_horizontalLayout">
@@ -1702,7 +1702,7 @@ Recommended are at least ~50.</string>
                 <number>10</number>
                </property>
                <property name="value">
-                <number>60</number>
+                <number>200</number>
                </property>
               </widget>
              </item>
@@ -1746,7 +1746,7 @@ Recommended are at least ~50.</string>
                 <number>15</number>
                </property>
                <property name="value">
-                <number>20</number>
+                <number>50</number>
                </property>
               </widget>
              </item>
@@ -2458,7 +2458,7 @@ bounding boxes is allowed before they are considered to be detecting the same ob
                 <double>0.050000000000000</double>
                </property>
                <property name="value">
-                <double>0.800000000000000</double>
+                <double>0.750000000000000</double>
                </property>
               </widget>
              </item>
@@ -2591,7 +2591,7 @@ bounding boxes is allowed before they are considered to be detecting the same ob
              <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
               <widget class="QCheckBox" name="single_subject_checkBox">
                <property name="enabled">
-                <bool>false</bool>
+                <bool>true</bool>
                </property>
                <property name="minimumSize">
                 <size>
@@ -2606,7 +2606,7 @@ bounding boxes is allowed before they are considered to be detecting the same ob
                 </size>
                </property>
                <property name="toolTip">
-                <string>Click this if you expect only one subject to be tracked across videos</string>
+                <string>Click this if you expect only one subject to be tracked per label</string>
                </property>
                <property name="text">
                 <string>1 subject</string>
@@ -2669,7 +2669,7 @@ bounding boxes is allowed before they are considered to be detecting the same ob
              <item row="2" column="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
               <widget class="QCheckBox" name="overwrite_prediction_checkBox">
                <property name="enabled">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="minimumSize">
                 <size>
