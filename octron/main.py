@@ -375,6 +375,9 @@ class octron_widget(QWidget):
     
     def _create_worker_polygons(self):
         # Create a new worker for polygon generation
+        # Watershed? 
+        enable_watershed = self.train_data_watershed_checkBox.isChecked()
+        self.yolo_octron.enable_watershed = enable_watershed
         self.polygon_worker = create_worker(self.yolo_octron.prepare_polygons)
         self.polygon_worker.setAutoDelete(True) # auto destruct !!
         self.polygon_worker.yielded.connect(self._polygon_yielded)
@@ -491,6 +494,7 @@ class octron_widget(QWidget):
             self.generate_training_data_btn.setEnabled(False)   
             self.train_data_overwrite_checkBox.setEnabled(False)
             self.train_prune_checkBox.setEnabled(False)
+            self.train_data_watershed_checkBox.setEnabled(False)
             # Write yolo config file 
             self.yolo_octron.write_yolo_config()    
             # Enable next part (YOLO training) of the pipeline 
@@ -531,7 +535,7 @@ class octron_widget(QWidget):
             self.polygons_generated = False # this needs to be here, since polygon generation needs to run
 
         self.training_data_folder_label.setEnabled(True)
-        self.training_data_folder_label.setText(f'→{self.yolo_octron.training_path.as_posix()[-40:]}')
+        self.training_data_folder_label.setText(f'→{self.yolo_octron.training_path.as_posix()[-38:]}')
 
 
     def _polygon_generation(self):
@@ -976,7 +980,9 @@ class octron_widget(QWidget):
             self.toolBox.widget(2).setEnabled(True)  # Training
             self.train_generate_groupbox.setEnabled(True)
             self.train_train_groupbox.setEnabled(True)
-            
+            # Enable some buttons too 
+            self.train_data_watershed_checkBox.setEnabled(True)
+            self.train_prune_checkBox.setEnabled(True)
 
     def on_label_table_double_clicked(self, index):
         """
@@ -1087,15 +1093,16 @@ class octron_widget(QWidget):
     def refresh_trained_model_list(self):
         """
         Refresh the trained model list combobox with the current models in the project directory
-        
         """
-        trained_models = self.yolo_octron.find_trained_models(project_path=self.project_path)
-        
-        if not trained_models:
-            return
         # Clear the old list, and re-instantiate
         self.yolomodel_trained_list.clear()
         self.yolomodel_trained_list.addItem('Choose model ...')
+        
+        trained_models = self.yolo_octron.find_trained_models(project_path=self.project_path)
+        if not trained_models:
+            self.toolBox.widget(3).setEnabled(False)
+            return
+        
         # Write the trained models to yolomodel_trained_list one by one
         for model in trained_models:
             if model.stem not in self.trained_models:

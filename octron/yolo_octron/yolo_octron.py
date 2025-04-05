@@ -90,6 +90,7 @@ class YOLO_octron:
         self.label_dict = None
         self.config_path = None
         self.models_dict = {}
+        self.enable_watershed = False
         
         if models_yaml_path is not None:
             self.models_yaml_path = Path(models_yaml_path) 
@@ -226,12 +227,14 @@ class YOLO_octron:
     def prepare_polygons(self):
         """
         Calculate polygons for each mask in each frame and label in the label_dict.
-        The watershedding is performed on the masks,
+        Optional watershedding is performed on the masks,
         and the polygons are extracted from the resulting labels.
-        
+        Whether watershedding is performed is determined by the 
+        enable_watershed attribute in this class.
+
         I am doing some kind of "optimal" watershedding here,
-        by determining the median object diameter from a subset of masks.
-        This is then used to determine the footprint diameter for the watershedding.
+        by determining the median object diameter from a random subset of masks.
+        This is then used to determine the min peak distance for the watershedding.
         
         Parameters
         ----------
@@ -285,6 +288,7 @@ class YOLO_octron:
         if self.label_dict is None:
             raise ValueError("No labels found. Please run prepare_labels() first.")
 
+        print(f"Watershed: {self.enable_watershed}")
         for no_entry, labels in enumerate(self.label_dict.values(), start=1):  
             min_area = None
 
@@ -295,38 +299,40 @@ class YOLO_octron:
                 frames = labels[entry]['frames']
                 mask_arrays = labels[entry]['masks'] # zarr array
                 
-                # On a subset of masks, determine object properties
-                random_frames = pick_random_frames(frames, n=10)
-                obj_diameters = []
-                for f in random_frames:
-                    for mask_array in mask_arrays:
-                        sample_mask = mask_array[f]
-                        if sample_mask.sum() == 0:
-                            continue
-                        else:
-                            if min_area is None:
-                                # Determine area threshold once
-                                # threshold at 0.01 percent of the image area
-                                min_area = 0.0001*sample_mask.shape[0]*sample_mask.shape[1]
-                            l, r = find_objects_in_mask(sample_mask, 
-                                                    min_area=min_area
-                                                    ) 
-                            for r_ in r:
-                                # Choosing feret diameter as a measure of object size
-                                # See https://en.wikipedia.org/wiki/Feret_diameter
-                                # and https://scikit-image.org/docs/stable/api/skimage.measure.html
-                                # "Maximum Feret’s diameter computed as the longest distance between 
-                                # points around a region’s convex hull contour
-                                # as determined by find_contours."
-                                obj_diameters.append(r_.feret_diameter_max)
-                                
-                # Now we can make assumptions about the median diameter of the objects
-                # I use this for "optimal" watershed parameters 
-                median_obj_diameter = np.nanmedian(obj_diameters)
-                if np.isnan(median_obj_diameter):
-                    median_obj_diameter = 5 # Pretty arbitrary, but should work for most cases
-                if median_obj_diameter < 1:
-                    median_obj_diameter = 5
+                if self.enable_watershed:
+                    # On a subset of masks, determine object properties
+                    random_frames = pick_random_frames(frames, n=25)
+                    obj_diameters = []
+                    for f in random_frames:
+                        for mask_array in mask_arrays:
+                            sample_mask = mask_array[f]
+                            if sample_mask.sum() == 0:
+                                continue
+                            else:
+                                if min_area is None:
+                                    # Determine area threshold once
+                                    # threshold at 0.01 percent of the image area
+                                    min_area = 0.0001*sample_mask.shape[0]*sample_mask.shape[1]
+                                l, r = find_objects_in_mask(sample_mask, 
+                                                        min_area=min_area
+                                                        ) 
+                                for r_ in r:
+                                    # Choosing feret diameter as a measure of object size
+                                    # See https://en.wikipedia.org/wiki/Feret_diameter
+                                    # and https://scikit-image.org/docs/stable/api/skimage.measure.html
+                                    # "Maximum Feret’s diameter computed as the longest distance between 
+                                    # points around a region’s convex hull contour
+                                    # as determined by find_contours."
+                                    obj_diameters.append(r_.feret_diameter_max)
+                                    
+                    # Now we can make assumptions about the median diameter of the objects
+                    # I use this for "optimal" watershed parameters 
+                    median_obj_diameter = np.nanmedian(obj_diameters)
+                    if np.isnan(median_obj_diameter):
+                        median_obj_diameter = 5 # Pretty arbitrary, but should work for most cases
+                    if median_obj_diameter < 1:
+                        median_obj_diameter = 5
+                        
                 ##################################################################################
                 polys = {} # Collected polygons over frame indices
                 for f_no, f in tqdm(enumerate(frames, start=1), 
@@ -337,26 +343,35 @@ class YOLO_octron:
                     mask_polys = [] # List of polygons for the current frame
                     for mask_array in mask_arrays:
                         mask_current_array = mask_array[f]
-                        # Watershed
-                        try:
-                            _, water_masks = watershed_mask(mask_current_array,
-                                                            footprint_diameter=median_obj_diameter,
-                                                            min_size_ratio=0.1,    
-                                                            plot=False
-                                                        )
-                        except AssertionError:
-                            # The mask is empty at this frame or the object spans the whole frame
-                            continue
-                        # Loop over watershedded masks
-                        for mask in water_masks:
+                        if self.enable_watershed:
+                            # Watershed
                             try:
-                                mask_polys.append(get_polygons(mask)) 
+                                _, water_masks = watershed_mask(mask_current_array,
+                                                                footprint_diameter=median_obj_diameter,
+                                                                min_size_ratio=0.1,    
+                                                                plot=False
+                                                            )
                             except AssertionError:
-                                # The mask is empty at this frame.
-                                # This happens if there is more than one mask 
-                                # zarr array (because there are multiple instances of a label), 
-                                # and the current label is not present in the current mask array.
-                                pass    
+                                # The mask is empty at this frame or the object spans the whole frame
+                                continue
+                            # Loop over watershedded masks
+                            for mask in water_masks:
+                                try:
+                                    mask_polys.append(get_polygons(mask)) 
+                                except AssertionError:
+                                    # The mask is empty at this frame.
+                                    # This happens if there is more than one mask 
+                                    # zarr array (because there are multiple instances of a label), 
+                                    # and the current label is not present in the current mask array.
+                                    pass    
+                        else:
+                            # No watershedding
+                            try:
+                                mask_polys.append(get_polygons(mask_current_array))
+                            except AssertionError:
+                                # See explanation above ... 
+                                pass
+                            
                     polys[f] = mask_polys
                     # Yield, to update the progress bar
                     yield((no_entry, len(self.label_dict), label, f_no, len(frames)))  

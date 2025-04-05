@@ -160,7 +160,7 @@ def watershed_mask(mask,
         ax[0].imshow(mask, cmap='gray')
         ax[0].set_title('Original mask')
         ax[1].imshow(labels, cmap='nipy_spectral')
-        ax[1].set_title(f'Watershed, remaining masks: {len(masks)}')
+        ax[1].set_title(f'Watershed, remaining masks: {len(masks)}\ndiam:{diam}')
         plt.show()
         
     return labels, masks
