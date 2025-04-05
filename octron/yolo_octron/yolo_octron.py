@@ -1611,3 +1611,4 @@ class YOLO_octron:
             )
             
             viewer.dims.set_point(0,0)
+            yield label, track_id, track_df_napari

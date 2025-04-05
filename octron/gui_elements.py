@@ -93,7 +93,7 @@ class octron_gui_elements(QWidget):
     ###### GUI SETUP CODE FROM QT DESIGNER ############################################################
     def setupUi(self, base_path):
         if not self.octron.objectName():
-            self.octron.setObjectName(u"self")
+            self.octron.setObjectName(u"OCTRON")
         self.octron.setEnabled(True)
         self.octron.resize(410, 700)
         self.octron.setMinimumSize(QSize(410, 700))
