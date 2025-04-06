@@ -256,13 +256,18 @@ def collect_labels(project_path,
             # Extract annotated frame indices
             # The fill value of the zarr array is -1, so we can use this to find annotated frames
             annotated_indices = np.where(loaded_masks[:,0,0] >= 0)[0]
+            if verbose:
+                print(f'Found {len(annotated_indices)} annotated frames for label {label} in {object_organizer.parent.name}')
             if prune_empty_labels:
+                
                 # Also get rid of frames where the mask is all zeros
                 # Why? 
                 # Because frames that are not annotated and accidentally skipped contribute to 
                 # "background" masks in YOLO. This will just spoil the actual training success.
-                summed = np.sum(loaded_masks, axis=(1,2))
+                summed = np.sum(loaded_masks, axis=(1,2)) # TODO: This is a heavy computation!!
                 annotated_indices = np.intersect1d(annotated_indices, np.where(summed > 0)[0])
+                if verbose: 
+                    print(f'PRUNING: {len(annotated_indices)} remain after removing empty frames')
             labels[label_id]['frames'].extend(annotated_indices) 
             
             expected_video_hash_zarr = loaded_masks.attrs.get('video_hash', None)
@@ -287,6 +292,8 @@ def collect_labels(project_path,
             common_frames = find_common_frames([f['frames'] for f in labels.values()])
             for label_id in labels:
                 labels[label_id]['frames'] = common_frames
+                if verbose: 
+                    print(f'PRUNING: Label {labels[label_id]["label"]} has {len(labels[label_id]["frames"])} common frames') 
         
         # Assert that there is a minimum number of frames available for training data generation
         if min_num_frames > 0: 

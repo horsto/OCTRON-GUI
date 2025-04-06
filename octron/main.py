@@ -606,7 +606,7 @@ class octron_widget(QWidget):
             self.yolo_octron.prepare_labels(
                         prune_empty_labels=prune, 
                         min_num_frames=5, # hardcoded ... less than 5 frames are not useful
-                        verbose=False, 
+                        verbose=True, 
             )
       
         except AssertionError as e:
