@@ -778,8 +778,8 @@ class YOLO_octron:
                     fliplr=.25,
                     mosaic=0.,
                     mixup=0.,
-                    copy_paste=0.,
-                    copy_paste_mode='mixup', 
+                    copy_paste=0.25,
+                    copy_paste_mode='flip', 
                     erasing=.0,
                     crop_fraction=1.0,
                 )
