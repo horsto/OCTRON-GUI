@@ -814,23 +814,23 @@ class YOLO_octron:
             print("Training interrupted by user")
             
     
-    def launch_tensorboard(self, port=6006):
+    def launch_tensorboard(self):
         """
         Check if TensorBoard is installed, launch it with the training directory,
         and open a web browser to view the TensorBoard interface.
+        Chooses a random port every time to avoid port collisions.
+        If TensorBoard is not installed, it will attempt to install it using pip.
+        
         
         Parameters
         ----------
-        port : int
-            Port number for TensorBoard to run on (default: 6006)
-        
+
         Returns
         -------
         bool
             True if TensorBoard was successfully launched, False otherwise
         """
-        
-        
+        import random
         # Check if tensorboard is installed
         if importlib.util.find_spec("tensorboard") is None:
             print("TensorBoard is not installed. Installing now...")
@@ -853,6 +853,7 @@ class YOLO_octron:
         # Launch tensorboard in a separate process
         log_dir = self.training_path / 'training'
         try:
+            port = random.randint(6000, 7000)
             print(f"Starting TensorBoard on port {port}...")
             tensorboard_process = subprocess.Popen(
                 [sys.executable, "-m", "tensorboard.main", 
@@ -1453,6 +1454,7 @@ class YOLO_octron:
         import pandas as pd 
         # Napari PyAV reader 
         from napari_pyav._reader import FastVideoReader
+        
 
         
         def _find_class_by_name(classes, class_name):
