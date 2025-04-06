@@ -593,7 +593,7 @@ class Ui_octron_widgetui(object):
         self.num_epochs_input.setMinimum(1)
         self.num_epochs_input.setMaximum(900)
         self.num_epochs_input.setSingleStep(10)
-        self.num_epochs_input.setValue(200)
+        self.num_epochs_input.setValue(250)
 
         self.train_grid_layout.addWidget(self.num_epochs_input, 0, 1, 1, 1, Qt.AlignmentFlag.AlignRight)
 
@@ -860,7 +860,7 @@ class Ui_octron_widgetui(object):
         self.predict_conf_thresh_spinbox.setMaximumSize(QSize(90, 25))
         self.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
         self.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
-        self.predict_conf_thresh_spinbox.setValue(0.750000000000000)
+        self.predict_conf_thresh_spinbox.setValue(0.850000000000000)
 
         self.predict_grid_layout2.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
