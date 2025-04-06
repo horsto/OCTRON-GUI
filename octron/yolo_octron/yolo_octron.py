@@ -743,6 +743,7 @@ class YOLO_octron:
         training_error = None
         
         def run_training():
+            # https://docs.ultralytics.com/modes/train/#resuming-interrupted-trainings
             nonlocal training_error
             try:
                 # Start training
@@ -753,27 +754,33 @@ class YOLO_octron:
                     project=self.training_path.as_posix(),
                     mode='segment',
                     device=device,
-                    mask_ratio=4,
+                    optimizer='auto',
+                    rect=True,
+                    cos_lr=True,
+                    mask_ratio=2,
+                    fraction=1.0,
                     epochs=epochs,
                     imgsz=imagesz,
                     resume=False,
                     plots=True,
                     batch=16,
-                    cache=False,
+                    cache='disk',
                     save=True,
                     save_period=save_period, 
                     exist_ok=True,
                     # Augmentation
                     hsv_v=.25,
                     degrees=180,
-                    scale=.5,
+                    perspective=0.,
+                    scale=0.25,
                     shear=2,
-                    flipud=.1,
-                    fliplr=.1,
-                    mosaic=1.0,
-                    copy_paste=.5,
+                    flipud=.25,
+                    fliplr=.25,
+                    mosaic=0.,
+                    mixup=0.,
+                    copy_paste=0.,
                     copy_paste_mode='mixup', 
-                    erasing=.25,
+                    erasing=.0,
                     crop_fraction=1.0,
                 )
             except Exception as e:
