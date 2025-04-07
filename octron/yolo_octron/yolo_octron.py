@@ -18,6 +18,7 @@ from tqdm import tqdm
 import numpy as np
 from natsort import natsorted
 import zarr 
+from skimage import measure
 
 import napari
 from napari.utils import DirectLabelColormap
@@ -344,6 +345,7 @@ class YOLO_octron:
                     mask_polys = [] # List of polygons for the current frame
                     for mask_array in mask_arrays:
                         mask_current_array = mask_array[f]
+                        min_area = 0.0001*mask_current_array.shape[0]*mask_current_array.shape[1]
                         if self.enable_watershed:
                             # Watershed
                             try:
@@ -367,11 +369,33 @@ class YOLO_octron:
                                     pass    
                         else:
                             # No watershedding
-                            try:
-                                mask_polys.append(get_polygons(mask_current_array))
-                            except AssertionError:
-                                # See explanation above ... 
-                                pass
+                            # Label all objects in the mask 
+                            mask_labeled = measure.label(mask_current_array)
+                            unique_labels = np.unique(mask_labeled)
+                            assert len(unique_labels) >= 1, f"Labeling failed for {label} in frame {f_no}"
+                            # Get new region props to filter out small-ish regions
+                            props = measure.regionprops_table(
+                                    mask_labeled,
+                                    properties=('area','label')
+                                    )
+                            # Filter out small objects by setting them to 0
+                            for i, area in enumerate(props['area']):
+                                if area < min_area:
+                                    mask_labeled[mask_labeled == props['label'][i]] = 0                                        
+                            if np.sum(mask_labeled) == 0:
+                                # No objects found after filtering
+                                continue
+                            unique_labels = np.unique(mask_labeled)
+                            for l in unique_labels:
+                                if l == 0:
+                                    # Background 
+                                    continue
+                                else:
+                                    # Re-initialize the mask
+                                    mask_current_array = np.zeros_like(mask_current_array)
+                                    mask_current_array[mask_labeled == l] = 1
+                                    mask_polys.append(get_polygons(mask_current_array))
+
                             
                     polys[f] = mask_polys
                     # Yield, to update the progress bar
@@ -755,7 +779,7 @@ class YOLO_octron:
                     mode='segment',
                     device=device,
                     optimizer='auto',
-                    rect=True,
+                    rect=False,
                     cos_lr=True,
                     mask_ratio=2,
                     fraction=1.0,
@@ -778,8 +802,8 @@ class YOLO_octron:
                     fliplr=.25,
                     mosaic=0.,
                     mixup=0.,
-                    copy_paste=0.25,
-                    copy_paste_mode='flip', 
+                    copy_paste=0.3,
+                    copy_paste_mode='mixup', 
                     erasing=.0,
                     crop_fraction=1.0,
                 )
