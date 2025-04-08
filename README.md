@@ -61,7 +61,13 @@ More instructions to follow ... stay tuned!
 ### Annotating in OCTRON
 
 <p align="center">
-    <img src="https://media.giphy.com/media/ccDSHmyOd6n9z9Q9ea/giphy.gif" alt="OCTRON Demo" width="100%"/>
+    <img src="pics/cuttlefish_octron.gif" alt="OCTRON Annotations" width="100%"/>
+</p>
+
+### Model output in OCTRON 
+
+<p align="center">
+    <img src="pics/tomopteris_long_swim.gif" alt="OCTRON Model output" width="100%"/>
 </p>
 
 
