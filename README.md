@@ -58,7 +58,7 @@ Follow these steps:
 
 More instructions to follow ... stay tuned! 
 
-![OCTRON annotations](https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnNjbmZ0bWNiMDV5dGpoenBheHc0c2Q1YjR3NHFkYW02dG1lMXdkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ccDSHmyOd6n9z9Q9ea/giphy.gif)
+![OCTRON annotations](https://i.giphy.com/ccDSHmyOd6n9z9Q9ea.webp)
 
 ---
 
