@@ -58,8 +58,7 @@ Follow these steps:
 
 More instructions to follow ... stay tuned! 
 
-![OCTRON annotations](https://i.giphy.com/ccDSHmyOd6n9z9Q9ea.webp)
-
+<div style="width:100%;height:0;padding-bottom:60%;position:relative;"><iframe src="https://giphy.com/embed/ccDSHmyOd6n9z9Q9ea" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div><p><a href="https://giphy.com/gifs/ccDSHmyOd6n9z9Q9ea">via GIPHY</a></p>
 ---
 
 ### Attributions
