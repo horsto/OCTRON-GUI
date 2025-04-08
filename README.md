@@ -58,18 +58,6 @@ Follow these steps:
 
 More instructions to follow ... stay tuned! 
 
-### Annotating in OCTRON
-
-<p align="center">
-    <img src="pics/cuttlefish_octron.gif" alt="OCTRON Annotations" width="100%"/>
-</p>
-
-### Model output in OCTRON 
-
-<p align="center">
-    <img src="pics/tomopteris_long_swim.gif" alt="OCTRON Model output" width="100%"/>
-</p>
-
 
 ### Attributions
 - Interface button and icon images were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
