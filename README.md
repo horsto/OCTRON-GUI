@@ -58,8 +58,12 @@ Follow these steps:
 
 More instructions to follow ... stay tuned! 
 
-<div style="width:100%;height:0;padding-bottom:60%;position:relative;"><iframe src="https://giphy.com/embed/ccDSHmyOd6n9z9Q9ea" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div><p><a href="https://giphy.com/gifs/ccDSHmyOd6n9z9Q9ea">via GIPHY</a></p>
----
+### Annotating in OCTRON
+
+<p align="center">
+    <img src="https://media.giphy.com/media/ccDSHmyOd6n9z9Q9ea/giphy.gif" alt="OCTRON Demo" width="100%"/>
+</p>
+
 
 ### Attributions
 - Interface button and icon images were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
