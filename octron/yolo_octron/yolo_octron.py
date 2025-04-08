@@ -1566,12 +1566,22 @@ class YOLO_octron:
 
         # Load the tracking data
         for csv in save_dir.glob('*.csv'):
-            track_df = pd.read_csv(csv, header=5)
-            assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
-            assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
-            label = track_df.iloc[0].label
-            track_id = track_df.iloc[0].track_id
-            label_trackid_dict[label] = track_id
+            
+            try:
+                track_df = pd.read_csv(csv, header=5)
+                assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
+                assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
+                label = track_df.iloc[0].label
+                track_id = track_df.iloc[0].track_id
+                label_trackid_dict[label] = track_id
+            except (AttributeError, pd.errors.ParserError):
+                print("Error reading .csv file. Trying old format ... ")
+                track_df = pd.read_csv(csv)
+                assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
+                assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
+                label = track_df.iloc[0].label
+                track_id = track_df.iloc[0].track_id
+                label_trackid_dict[label] = track_id
             
             # Check zarr
             assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
