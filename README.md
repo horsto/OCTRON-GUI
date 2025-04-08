@@ -1,7 +1,9 @@
 # OCTRON
 
-OCTRON is a [napari](https://www.napari.org) plugin that allows for tracking animals in behavioral setups. It helps you to create rich annotation and training data that can be used to train your own machine learning tracker.
+OCTRON is a [napari](https://www.napari.org) plugin that allows for tracking animals in behavioral setups. It helps you to create rich annotation and training data that can be used to train your own machine learning segmentation model and tracker.
 This enables dense quantification of animal behavior across a wide range of species and video recording conditions. 
+
+Octron is built on [napari](https://www.napari.org), [segment anything](https://segment-anything.com/), [yolo](https://www.ultralytics.com/) and ❤️.
 
 ## Installation
 
@@ -62,8 +64,8 @@ More instructions to follow ... stay tuned!
 
 ### Attributions
 - Interface button and icon images were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
-- OCTRON training is accomplished via ultralytics: 
 
+- OCTRON training is accomplished via ultralytics: 
 ```{bibtex}
 @software{yolo11_ultralytics,
   author = {Glenn Jocher and Jing Qiu},
@@ -73,5 +75,14 @@ More instructions to follow ... stay tuned!
   url = {https://github.com/ultralytics/ultralytics},
   orcid = {0000-0001-5950-6979, 0000-0002-7603-6750, 0000-0003-3783-7069},
   license = {AGPL-3.0}
+}
+```
+- OCTRON annotation data is generated via Segment Anything:
+```{bibtex}
+@article{kirillov2023segany,
+  title={Segment Anything},
+  author={Kirillov, Alexander and Mintun, Eric and Ravi, Nikhila and Mao, Hanzi and Rolland, Chloe and Gustafson, Laura and Xiao, Tete and Whitehead, Spencer and Berg, Alexander C. and Lo, Wan-Yen and Doll{\'a}r, Piotr and Girshick, Ross},
+  journal={arXiv:2304.02643},
+  year={2023}
 }
 ```
