@@ -1227,6 +1227,7 @@ class YOLO_octron:
             video = video_dict['video']
             tracking_df_dict = {}
             track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
+            last_frame_seen = -1 # For distance and speed calculations
             for frame_no, frame in enumerate(video, start=0):
                 frame_start = time.time()
                 
@@ -1329,6 +1330,7 @@ class YOLO_octron:
                     # Initialize tracking dataframe if needed
                     if track_id not in tracking_df_dict:
                         tracking_df = self.create_tracking_dataframe(video_dict)
+                        tracking_df.attrs['video_name'] = video_name
                         tracking_df.attrs['label'] = label
                         tracking_df.attrs['track_id'] = track_id
                         tracking_df_dict[track_id] = tracking_df
@@ -1371,7 +1373,22 @@ class YOLO_octron:
                     tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
                     tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
                     tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
-                
+                    
+                    if last_frame_seen >= 0:
+                        # Get distance between current and last analyzed frame
+                        centroid_last = tracking_df.loc[(last_frame_seen, track_id), 'pos_y'], \
+                            tracking_df.loc[(last_frame_seen, track_id), 'pos_x']
+                        distance = np.linalg.norm(np.array(centroid) - np.array(centroid_last))
+                        tracking_df.loc[(frame_no, track_id), 'distance'] = float(distance)
+                        # Calculate speed
+                        speed = distance / (frame_no - last_frame_seen)
+                        tracking_df.loc[(frame_no, track_id), 'speed'] = float(speed)
+                    else:
+                        tracking_df.loc[(frame_no, track_id), 'distance'] = 0.
+                        tracking_df.loc[(frame_no, track_id), 'speed'] = 0.
+                    
+                    last_frame_seen = frame_no
+                    
                 # A FRAME IS COMPLETE
                 
             # A VIDEO IS COMPLETE 
@@ -1381,10 +1398,25 @@ class YOLO_octron:
                 df_to_save = tr_df.copy()
                 # Add the label column (will be filled with the same value for all rows)
                 df_to_save.insert(0, 'label', label)
-                # Save to CSV 
+                
+                # Save to CSV with metadata header
                 filename = f'{label}_track_{track_id}.csv'
                 csv_path = save_dir / filename
-                df_to_save.to_csv(csv_path)
+                
+                # Create header with metadata
+                header = [
+                    f"video_name: {tr_df.attrs.get('video_name', 'unknown')}",
+                    f"frame_count: {tr_df.attrs.get('frame_count', '')}",
+                    f"video_height: {tr_df.attrs.get('video_height', '')}",
+                    f"video_width: {tr_df.attrs.get('video_width', '')}",
+                    f"created_at: {tr_df.attrs.get('created_at', str(datetime.now()))}",
+                    ""  # Empty line to separate header from data
+                ]
+                
+                # Write the header and then the data
+                with open(csv_path, 'w') as f:
+                    f.write('\n'.join(header))
+                    df_to_save.to_csv(f)
                 print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
             
             yield {
@@ -1420,7 +1452,7 @@ class YOLO_octron:
         import pandas as pd
         assert 'num_frames' in video_dict, "Video metadata must include 'num_frames'"
         # Create a flat column structure
-        columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity' ]
+        columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity', 'distance', 'speed']
         
         # Initialize the DataFrame with NaN values
         df = pd.DataFrame(
@@ -1534,12 +1566,22 @@ class YOLO_octron:
 
         # Load the tracking data
         for csv in save_dir.glob('*.csv'):
-            track_df = pd.read_csv(csv)
-            assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
-            assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
-            label = track_df.iloc[0].label
-            track_id = track_df.iloc[0].track_id
-            label_trackid_dict[label] = track_id
+            
+            try:
+                track_df = pd.read_csv(csv, header=5)
+                assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
+                assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
+                label = track_df.iloc[0].label
+                track_id = track_df.iloc[0].track_id
+                label_trackid_dict[label] = track_id
+            except (AttributeError, pd.errors.ParserError):
+                print("Error reading .csv file. Trying old format ... ")
+                track_df = pd.read_csv(csv)
+                assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
+                assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
+                label = track_df.iloc[0].label
+                track_id = track_df.iloc[0].track_id
+                label_trackid_dict[label] = track_id
             
             # Check zarr
             assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
