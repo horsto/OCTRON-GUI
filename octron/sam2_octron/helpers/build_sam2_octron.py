@@ -11,7 +11,7 @@ from omegaconf import OmegaConf
 from sam2.build_sam import _load_checkpoint
 
 def build_sam2_octron(
-    config_file,
+    config_file_path,
     ckpt_path=None,
     mode="eval",
     hydra_overrides_extra=[],
@@ -26,7 +26,7 @@ def build_sam2_octron(
     
     Parameters
     ----------
-    config_file : str
+    config_file_path : str
         Path to the SAM2 model config file (.yaml)
     ckpt_path : str
         Path to the SAM2 model checkpoint file (.pth)
@@ -44,6 +44,14 @@ def build_sam2_octron(
             fill_hole_area = 8
     **kwargs : dict
     """
+    
+    # Is this HQ or normal SAM2?
+    if 'hq' in str(config_file_path).lower():
+        print("HQ SAM2 model detected. Setting HQ mode to True.")
+        hq_mode = True
+    else:
+        print("Normal SAM2 model detected. Setting HQ mode to False.")
+        hq_mode = False
     
     # Find out which device to use
     # Will automatically select CUDA if available and MPS (on Mac)
@@ -69,10 +77,16 @@ def build_sam2_octron(
         )
 
     # Hydra configuration 
-    hydra_overrides = [
-        "++model._target_=octron.sam2_octron.helpers.sam2_octron.SAM2_octron",
-    ]
-
+    if hq_mode:
+        hydra_overrides = [
+            "++model._target_=octron.sam2_octron.helpers.sam2hq_octron.SAM2_octron_hq",
+        ]
+    else:
+        hydra_overrides = [
+            "++model._target_=octron.sam2_octron.helpers.sam2_octron.SAM2_octron",
+        ]
+    
+    
     if apply_postprocessing:
         hydra_overrides_extra = hydra_overrides_extra.copy()
         hydra_overrides_extra += [
@@ -88,7 +102,7 @@ def build_sam2_octron(
     hydra_overrides.extend(hydra_overrides_extra)
 
     # Read config and init model
-    config_name = os.path.basename(config_file)
+    config_name = os.path.basename(config_file_path)
     # Clear existing Hydra instance if it exists
     if GlobalHydra.instance().is_initialized():
         GlobalHydra.instance().clear()
@@ -98,8 +112,7 @@ def build_sam2_octron(
         cfg = compose(config_name=config_name, overrides=hydra_overrides)
         OmegaConf.resolve(cfg)
         model = instantiate(cfg.model, _recursive_=True)
-
-
+        
     _load_checkpoint(model, ckpt_path)
     model = model.to(device)
     if mode == "eval":

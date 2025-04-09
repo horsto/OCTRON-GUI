@@ -259,7 +259,7 @@ class octron_widget(QWidget):
         model = self.sam2models_dict[model_id]
         config_path = Path(model['config_path'])
         checkpoint_path = self.base_path / Path(f"sam2_octron/{model['checkpoint_path']}")
-        self.predictor, self.device = build_sam2_octron(config_file=config_path.as_posix(),
+        self.predictor, self.device = build_sam2_octron(config_file_path=config_path.as_posix(),
                                                         ckpt_path=checkpoint_path.as_posix(),
                                                         )
         self.predictor.is_initialized = False
