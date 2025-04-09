@@ -14,3 +14,7 @@ sam2_large:
   name: "SAM2 Large"
   config_path: "configs/sam2.1/sam2.1_hiera_l.yaml"
   checkpoint_path: "checkpoints/sam2.1_hiera_large.pt"
+sam2_large_hq:
+  name: "SAM2 Large HQ"
+  config_path: "configs/sam2.1/sam2.1_hq_hiera_l.yaml"
+  checkpoint_path: "checkpoints/sam2.1_hq_hiera_large.pt"

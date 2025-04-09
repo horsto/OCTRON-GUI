@@ -85,7 +85,10 @@ def check_sam2_models(SAM2p1_BASE_URL,
     """
     if not SAM2p1_BASE_URL:
         # Archiving the SAM2 URL here for now ...
-        SAM2p1_BASE_URL="https://dl.fbaipublicfiles.com/segment_anything_2/092824" 
+        SAM2p1_BASE_URLs =["https://dl.fbaipublicfiles.com/segment_anything_2/092824",
+                           "https://huggingface.co/lkeab/hq-sam/resolve/main"]
+    else:
+        SAM2p1_BASE_URLs = [SAM2p1_BASE_URL]
     
     sam2_path = models_yaml_path.parent
     assert sam2_path.exists(), f"Path {sam2_path} does not exist"
@@ -116,13 +119,17 @@ def check_sam2_models(SAM2p1_BASE_URL,
             print(f'Trying to download the checkpoint file (force_download={force_download})')
             checkpoint_path = model_checkpt_path
             checkpoint_name = checkpoint_path.name
-            model_url = f"{SAM2p1_BASE_URL}/{checkpoint_name}"
-            
-            assert check_url_availability(model_url), f"URL {model_url} is not available."
-            
-            download_sam2_checkpoint(url=model_url, 
-                                    fpath=checkpoint_path, 
-                                    overwrite=True
-                                    )
-     
+            for download_url in SAM2p1_BASE_URLs:
+                try:
+                    model_url = f"{download_url}/{checkpoint_name}"
+                    assert check_url_availability(model_url), f"URL {model_url} is not available."
+                    download_sam2_checkpoint(url=model_url, 
+                                            fpath=checkpoint_path, 
+                                            overwrite=True
+                                            )
+                except AssertionError as e:
+                    print(f"Error: {e}")
+                    print(f"Trying next URL...")
+                    continue
+                
     return models_dict
