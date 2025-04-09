@@ -774,3 +774,6 @@ def run_new_pred(predictor,
     
     mask = mask.squeeze() # From 4D => 2D (the first 2 dimensions are always 1)
     return mask
+
+if __name__ == "__main__":
+    pass
