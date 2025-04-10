@@ -1,7 +1,8 @@
 [build-system]
 requires = [
     "setuptools>=62.3.0,<75.8.1",
-    "wheel"
+    "wheel",
+    "tomli"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -45,8 +46,8 @@ dependencies = [
     "opencv-python>=4.11.0",       
     "natsort>=8.4.0",   
     "napari-pyav @ git+https://github.com/horsto/napari-pyav.git",
-    "sam-2 @ git+https://github.com/horsto/sam2.git",
-    "hq-sam-2 @ git+https://github.com/horsto/sam-hq.git@main#subdirectory=sam-hq2"
+    "hq-sam-2 @ git+https://github.com/horsto/sam-hq.git@main#subdirectory=sam-hq2",
+    "sam-2 @ git+https://github.com/horsto/sam2.git"
 ]
 
 [project.urls]
@@ -58,16 +59,23 @@ Changelog = "https://github.com/horsto/octron/blob/master/CHANGELOG.md"
 [project.entry-points."napari.manifest"]
 octron = "octron:napari.yaml"
 
+[project.entry-points."pipx.run"]
+octron = "octron.main:octron_gui"
+
+# Register our post-install function to run automatically after installation
+[project.entry-points."setuptools.installation"]
+post_install = "octron.post_install:run_post_install"
+
 [project.scripts]
 octron = "octron:napari.yaml"
 octron-gui = "octron.main:octron_gui"
 octron-gif = "octron.tools.mp4_to_gif:main"
+octron-post-install = "octron.post_install:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["octron*", "qt_gui"]
 exclude = ["pics", "sample_data"]
-
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.svg", "*.md"]
