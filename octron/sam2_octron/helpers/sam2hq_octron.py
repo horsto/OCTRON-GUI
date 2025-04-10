@@ -1,5 +1,7 @@
 # Main SAM2 HQ predictor class for OCTRON
-# This class is a subclass of the SAM2VideoPredictor class from the SAM2 library
+# This class is a subclass of the SAM2HQBase class from the SAM2 HQ library
+# NOTE: 
+# This largely replicates the functionality of the SAM2VideoPredictor class from the SAM2 HQ library
 
 import os 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1" # Leaving this here out of pure desperation
@@ -8,16 +10,9 @@ from collections import OrderedDict
 import torch
 from sam2.modeling.sam2_hq_base import SAM2HQBase, NO_OBJ_SCORE
 from sam2.utils.misc import concat_points
-from tqdm.auto import tqdm
-# I am using kornia for morphological operations
-# Check https://kornia.readthedocs.io/en/latest/morphology.html#kornia.morphology.closing
-from kornia.morphology import closing as kornia_closing
-from torch import tensor as torch_tensor
-from skimage.morphology import disk
 
 # Custom Zarr archive class
 from .sam2_zarr import OctoZarr
-
 import warnings
 warnings.simplefilter("ignore")
 
@@ -56,15 +51,10 @@ class SAM2_octron_hq(SAM2HQBase):
         video_data,
         zarr_store,
     ):
-        """
-
-        """
         compute_device = self.device  
-        
         # Sanity checks on video data
         assert len(video_data.shape) == 4, f"video data should have shape (num_frames, H, W, 3), got {video_data.shape}"
         assert video_data.shape[3] == 3, f"video data should be RGB and have shape (num_frames, H, W, 3), got {video_data.shape}"
-
 
         """Initialize an inference state."""
         inference_state = {}
@@ -251,11 +241,9 @@ class SAM2_octron_hq(SAM2HQBase):
         assert all_consolidated_frame_inds == input_frames_inds
 
 
-
     ######## ADDING NEW POINTS AND MASKS ################################################################
     #####################################################################################################
     
-
     @torch.inference_mode()
     def add_new_points_or_box(
         self,
@@ -267,7 +255,43 @@ class SAM2_octron_hq(SAM2HQBase):
         normalize_coords=True,
         box=None,
     ):
-        """Add new points to a frame."""
+        """
+        Add new points or a box to a frame.
+        
+        Parameters
+        ----------
+        frame_idx : int
+            The index of the frame to add the points or box to.
+        obj_id : int
+            The id of the object to add the points or box to.
+        points : array-like, optional
+            The points to add. If not provided, a box must be provided.
+        labels : array-like, optional
+            The labels for the points. If not provided, a box must be provided.
+        clear_old_points : bool, optional
+            Whether to clear old points. Default is True.
+        normalize_coords : bool, optional
+            Whether to normalize the coordinates of the points. Default is True.
+        box : array-like, optional
+            The box to add. If not provided, points must be provided.
+            
+        Returns
+        -------
+        frame_idx : int
+            The index of the frame the points or box were added to.
+        obj_ids : list
+            The list of object ids the points or box were added to.
+        video_res_masks : torch.Tensor
+            The resized mask at the original video resolution.
+        
+        Notes
+        -----
+        Returns None, None, None, if the object id is not found in the inference state.
+        This is because SAM2 HQ does not allow adding objects after tracking starts.
+        In case the user wants to add a new tracking object (id), they first need to reset
+        the predictor.
+                
+        """
         obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
         if obj_idx is None: 
             return None, None, None 
@@ -404,8 +428,6 @@ class SAM2_octron_hq(SAM2HQBase):
         """Deprecated method. Please use `add_new_points_or_box` instead."""
         return self.add_new_points_or_box(*args, **kwargs)
 
-
-
     @torch.inference_mode()
     def add_new_mask(
         self,
@@ -413,7 +435,35 @@ class SAM2_octron_hq(SAM2HQBase):
         obj_id,
         mask,
     ):
-        """Add new mask to a frame."""
+        """
+        Add a new mask to a frame.
+        
+        Parameter
+        ----------
+        frame_idx : int
+            The index of the frame to add the mask to.
+        obj_id : int
+            The id of the object to add the mask to.
+        mask : array-like
+            The mask to add. 
+        
+        Returns
+        -------
+        frame_idx : int
+            The index of the frame the mask was added to.
+        obj_ids : list
+            The list of object ids the mask was added to.
+        video_res_masks : torch.Tensor
+            The resized mask at the original video resolution.
+        
+        Notes
+        -----
+        Returns None, None, None, if the object id is not found in the inference state.
+        This is because SAM2 HQ does not allow adding objects after tracking starts.
+        In case the user wants to add a new tracking object (id), they first need to reset
+        the predictor.
+
+        """
         obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
         if obj_idx is None: 
             return None, None, None 

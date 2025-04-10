@@ -126,6 +126,10 @@ class sam2_octron_callbacks():
                                     masks=shape_mask,
                                     )
             if mask is not None:
+                # mask can be None,
+                # when new objects are added after tracking starts 
+                # for the SAM2-HQ model. See comments in 
+                # sam2hq_octron.add_new_mask / add_new_points_or_box
                 prediction_layer.data[frame_idx] = mask
                 prediction_layer.refresh()
   
@@ -211,6 +215,10 @@ class sam2_octron_callbacks():
                                     points=point_data,
                                     )
                 if mask is not None:
+                    # mask can be None,
+                    # when new objects are added after tracking starts 
+                    # for the SAM2-HQ model. See comments in 
+                    # sam2hq_octron.add_new_mask / add_new_points_or_box
                     prediction_layer.data[frame_idx,:,:] = mask
             prediction_layer.refresh()  
         else:
@@ -295,7 +303,6 @@ class sam2_octron_callbacks():
             
         end_time = time.time()
         print(f'Start idx {current_frame} | Predicted 1 frame in {end_time-start_time:.2f} seconds')
-        
         self.octron.chunk_size = chunk_size_real
         return
 
