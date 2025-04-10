@@ -42,7 +42,7 @@ class SAM2_octron(SAM2VideoPredictor):
         self.non_overlap_masks = non_overlap_masks
         self.clear_non_cond_mem_around_input = clear_non_cond_mem_around_input
         self.add_all_frames_to_correct_as_cond = add_all_frames_to_correct_as_cond
-        
+        self.perform_morphological_operations = False
         super().__init__(**kwargs)
        
         
@@ -54,18 +54,11 @@ class SAM2_octron(SAM2VideoPredictor):
         video_data,
         zarr_store,
     ):
-        """
 
-        
-        
-        
-        """
-        compute_device = self.device  
-        
+        compute_device = self.device          
         # Sanity checks on video data
         assert len(video_data.shape) == 4, f"video data should have shape (num_frames, H, W, 3), got {video_data.shape}"
         assert video_data.shape[3] == 3, f"video data should be RGB and have shape (num_frames, H, W, 3), got {video_data.shape}"
-
 
         """Initialize an inference state."""
         inference_state = {}
@@ -116,12 +109,12 @@ class SAM2_octron(SAM2VideoPredictor):
         self.video_data = video_data            
         
                 
-        # TODO Make configurable
+        
         #self.fill_hole_area = 200
         # For morphological operations 
-        self.disk_size = 2
-        self.perform_morphological_operations = True
         if self.perform_morphological_operations:
+            # TODO Make configurable
+            self.disk_size = 2
             self.closing_kernel = torch_tensor(disk(self.disk_size).tolist()).to(compute_device)
                     
     
@@ -255,7 +248,9 @@ class SAM2_octron(SAM2VideoPredictor):
                     
         try:
             for frame_idx in processing_order:
-                pred_masks_per_obj = [None] * batch_size
+                pred_masks_per_obj = []
+                for _ in range(batch_size):
+                    pred_masks_per_obj.append(None)
                 for obj_idx in range(batch_size):
                     obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
                     # We skip those frames already in consolidated outputs (these are frames
@@ -299,6 +294,10 @@ class SAM2_octron(SAM2VideoPredictor):
                             for objid in self.inference_state['output_dict_per_obj'].keys():
                                 if old_idx in self.inference_state['output_dict_per_obj'][objid][storage_key]:
                                     self.inference_state['output_dict_per_obj'][objid][storage_key].pop(old_idx)
+                        
+                        
+                        
+                        
                                 
                     self.inference_state["frames_tracked_per_obj"][obj_idx][frame_idx] = {
                         "reverse": reverse
@@ -462,7 +461,38 @@ class SAM2_octron(SAM2VideoPredictor):
         normalize_coords=True,
         box=None,
     ):
-        """Add new points to a frame."""
+        """
+        Add new points or a box to a frame.
+        
+        Parameters
+        ----------
+        frame_idx : int
+            The index of the frame to add the points or box to.
+        obj_id : int
+            The id of the object to add the points or box to.
+        points : array-like, optional
+            The points to add. If not provided, a box must be provided.
+        labels : array-like, optional
+            The labels for the points. If not provided, a box must be provided.
+        clear_old_points : bool, optional
+            Whether to clear old points. Default is True.
+        normalize_coords : bool, optional
+            Whether to normalize the coordinates of the points. Default is True.
+        box : array-like, optional
+            The box to add. If not provided, points must be provided.
+            
+        Returns
+        -------
+        frame_idx : int
+            The index of the frame the points or box were added to.
+        obj_ids : list
+            The list of object ids the points or box were added to.
+        video_res_masks : torch.Tensor
+            The resized mask at the original video resolution.
+        
+        
+        """
+       
         obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
         point_inputs_per_frame = self.inference_state["point_inputs_per_obj"][obj_idx]
         mask_inputs_per_frame = self.inference_state["mask_inputs_per_obj"][obj_idx]
@@ -592,7 +622,29 @@ class SAM2_octron(SAM2VideoPredictor):
         obj_id,
         mask,
     ):
-        """Add new mask to a frame."""
+        """
+        Add a new mask to a frame.
+        
+        Parameter
+        ----------
+        frame_idx : int
+            The index of the frame to add the mask to.
+        obj_id : int
+            The id of the object to add the mask to.
+        mask : array-like
+            The mask to add. 
+        
+        Returns
+        -------
+        frame_idx : int
+            The index of the frame the mask was added to.
+        obj_ids : list
+            The list of object ids the mask was added to.
+        video_res_masks : torch.Tensor
+            The resized mask at the original video resolution.
+
+
+        """
         obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
         point_inputs_per_frame = self.inference_state["point_inputs_per_obj"][obj_idx]
         mask_inputs_per_frame = self.inference_state["mask_inputs_per_obj"][obj_idx]
@@ -668,6 +720,8 @@ class SAM2_octron(SAM2VideoPredictor):
 
 
 #####################################################################################################
+
+
 def run_new_pred(predictor,
                  frame_idx,
                  obj_id, 
@@ -714,6 +768,8 @@ def run_new_pred(predictor,
     -------
     mask : np.array
         The mask image that can be re-added to the viewer.
+        Returns None if the frame index is None.
+        This happens if SAM2 HQ tries to add new objects on existing tracking.
     
     """
     clear_old_points = kwargs.get('clear_old_points', True)
@@ -731,8 +787,10 @@ def run_new_pred(predictor,
         f'Either point, box or mask input must be provided'
         
     if points is not None:
-        assert len(points) == len(labels), f'Number of points and labels must match,\
-            got {len(points)} points and {len(labels)} labels'
+        points_length = len(points) if isinstance(points, (list, np.ndarray)) else 1
+        labels_length = len(labels) if isinstance(labels, (list, np.ndarray)) else 1
+        assert points_length == labels_length, f'Number of points and labels must match,\
+            got {points_length} points and {labels_length} labels'
     if box is not None:
         assert len(box) == 4, f'Box input must have 4 numbers [y1,x1,y2,x2], got {len(box)}'
         
@@ -744,6 +802,11 @@ def run_new_pred(predictor,
                                                     obj_id=obj_id,
                                                     mask=np.array(masks,dtype=bool),
                                                     )
+        # Function returns None, None, None in case a new object is added for SAM2-HQ 
+        # This is because SAM2-HQ does not allow adding new objects on top of existing ones.
+        # See comments in sam2hq_octron.add_new_mask
+        if frame_idx is None:
+            return None 
         index_obj_id = obj_ids.index(obj_id)
         mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
                 
@@ -757,6 +820,11 @@ def run_new_pred(predictor,
                                                     clear_old_points=clear_old_points,
                                                     normalize_coords=normalize_coords
                                                     )
+        # Function returns None, None, None in case a new object is added for SAM2-HQ 
+        # This is because SAM2-HQ does not allow adding new objects on top of existing ones.
+        # See comments in sam2hq_octron.add_new_points_or_box
+        if frame_idx is None:
+            return None
         index_obj_id = obj_ids.index(obj_id)
         mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
         
@@ -769,8 +837,16 @@ def run_new_pred(predictor,
                                                     clear_old_points=clear_old_points,
                                                     normalize_coords=normalize_coords
                                                     )
+        # Function returns None, None, None in case a new object is added for SAM2-HQ 
+        # This is because SAM2-HQ does not allow adding new objects on top of existing ones.
+        # See comments in sam2hq_octron.add_new_points_or_box
+        if frame_idx is None:
+            return None
         index_obj_id = obj_ids.index(obj_id)
         mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
     
     mask = mask.squeeze() # From 4D => 2D (the first 2 dimensions are always 1)
     return mask
+
+if __name__ == "__main__":
+    pass
