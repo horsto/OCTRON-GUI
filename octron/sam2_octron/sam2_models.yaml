@@ -2,14 +2,6 @@ sam2_base_plus:
   name: "SAM2 Base Plus"
   config_path: "configs/sam2.1/sam2.1_hiera_b+.yaml"
   checkpoint_path: "checkpoints/sam2.1_hiera_base_plus.pt"
-sam2_tiny:
-  name: "SAM2 Tiny"
-  config_path: "configs/sam2.1/sam2.1_hiera_t.yaml"
-  checkpoint_path: "checkpoints/sam2.1_hiera_tiny.pt"
-sam2_small:
-  name: "SAM2 Small"
-  config_path: "configs/sam2.1/sam2.1_hiera_s.yaml"
-  checkpoint_path: "checkpoints/sam2.1_hiera_small.pt"
 sam2_large:
   name: "SAM2 Large"
   config_path: "configs/sam2.1/sam2.1_hiera_l.yaml"
