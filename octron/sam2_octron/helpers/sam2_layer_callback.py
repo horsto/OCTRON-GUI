@@ -125,9 +125,9 @@ class sam2_octron_callbacks():
                                     labels=label,
                                     masks=shape_mask,
                                     )
-
-            prediction_layer.data[frame_idx] = mask
-            prediction_layer.refresh()
+            if mask is not None:
+                prediction_layer.data[frame_idx] = mask
+                prediction_layer.refresh()
   
         else:
             # Catching all above with ['added','removed','changed']
@@ -210,7 +210,8 @@ class sam2_octron_callbacks():
                                     labels=labels,
                                     points=point_data,
                                     )
-                prediction_layer.data[frame_idx,:,:] = mask
+                if mask is not None:
+                    prediction_layer.data[frame_idx,:,:] = mask
             prediction_layer.refresh()  
         else:
             # Catching all above with ['added','removed','changed']
@@ -332,10 +333,17 @@ class sam2_octron_callbacks():
                 last_run = True
             else:
                 last_run = False
-            for i, out_obj_id in enumerate(out_obj_ids):
-                mask = (out_mask_logits[i] > 0).cpu().numpy().astype(np.uint8)
-                yield counter, out_frame_idx, out_obj_id, mask.squeeze(), last_run
-
+            try:
+                for i, out_obj_id in enumerate(out_obj_ids):
+                    mask = (out_mask_logits[i] > 0).cpu().numpy().astype(np.uint8)
+                    yield counter, out_frame_idx, out_obj_id, mask.squeeze(), last_run
+            except Exception as e:
+                # Trying again for sam hq 
+                for i, out_obj_id in enumerate(out_obj_ids):
+                    mask = out_mask_logits[0][out_mask_logits[0] == out_obj_id]
+                    mask = mask.cpu().numpy().astype(np.uint8)
+                    yield counter, out_frame_idx, out_obj_id, mask.squeeze(), last_run
+                
             counter += 1
             
         end_time = time.time()

@@ -8,7 +8,7 @@ from collections import OrderedDict
 import torch
 from sam2.modeling.sam2_hq_base import SAM2HQBase, NO_OBJ_SCORE
 from sam2.utils.misc import concat_points
-
+from tqdm.auto import tqdm
 # I am using kornia for morphological operations
 # Check https://kornia.readthedocs.io/en/latest/morphology.html#kornia.morphology.closing
 from kornia.morphology import closing as kornia_closing
@@ -34,12 +34,15 @@ class SAM2_octron_hq(SAM2HQBase):
         non_overlap_masks=False
         # whether to clear non-conditioning memory of the surrounding frames (which may contain outdated information) after adding correction clicks;
         # note that this would only apply to *single-object tracking* unless `clear_non_cond_mem_for_multi_obj` is also set to True)
-        clear_non_cond_mem_around_input=True
+        clear_non_cond_mem_around_input=False,
+        # whether to also clear non-conditioning memory of the surrounding frames (only effective when `clear_non_cond_mem_around_input` is True).
+        clear_non_cond_mem_for_multi_obj=False,
         # if `add_all_frames_to_correct_as_cond` is True, we also append to the conditioning frame list any frame that receives a later correction click
         # if `add_all_frames_to_correct_as_cond` is False, we conditioning frame list to only use those initial conditioning frames
-        add_all_frames_to_correct_as_cond=True
+        add_all_frames_to_correct_as_cond=True,
         self.non_overlap_masks = non_overlap_masks
         self.clear_non_cond_mem_around_input = clear_non_cond_mem_around_input
+        self.clear_non_cond_mem_for_multi_obj = clear_non_cond_mem_for_multi_obj
         self.add_all_frames_to_correct_as_cond = add_all_frames_to_correct_as_cond
         
         super().__init__(**kwargs)
@@ -161,11 +164,10 @@ class SAM2_octron_hq(SAM2HQBase):
             }
             return obj_idx
         else:
-            raise RuntimeError(
-                f"Cannot add new object id {obj_id} after tracking starts. "
-                f"All existing object ids: {inference_state['obj_ids']}. "
-                f"Please call 'reset_state' to restart from scratch."
-            )
+            print(f"Cannot add new object id {obj_id} after tracking starts.")
+            print(f"All existing object ids: {inference_state['obj_ids']}.")
+            print(f"Please call 'reset_state' to restart from scratch.")
+            return
     
     
     def _obj_idx_to_id(self, inference_state, obj_idx):
@@ -257,7 +259,6 @@ class SAM2_octron_hq(SAM2HQBase):
     @torch.inference_mode()
     def add_new_points_or_box(
         self,
-        inference_state,
         frame_idx,
         obj_id,
         points=None,
@@ -267,9 +268,11 @@ class SAM2_octron_hq(SAM2HQBase):
         box=None,
     ):
         """Add new points to a frame."""
-        obj_idx = self._obj_id_to_idx(inference_state, obj_id)
-        point_inputs_per_frame = inference_state["point_inputs_per_obj"][obj_idx]
-        mask_inputs_per_frame = inference_state["mask_inputs_per_obj"][obj_idx]
+        obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
+        if obj_idx is None: 
+            return None, None, None 
+        point_inputs_per_frame = self.inference_state["point_inputs_per_obj"][obj_idx]
+        mask_inputs_per_frame = self.inference_state["mask_inputs_per_obj"][obj_idx]
 
         if (points is not None) != (labels is not None):
             raise ValueError("points and labels must be provided together")
@@ -298,7 +301,7 @@ class SAM2_octron_hq(SAM2HQBase):
                     "box prompt must be provided before any point prompt "
                     "(please use clear_old_points=True instead)"
                 )
-            if inference_state["tracking_has_started"]:
+            if self.inference_state["tracking_has_started"]:
                 warnings.warn(
                     "You are adding a box after tracking starts. SAM 2 may not always be "
                     "able to incorporate a box prompt for *refinement*. If you intend to "
@@ -316,13 +319,13 @@ class SAM2_octron_hq(SAM2HQBase):
             labels = torch.cat([box_labels, labels], dim=1)
 
         if normalize_coords:
-            video_H = inference_state["video_height"]
-            video_W = inference_state["video_width"]
+            video_H = self.inference_state["video_height"]
+            video_W = self.inference_state["video_width"]
             points = points / torch.tensor([video_W, video_H]).to(points.device)
         # scale the (normalized) coordinates by the model's internal image size
         points = points * self.image_size
-        points = points.to(inference_state["device"])
-        labels = labels.to(inference_state["device"])
+        points = points.to(self.inference_state["device"])
+        labels = labels.to(self.inference_state["device"])
 
         if not clear_old_points:
             point_inputs = point_inputs_per_frame.get(frame_idx, None)
@@ -336,14 +339,14 @@ class SAM2_octron_hq(SAM2HQBase):
         # frame, meaning that the inputs points are to generate segments on this frame without
         # using any memory from other frames, like in SAM. Otherwise (if it has been tracked),
         # the input points will be used to correct the already tracked masks.
-        is_init_cond_frame = frame_idx not in inference_state["frames_already_tracked"]
+        is_init_cond_frame = frame_idx not in self.inference_state["frames_already_tracked"]
         # whether to track in reverse time order
         if is_init_cond_frame:
             reverse = False
         else:
-            reverse = inference_state["frames_already_tracked"][frame_idx]["reverse"]
-        obj_output_dict = inference_state["output_dict_per_obj"][obj_idx]
-        obj_temp_output_dict = inference_state["temp_output_dict_per_obj"][obj_idx]
+            reverse = self.inference_state["frames_already_tracked"][frame_idx]["reverse"]
+        obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
+        obj_temp_output_dict = self.inference_state["temp_output_dict_per_obj"][obj_idx]
         # Add a frame to conditioning output if it's an initial conditioning frame or
         # if the model sees all frames receiving clicks/mask as conditioning frames.
         is_cond = is_init_cond_frame or self.add_all_frames_to_correct_as_cond
@@ -361,12 +364,11 @@ class SAM2_octron_hq(SAM2HQBase):
                 prev_out = obj_output_dict["non_cond_frame_outputs"].get(frame_idx)
 
         if prev_out is not None and prev_out["pred_masks"] is not None:
-            device = inference_state["device"]
+            device = self.inference_state["device"]
             prev_sam_mask_logits = prev_out["pred_masks"].to(device, non_blocking=True)
             # Clamp the scale of prev_sam_mask_logits to avoid rare numerical issues.
             prev_sam_mask_logits = torch.clamp(prev_sam_mask_logits, -32.0, 32.0)
         current_out, _ = self._run_single_frame_inference(
-            inference_state=inference_state,
             output_dict=obj_output_dict,  # run on the slice of a single object
             frame_idx=frame_idx,
             batch_size=1,  # run on the slice of a single object
@@ -385,16 +387,16 @@ class SAM2_octron_hq(SAM2HQBase):
         obj_temp_output_dict[storage_key][frame_idx] = current_out
 
         # Resize the output mask to the original video resolution
-        obj_ids = inference_state["obj_ids"]
+        obj_ids = self.inference_state["obj_ids"]
         consolidated_out = self._consolidate_temp_output_across_obj(
-            inference_state,
+            self.inference_state,
             frame_idx,
             is_cond=is_cond,
             run_mem_encoder=False,
             consolidate_at_video_res=True,
         )
         _, video_res_masks = self._get_orig_video_res_output(
-            inference_state, consolidated_out["pred_masks_video_res"]
+            self.inference_state, consolidated_out["pred_masks_video_res"]
         )
         return frame_idx, obj_ids, video_res_masks
     
@@ -402,25 +404,27 @@ class SAM2_octron_hq(SAM2HQBase):
         """Deprecated method. Please use `add_new_points_or_box` instead."""
         return self.add_new_points_or_box(*args, **kwargs)
 
+
+
     @torch.inference_mode()
     def add_new_mask(
         self,
-        inference_state,
         frame_idx,
         obj_id,
         mask,
     ):
         """Add new mask to a frame."""
-        obj_idx = self._obj_id_to_idx(inference_state, obj_id)
-        point_inputs_per_frame = inference_state["point_inputs_per_obj"][obj_idx]
-        mask_inputs_per_frame = inference_state["mask_inputs_per_obj"][obj_idx]
+        obj_idx = self._obj_id_to_idx(self.inference_state, obj_id)
+        if obj_idx is None: 
+            return None, None, None 
+        point_inputs_per_frame = self.inference_state["point_inputs_per_obj"][obj_idx]
+        mask_inputs_per_frame = self.inference_state["mask_inputs_per_obj"][obj_idx]
 
         if not isinstance(mask, torch.Tensor):
             mask = torch.tensor(mask, dtype=torch.bool)
-        assert mask.dim() == 2
         mask_H, mask_W = mask.shape
         mask_inputs_orig = mask[None, None]  # add batch and channel dimension
-        mask_inputs_orig = mask_inputs_orig.float().to(inference_state["device"])
+        mask_inputs_orig = mask_inputs_orig.float().to(self.inference_state["device"])
 
         # resize the mask if it doesn't match the model's image size
         if mask_H != self.image_size or mask_W != self.image_size:
@@ -441,21 +445,20 @@ class SAM2_octron_hq(SAM2HQBase):
         # frame, meaning that the inputs points are to generate segments on this frame without
         # using any memory from other frames, like in SAM. Otherwise (if it has been tracked),
         # the input points will be used to correct the already tracked masks.
-        is_init_cond_frame = frame_idx not in inference_state["frames_already_tracked"]
+        is_init_cond_frame = frame_idx not in self.inference_state["frames_already_tracked"]
         # whether to track in reverse time order
         if is_init_cond_frame:
             reverse = False
         else:
-            reverse = inference_state["frames_already_tracked"][frame_idx]["reverse"]
-        obj_output_dict = inference_state["output_dict_per_obj"][obj_idx]
-        obj_temp_output_dict = inference_state["temp_output_dict_per_obj"][obj_idx]
+            reverse = self.inference_state["frames_already_tracked"][frame_idx]["reverse"]
+        obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
+        obj_temp_output_dict = self.inference_state["temp_output_dict_per_obj"][obj_idx]
         # Add a frame to conditioning output if it's an initial conditioning frame or
         # if the model sees all frames receiving clicks/mask as conditioning frames.
         is_cond = is_init_cond_frame or self.add_all_frames_to_correct_as_cond
         storage_key = "cond_frame_outputs" if is_cond else "non_cond_frame_outputs"
 
         current_out, _ = self._run_single_frame_inference(
-            inference_state=inference_state,
             output_dict=obj_output_dict,  # run on the slice of a single object
             frame_idx=frame_idx,
             batch_size=1,  # run on the slice of a single object
@@ -473,16 +476,16 @@ class SAM2_octron_hq(SAM2HQBase):
         obj_temp_output_dict[storage_key][frame_idx] = current_out
 
         # Resize the output mask to the original video resolution
-        obj_ids = inference_state["obj_ids"]
+        obj_ids = self.inference_state["obj_ids"]
         consolidated_out = self._consolidate_temp_output_across_obj(
-            inference_state,
+            self.inference_state,
             frame_idx,
             is_cond=is_cond,
             run_mem_encoder=False,
             consolidate_at_video_res=True,
         )
         _, video_res_masks = self._get_orig_video_res_output(
-            inference_state, consolidated_out["pred_masks_video_res"]
+            self.inference_state, consolidated_out["pred_masks_video_res"]
         )
         return frame_idx, obj_ids, video_res_masks
     
@@ -677,88 +680,117 @@ class SAM2_octron_hq(SAM2HQBase):
     @torch.inference_mode()
     def propagate_in_video(
         self,
-        inference_state,
         start_frame_idx=None,
         max_frame_num_to_track=None,
+        processing_order=None,
         reverse=False,
     ):
         """Propagate the input points across frames to track in the entire video."""
-        self.propagate_in_video_preflight(inference_state)
+        self.propagate_in_video_preflight(self.inference_state)
 
-        output_dict = inference_state["output_dict"]
-        consolidated_frame_inds = inference_state["consolidated_frame_inds"]
-        obj_ids = inference_state["obj_ids"]
-        num_frames = inference_state["num_frames"]
-        batch_size = self._get_obj_num(inference_state)
-        if len(output_dict["cond_frame_outputs"]) == 0:
-            raise RuntimeError("No points are provided; please add points first")
-        clear_non_cond_mem = self.clear_non_cond_mem_around_input and (
-            self.clear_non_cond_mem_for_multi_obj or batch_size <= 1
-        )
-
+        output_dict = self.inference_state["output_dict"]
+        consolidated_frame_inds = self.inference_state["consolidated_frame_inds"]
+        
+        obj_ids = self.inference_state["obj_ids"]
+        num_frames = self.inference_state["num_frames"]
+        batch_size = self._get_obj_num(self.inference_state)
+        
         # set start index, end index, and processing order
-        if start_frame_idx is None:
-            # default: start from the earliest frame with input points
-            start_frame_idx = min(output_dict["cond_frame_outputs"])
-        if max_frame_num_to_track is None:
-            # default: track all the frames in the video
-            max_frame_num_to_track = num_frames
-        if reverse:
-            end_frame_idx = max(start_frame_idx - max_frame_num_to_track, 0)
-            if start_frame_idx > 0:
-                processing_order = range(start_frame_idx, end_frame_idx - 1, -1)
-            else:
-                processing_order = []  # skip reverse tracking if starting from frame 0
-        else:
-            end_frame_idx = min(
-                start_frame_idx + max_frame_num_to_track, num_frames - 1
-            )
-            processing_order = range(start_frame_idx, end_frame_idx + 1)
-
-        for frame_idx in tqdm(processing_order, desc="propagate in video"):
-            # We skip those frames already in consolidated outputs (these are frames
-            # that received input clicks or mask). Note that we cannot directly run
-            # batched forward on them via `_run_single_frame_inference` because the
-            # number of clicks on each object might be different.
-            if frame_idx in consolidated_frame_inds["cond_frame_outputs"]:
-                storage_key = "cond_frame_outputs"
-                current_out = output_dict[storage_key][frame_idx]
-                pred_masks = current_out["pred_masks"]
-                if clear_non_cond_mem:
-                    # clear non-conditioning memory of the surrounding frames
-                    self._clear_non_cond_mem_around_input(inference_state, frame_idx)
-            elif frame_idx in consolidated_frame_inds["non_cond_frame_outputs"]:
-                storage_key = "non_cond_frame_outputs"
-                current_out = output_dict[storage_key][frame_idx]
-                pred_masks = current_out["pred_masks"]
-            else:
-                storage_key = "non_cond_frame_outputs"
-                current_out, pred_masks = self._run_single_frame_inference(
-                    inference_state=inference_state,
-                    output_dict=output_dict,
-                    frame_idx=frame_idx,
-                    batch_size=batch_size,
-                    is_init_cond_frame=False,
-                    point_inputs=None,
-                    mask_inputs=None,
-                    reverse=reverse,
-                    run_mem_encoder=True,
+        if processing_order is None:
+            if start_frame_idx is None:
+                # default: start from the earliest frame with input points
+                start_frame_idx = min(
+                    t
+                    for obj_output_dict in self.inference_state["output_dict_per_obj"].values()
+                    for t in obj_output_dict["cond_frame_outputs"]
                 )
-                output_dict[storage_key][frame_idx] = current_out
-            # Create slices of per-object outputs for subsequent interaction with each
-            # individual object after tracking.
-            self._add_output_per_object(
-                inference_state, frame_idx, current_out, storage_key
-            )
-            inference_state["frames_already_tracked"][frame_idx] = {"reverse": reverse}
-
-            # Resize the output mask to the original video resolution (we directly use
-            # the mask scores on GPU for output to avoid any CPU conversion in between)
-            _, video_res_masks = self._get_orig_video_res_output(
-                inference_state, pred_masks
-            )
-            yield frame_idx, obj_ids, video_res_masks
-
+            if max_frame_num_to_track is None:
+                # default: track all the frames in the video
+                max_frame_num_to_track = num_frames
+            if reverse:
+                end_frame_idx = max(start_frame_idx - max_frame_num_to_track, 0)
+                if start_frame_idx > 0:
+                    processing_order = range(start_frame_idx, end_frame_idx - 1, -1)
+                else:
+                    processing_order = []  # skip reverse tracking if starting from frame 0
+            else:
+                end_frame_idx = min(
+                    start_frame_idx + max_frame_num_to_track, num_frames - 1
+                )
+                processing_order = range(start_frame_idx, end_frame_idx + 1)
+                    
+        try:
+            for frame_idx in processing_order:
+                pred_masks_per_obj = []
+                for _ in range(batch_size):
+                    pred_masks_per_obj.append(None)
+                for obj_idx in range(batch_size):
+                    obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
+                    # We skip those frames already in consolidated outputs (these are frames
+                    # that received input clicks or mask). Note that we cannot directly run
+                    # batched forward on them via `_run_single_frame_inference` because the
+                    # number of clicks on each object might be different.
+                    if frame_idx in obj_output_dict["cond_frame_outputs"]:
+                        storage_key = "cond_frame_outputs"
+                        current_out = obj_output_dict[storage_key][frame_idx]
+                        device = self.inference_state["device"]
+                        pred_masks = current_out["pred_masks"].to(device, non_blocking=True)
+                        
+                        # TODO: Reimplement this function 
+                        # if self.clear_non_cond_mem_around_input:
+                            # # clear non-conditioning memory of the surrounding frames
+                            # self._clear_obj_non_cond_mem_around_input(
+                            #     self.inference_state, frame_idx, obj_idx
+                            # )
+                    else:
+                        storage_key = "non_cond_frame_outputs"
+                        current_out, pred_masks = self._run_single_frame_inference(
+                            output_dict=obj_output_dict,
+                            frame_idx=frame_idx,
+                            batch_size=1,  # run on the slice of a single object
+                            is_init_cond_frame=False,
+                            point_inputs=None,
+                            mask_inputs=None,
+                            reverse=reverse,
+                            run_mem_encoder=True,
+                        )
+                        
+                        obj_output_dict[storage_key][frame_idx] = current_out
+                        
+                        #Clear all non conditioned output frames that are older than 16 frames
+                        #https://github.com/facebookresearch/sam2/issues/196#issuecomment-2286352777
+                        oldest_allowed_idx = frame_idx - 16
+                        all_frame_idxs = obj_output_dict[storage_key].keys()
+                        old_frame_idxs = [idx for idx in all_frame_idxs if idx < oldest_allowed_idx]
+                        for old_idx in old_frame_idxs:
+                            obj_output_dict[storage_key].pop(old_idx)
+                            for objid in self.inference_state['output_dict_per_obj'].keys():
+                                if old_idx in self.inference_state['output_dict_per_obj'][objid][storage_key]:
+                                    self.inference_state['output_dict_per_obj'][objid][storage_key].pop(old_idx)
+                        
+                     
+                    # Create slices of per-object outputs for subsequent interaction with each
+                    # individual object after tracking.
+                    # self._add_output_per_object(
+                    #     self.inference_state, frame_idx, current_out, storage_key
+                    # )
+                    self.inference_state["frames_already_tracked"][frame_idx] = {"reverse": reverse}
+                    pred_masks_per_obj[obj_idx] = pred_masks
+                    
+                # Resize the output mask to the original video resolution (we directly use
+                # the mask scores on GPU for output to avoid any CPU conversion in between)
+                if len(pred_masks_per_obj) > 1:
+                    all_pred_masks = torch.cat(pred_masks_per_obj, dim=0)
+                else:
+                    all_pred_masks = pred_masks_per_obj[0]
+                _, video_res_masks = self._get_orig_video_res_output(
+                    self.inference_state, all_pred_masks
+                )
+                yield frame_idx, obj_ids, video_res_masks
+        except Exception as e:
+            print(e)
+            raise
+        
     def _add_output_per_object(
         self, inference_state, frame_idx, current_out, storage_key
     ):
@@ -794,7 +826,8 @@ class SAM2_octron_hq(SAM2HQBase):
     ):
         """Remove all input points or mask in a specific frame for a given object."""
         obj_idx = self._obj_id_to_idx(inference_state, obj_id)
-
+        if obj_idx is None:
+            return 
         # Clear the conditioning information on the given frame
         inference_state["point_inputs_per_obj"][obj_idx].pop(frame_idx, None)
         inference_state["mask_inputs_per_obj"][obj_idx].pop(frame_idx, None)
@@ -860,17 +893,17 @@ class SAM2_octron_hq(SAM2HQBase):
         return frame_idx, obj_ids, video_res_masks
 
     @torch.inference_mode()
-    def reset_state(self, inference_state):
+    def reset_state(self):
         """Remove all input points or mask in all frames throughout the video."""
-        self._reset_tracking_results(inference_state)
+        self._reset_tracking_results(self.inference_state)
         # Remove all object ids
-        inference_state["obj_id_to_idx"].clear()
-        inference_state["obj_idx_to_id"].clear()
-        inference_state["obj_ids"].clear()
-        inference_state["point_inputs_per_obj"].clear()
-        inference_state["mask_inputs_per_obj"].clear()
-        inference_state["output_dict_per_obj"].clear()
-        inference_state["temp_output_dict_per_obj"].clear()
+        self.inference_state["obj_id_to_idx"].clear()
+        self.inference_state["obj_idx_to_id"].clear()
+        self.inference_state["obj_ids"].clear()
+        self.inference_state["point_inputs_per_obj"].clear()
+        self.inference_state["mask_inputs_per_obj"].clear()
+        self.inference_state["output_dict_per_obj"].clear()
+        self.inference_state["temp_output_dict_per_obj"].clear()
 
     def _reset_tracking_results(self, inference_state):
         """Reset all tracking inputs and results across the videos."""
@@ -926,7 +959,6 @@ class SAM2_octron_hq(SAM2HQBase):
 
     def _run_single_frame_inference(
         self,
-        inference_state,
         output_dict,
         frame_idx,
         batch_size,
@@ -945,7 +977,7 @@ class SAM2_octron_hq(SAM2HQBase):
             current_vision_feats,
             current_vision_pos_embeds,
             feat_sizes,
-        ) = self._get_image_feature(inference_state, frame_idx, batch_size)
+        ) = self._get_image_feature(self.inference_state, frame_idx, batch_size)
 
         # point and mask should not appear as input simultaneously on the same frame
         assert point_inputs is None or mask_inputs is None
@@ -958,14 +990,14 @@ class SAM2_octron_hq(SAM2HQBase):
             point_inputs=point_inputs,
             mask_inputs=mask_inputs,
             output_dict=output_dict,
-            num_frames=inference_state["num_frames"],
+            num_frames=self.inference_state["num_frames"],
             track_in_reverse=reverse,
             run_mem_encoder=run_mem_encoder,
             prev_sam_mask_logits=prev_sam_mask_logits,
         )
 
         # optionally offload the output to CPU memory to save GPU space
-        storage_device = inference_state["storage_device"]
+        storage_device = self.inference_state["storage_device"]
         maskmem_features = current_out["maskmem_features"]
         if maskmem_features is not None:
             maskmem_features = maskmem_features.to(torch.bfloat16)
@@ -978,7 +1010,7 @@ class SAM2_octron_hq(SAM2HQBase):
         #     )
         pred_masks = pred_masks_gpu.to(storage_device, non_blocking=True)
         # "maskmem_pos_enc" is the same across frames, so we only need to store one copy of it
-        maskmem_pos_enc = self._get_maskmem_pos_enc(inference_state, current_out)
+        maskmem_pos_enc = self._get_maskmem_pos_enc(self.inference_state, current_out)
         # object pointer is a small tensor, so we always keep it on GPU memory for fast access
         obj_ptr = current_out["obj_ptr"]
         object_score_logits = current_out["object_score_logits"]
@@ -1054,26 +1086,26 @@ class SAM2_octron_hq(SAM2HQBase):
         return expanded_maskmem_pos_enc
 
     @torch.inference_mode()
-    def remove_object(self, inference_state, obj_id, strict=False, need_output=True):
+    def remove_object(self, obj_id, strict=False, need_output=True):
         """
         Remove an object id from the tracking state. If strict is True, we check whether
         the object id actually exists and raise an error if it doesn't exist.
         """
-        old_obj_idx_to_rm = inference_state["obj_id_to_idx"].get(obj_id, None)
+        old_obj_idx_to_rm = self.inference_state["obj_id_to_idx"].get(obj_id, None)
         updated_frames = []
         # Check whether this object_id to remove actually exists and possibly raise an error.
         if old_obj_idx_to_rm is None:
             if not strict:
-                return inference_state["obj_ids"], updated_frames
+                return self.inference_state["obj_ids"], updated_frames
             raise RuntimeError(
                 f"Cannot remove object id {obj_id} as it doesn't exist. "
-                f"All existing object ids: {inference_state['obj_ids']}."
+                f"All existing object ids: {self.inference_state['obj_ids']}."
             )
 
         # If this is the only remaining object id, we simply reset the state.
-        if len(inference_state["obj_id_to_idx"]) == 1:
-            self.reset_state(inference_state)
-            return inference_state["obj_ids"], updated_frames
+        if len(self.inference_state["obj_id_to_idx"]) == 1:
+            self.reset_state()
+            return self.inference_state["obj_ids"], updated_frames
 
         # There are still remaining objects after removing this object id. In this case,
         # we need to delete the object storage from inference state tensors.
@@ -1082,19 +1114,19 @@ class SAM2_octron_hq(SAM2HQBase):
         # non-conditioning ones)
         obj_input_frames_inds = set()
         obj_input_frames_inds.update(
-            inference_state["point_inputs_per_obj"][old_obj_idx_to_rm]
+            self.inference_state["point_inputs_per_obj"][old_obj_idx_to_rm]
         )
         obj_input_frames_inds.update(
-            inference_state["mask_inputs_per_obj"][old_obj_idx_to_rm]
+            self.inference_state["mask_inputs_per_obj"][old_obj_idx_to_rm]
         )
         for frame_idx in obj_input_frames_inds:
             self.clear_all_prompts_in_frame(
-                inference_state, frame_idx, obj_id, need_output=False
+                self.inference_state, frame_idx, obj_id, need_output=False
             )
 
         # Step 1: Update the object id mapping (note that it must be done after Step 0,
-        # since Step 0 still requires the old object id mappings in inference_state)
-        old_obj_ids = inference_state["obj_ids"]
+        # since Step 0 still requires the old object id mappings in self.inference_state)
+        old_obj_ids = self.inference_state["obj_ids"]
         old_obj_inds = list(range(len(old_obj_ids)))
         remain_old_obj_inds = old_obj_inds.copy()
         remain_old_obj_inds.remove(old_obj_idx_to_rm)
@@ -1102,9 +1134,9 @@ class SAM2_octron_hq(SAM2HQBase):
         new_obj_inds = list(range(len(new_obj_ids)))
         # build new mappings
         old_idx_to_new_idx = dict(zip(remain_old_obj_inds, new_obj_inds))
-        inference_state["obj_id_to_idx"] = dict(zip(new_obj_ids, new_obj_inds))
-        inference_state["obj_idx_to_id"] = dict(zip(new_obj_inds, new_obj_ids))
-        inference_state["obj_ids"] = new_obj_ids
+        self.inference_state["obj_id_to_idx"] = dict(zip(new_obj_ids, new_obj_inds))
+        self.inference_state["obj_idx_to_id"] = dict(zip(new_obj_inds, new_obj_ids))
+        self.inference_state["obj_ids"] = new_obj_ids
 
         # Step 2: For per-object tensor storage, we shift their obj_idx in the dict keys.
         # (note that "consolidated_frame_inds" doesn't need to be updated in this step as
@@ -1117,10 +1149,10 @@ class SAM2_octron_hq(SAM2HQBase):
                     new_kvs.append((old_idx_to_new_idx[k], v))
             container.update(new_kvs)
 
-        _map_keys(inference_state["point_inputs_per_obj"])
-        _map_keys(inference_state["mask_inputs_per_obj"])
-        _map_keys(inference_state["output_dict_per_obj"])
-        _map_keys(inference_state["temp_output_dict_per_obj"])
+        _map_keys(self.inference_state["point_inputs_per_obj"])
+        _map_keys(self.inference_state["mask_inputs_per_obj"])
+        _map_keys(self.inference_state["output_dict_per_obj"])
+        _map_keys(self.inference_state["temp_output_dict_per_obj"])
 
         # Step 3: For packed tensor storage, we index the remaining ids and rebuild the per-object slices.
         def _slice_state(output_dict, storage_key):
@@ -1130,7 +1162,7 @@ class SAM2_octron_hq(SAM2HQBase):
                     x[remain_old_obj_inds] for x in out["maskmem_pos_enc"]
                 ]
                 # "maskmem_pos_enc" is the same across frames, so we only need to store one copy of it
-                out["maskmem_pos_enc"] = self._get_maskmem_pos_enc(inference_state, out)
+                out["maskmem_pos_enc"] = self._get_maskmem_pos_enc(self.inference_state, out)
                 out["pred_masks"] = out["pred_masks"][remain_old_obj_inds]
                 out["obj_ptr"] = out["obj_ptr"][remain_old_obj_inds]
                 out["object_score_logits"] = out["object_score_logits"][
@@ -1138,34 +1170,34 @@ class SAM2_octron_hq(SAM2HQBase):
                 ]
                 # also update the per-object slices
                 self._add_output_per_object(
-                    inference_state, frame_idx, out, storage_key
+                    self.inference_state, frame_idx, out, storage_key
                 )
 
-        _slice_state(inference_state["output_dict"], "cond_frame_outputs")
-        _slice_state(inference_state["output_dict"], "non_cond_frame_outputs")
+        _slice_state(self.inference_state["output_dict"], "cond_frame_outputs")
+        _slice_state(self.inference_state["output_dict"], "non_cond_frame_outputs")
 
         # Step 4: Further collect the outputs on those frames in `obj_input_frames_inds`, which
         # could show an updated mask for objects previously occluded by the object being removed
         if need_output:
-            temp_output_dict_per_obj = inference_state["temp_output_dict_per_obj"]
+            temp_output_dict_per_obj = self.inference_state["temp_output_dict_per_obj"]
             for frame_idx in obj_input_frames_inds:
                 is_cond = any(
                     frame_idx in obj_temp_output_dict["cond_frame_outputs"]
                     for obj_temp_output_dict in temp_output_dict_per_obj.values()
                 )
                 consolidated_out = self._consolidate_temp_output_across_obj(
-                    inference_state,
+                    self.inference_state,
                     frame_idx,
                     is_cond=is_cond,
                     run_mem_encoder=False,
                     consolidate_at_video_res=True,
                 )
                 _, video_res_masks = self._get_orig_video_res_output(
-                    inference_state, consolidated_out["pred_masks_video_res"]
+                    self.inference_state, consolidated_out["pred_masks_video_res"]
                 )
                 updated_frames.append((frame_idx, video_res_masks))
 
-        return inference_state["obj_ids"], updated_frames
+        return self.inference_state["obj_ids"], updated_frames
 
     def _clear_non_cond_mem_around_input(self, inference_state, frame_idx):
         """
@@ -1186,9 +1218,7 @@ class SAM2_octron_hq(SAM2HQBase):
             for obj_output_dict in inference_state["output_dict_per_obj"].values():
                 obj_output_dict["non_cond_frame_outputs"].pop(t, None)    
     
-    
-    
-    
+
     
 if __name__ == "__main__":
     pass

@@ -42,7 +42,7 @@ class SAM2_octron(SAM2VideoPredictor):
         self.non_overlap_masks = non_overlap_masks
         self.clear_non_cond_mem_around_input = clear_non_cond_mem_around_input
         self.add_all_frames_to_correct_as_cond = add_all_frames_to_correct_as_cond
-        
+        self.perform_morphological_operations = False
         super().__init__(**kwargs)
        
         
@@ -55,9 +55,6 @@ class SAM2_octron(SAM2VideoPredictor):
         zarr_store,
     ):
         """
-
-        
-        
         
         """
         compute_device = self.device  
@@ -116,12 +113,12 @@ class SAM2_octron(SAM2VideoPredictor):
         self.video_data = video_data            
         
                 
-        # TODO Make configurable
+        
         #self.fill_hole_area = 200
         # For morphological operations 
-        self.disk_size = 2
-        self.perform_morphological_operations = True
         if self.perform_morphological_operations:
+            # TODO Make configurable
+            self.disk_size = 2
             self.closing_kernel = torch_tensor(disk(self.disk_size).tolist()).to(compute_device)
                     
     
@@ -255,7 +252,9 @@ class SAM2_octron(SAM2VideoPredictor):
                     
         try:
             for frame_idx in processing_order:
-                pred_masks_per_obj = [None] * batch_size
+                pred_masks_per_obj = []
+                for _ in range(batch_size):
+                    pred_masks_per_obj.append(None)
                 for obj_idx in range(batch_size):
                     obj_output_dict = self.inference_state["output_dict_per_obj"][obj_idx]
                     # We skip those frames already in consolidated outputs (these are frames
@@ -299,6 +298,10 @@ class SAM2_octron(SAM2VideoPredictor):
                             for objid in self.inference_state['output_dict_per_obj'].keys():
                                 if old_idx in self.inference_state['output_dict_per_obj'][objid][storage_key]:
                                     self.inference_state['output_dict_per_obj'][objid][storage_key].pop(old_idx)
+                        
+                        
+                        
+                        
                                 
                     self.inference_state["frames_tracked_per_obj"][obj_idx][frame_idx] = {
                         "reverse": reverse
@@ -714,6 +717,8 @@ def run_new_pred(predictor,
     -------
     mask : np.array
         The mask image that can be re-added to the viewer.
+        Returns None if the frame index is None.
+        This happens if SAM2 HQ tries to add new objects on existing tracking.
     
     """
     clear_old_points = kwargs.get('clear_old_points', True)
@@ -731,8 +736,10 @@ def run_new_pred(predictor,
         f'Either point, box or mask input must be provided'
         
     if points is not None:
-        assert len(points) == len(labels), f'Number of points and labels must match,\
-            got {len(points)} points and {len(labels)} labels'
+        points_length = len(points) if isinstance(points, (list, np.ndarray)) else 1
+        labels_length = len(labels) if isinstance(labels, (list, np.ndarray)) else 1
+        assert points_length == labels_length, f'Number of points and labels must match,\
+            got {points_length} points and {labels_length} labels'
     if box is not None:
         assert len(box) == 4, f'Box input must have 4 numbers [y1,x1,y2,x2], got {len(box)}'
         
@@ -744,6 +751,8 @@ def run_new_pred(predictor,
                                                     obj_id=obj_id,
                                                     mask=np.array(masks,dtype=bool),
                                                     )
+        if frame_idx is None:
+            return None 
         index_obj_id = obj_ids.index(obj_id)
         mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
                 
@@ -757,6 +766,8 @@ def run_new_pred(predictor,
                                                     clear_old_points=clear_old_points,
                                                     normalize_coords=normalize_coords
                                                     )
+        if frame_idx is None:
+            return None
         index_obj_id = obj_ids.index(obj_id)
         mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
         
@@ -769,6 +780,8 @@ def run_new_pred(predictor,
                                                     clear_old_points=clear_old_points,
                                                     normalize_coords=normalize_coords
                                                     )
+        if frame_idx is None:
+            return None
         index_obj_id = obj_ids.index(obj_id)
         mask = (video_res_masks[index_obj_id] > 0).cpu().numpy().astype(np.uint8)
     
