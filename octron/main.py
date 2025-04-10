@@ -1164,7 +1164,7 @@ class octron_widget(QWidget):
         """
         if not isinstance(spare, list):
             spare = [spare]
-        print(f'🗑️ Deleting all layers except "{spare}"')
+        print(f'🗑️  Deleting all layers except "{spare}"')
         # First remove mask layers (to avoid dependencies with annotation layers)
         mask_layers = []
         other_layers = []
