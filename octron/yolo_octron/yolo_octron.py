@@ -286,6 +286,12 @@ class YOLO_octron:
             
         
         """ 
+        
+        # Some constants 
+        MIN_SIZE_RATIO_OBJECT_FRAME = 0.00005 # Minimum size ratio of an object to the whole image
+                                              # 0.00005: for a 1024x1024 image, this is ~ 52 pixels
+        MIN_SIZE_RATIO_OBJECT_MAX = 0.1 # Minimum size ratio of an object to the largest object in the frame
+        
         if self.label_dict is None:
             raise ValueError("No labels found. Please run prepare_labels() first.")
 
@@ -312,11 +318,10 @@ class YOLO_octron:
                             else:
                                 if min_area is None:
                                     # Determine area threshold once
-                                    # For a 1024x1024 image, this is ~ 52 pixels
-                                    min_area = 0.00005*sample_mask.shape[0]*sample_mask.shape[1]
+                                    min_area = MIN_SIZE_RATIO_OBJECT_FRAME*sample_mask.shape[0]*sample_mask.shape[1]
                                 l, r = find_objects_in_mask(sample_mask, 
-                                                        min_area=min_area
-                                                        ) 
+                                                           min_area=min_area
+                                                           ) 
                                 for r_ in r:
                                     # Choosing feret diameter as a measure of object size
                                     # See https://en.wikipedia.org/wiki/Feret_diameter
@@ -346,14 +351,13 @@ class YOLO_octron:
                     for mask_array in mask_arrays:
                         mask_current_array = mask_array[f]
                         # Determine area threshold 
-                        # For a 1024x1024 image, this is ~ 52 pixels
-                        min_area = 0.00005*mask_current_array.shape[0]*mask_current_array.shape[1]
+                        min_area = MIN_SIZE_RATIO_OBJECT_FRAME*mask_current_array.shape[0]*mask_current_array.shape[1]
                         if self.enable_watershed:
                             # Watershed
                             try:
                                 _, water_masks = watershed_mask(mask_current_array,
                                                                 footprint_diameter=median_obj_diameter,
-                                                                min_size_ratio=0.1,    
+                                                                min_size_ratio=MIN_SIZE_RATIO_OBJECT_MAX,  
                                                                 plot=False
                                                             )
                             except AssertionError:
@@ -371,8 +375,7 @@ class YOLO_octron:
                                     pass    
                         else:
                             # No watershedding
-                            # Label all objects in the mask 
-                            mask_labeled = measure.label(mask_current_array)
+                            mask_labeled = np.asarray(measure.label(mask_current_array))
                             unique_labels = np.unique(mask_labeled)
                             assert len(unique_labels) >= 1, f"Labeling failed for {label} in frame {f_no}"
                             # Get new region props to filter out small-ish regions
@@ -381,9 +384,14 @@ class YOLO_octron:
                                     properties=('area','label')
                                     )
                             # Filter out small objects by setting them to 0
+                            # and those that are smaller than a certain size ratio 
+                            # smaller than the max object size
+                            max_area = max(props['area'])
                             for i, area in enumerate(props['area']):
                                 if area < min_area:
-                                    mask_labeled[mask_labeled == props['label'][i]] = 0                                        
+                                    mask_labeled[mask_labeled == props['label'][i]] = 0          
+                                if area < MIN_SIZE_RATIO_OBJECT_MAX*max_area:
+                                    mask_labeled[mask_labeled == props['label'][i]] = 0                              
                             if np.sum(mask_labeled) == 0:
                                 # No objects found after filtering
                                 continue
