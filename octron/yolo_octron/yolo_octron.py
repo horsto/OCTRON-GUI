@@ -312,8 +312,8 @@ class YOLO_octron:
                             else:
                                 if min_area is None:
                                     # Determine area threshold once
-                                    # threshold at 0.01 percent of the image area
-                                    min_area = 0.0001*sample_mask.shape[0]*sample_mask.shape[1]
+                                    # For a 1024x1024 image, this is ~ 52 pixels
+                                    min_area = 0.00005*sample_mask.shape[0]*sample_mask.shape[1]
                                 l, r = find_objects_in_mask(sample_mask, 
                                                         min_area=min_area
                                                         ) 
@@ -345,7 +345,9 @@ class YOLO_octron:
                     mask_polys = [] # List of polygons for the current frame
                     for mask_array in mask_arrays:
                         mask_current_array = mask_array[f]
-                        min_area = 0.0001*mask_current_array.shape[0]*mask_current_array.shape[1]
+                        # Determine area threshold 
+                        # For a 1024x1024 image, this is ~ 52 pixels
+                        min_area = 0.00005*mask_current_array.shape[0]*mask_current_array.shape[1]
                         if self.enable_watershed:
                             # Watershed
                             try:
