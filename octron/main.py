@@ -1272,6 +1272,8 @@ class octron_widget(QWidget):
                 self.object_organizer = ObjectOrganizer()
                 # Disable the layer annotation box until SAM2 is loaded 
                 self.annotate_layer_create_groupbox.setEnabled(False)
+                # Reset naming of annotation tab 
+                self.toolBox.setItemText(1, "Generate annotation data")
             # Reset the flag 
             self.remove_current_layer = False
     
@@ -1377,6 +1379,7 @@ class octron_widget(QWidget):
             
             print(f"VIDEO LAYER >>> {layer_name}")
             self.toolBox.widget(1).setEnabled(True) 
+            self.toolBox.setItemText(1, f"Generate annotation data for: {self.current_video_hash}")
 
         return
         
