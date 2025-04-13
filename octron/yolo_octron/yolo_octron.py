@@ -778,6 +778,7 @@ class YOLO_octron:
         
         def run_training():
             # https://docs.ultralytics.com/modes/train/#resuming-interrupted-trainings
+            # overlap_mask - https://github.com/ultralytics/ultralytics/issues/3213#issuecomment-2799841153
             nonlocal training_error
             try:
                 # Start training
