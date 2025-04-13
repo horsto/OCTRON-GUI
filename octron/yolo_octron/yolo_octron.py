@@ -1258,7 +1258,7 @@ class YOLO_octron:
                     conf=conf_thresh,
                     iou=iou_thresh,
                     device=device, 
-                    retina_masks=True,
+                    retina_masks=True, # original image resolution, not inference resolution
                     show_boxes=False,
                     save_txt=False,
                     save_conf=False,
