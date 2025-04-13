@@ -792,6 +792,7 @@ class YOLO_octron:
                     rect=False,
                     cos_lr=True,
                     mask_ratio=2,
+                    overlap_mask=True,
                     fraction=1.0,
                     epochs=epochs,
                     imgsz=imagesz,
