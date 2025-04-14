@@ -883,9 +883,11 @@ class octron_widget(QWidget):
             show_warning("Please select a YOLO model")
             return
         model_name = self.yolomodel_trained_list.currentText()
+        model_name = Path(model_name).stem
         # The self.trained_models dictionary contains the model name as key
         # and the model path as value
-        assert model_name in self.trained_models, f"Model {model_name} not found in trained models."
+        assert model_name in self.trained_models, \
+            f"Model {model_name} not found in trained models: {self.trained_models}"
         self.model_predict_path = self.trained_models[model_name]
         index_tracker_list = self.yolomodel_tracker_list.currentIndex()
         if index_tracker_list == 0:
@@ -1110,7 +1112,7 @@ class octron_widget(QWidget):
         for model in trained_models:
             if model.stem not in self.trained_models:
                 self.trained_models[model.stem] = model
-            self.yolomodel_trained_list.addItem(model.stem)
+            self.yolomodel_trained_list.addItem('/'.join(model.parts[-5:]))
         # Enable prediction tab if trained models are available
         self.toolBox.widget(3).setEnabled(True)
         self.predict_video_drop_groupbox.setEnabled(True)
