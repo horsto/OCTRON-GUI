@@ -1239,7 +1239,6 @@ class YOLO_octron:
             video = video_dict['video']
             tracking_df_dict = {}
             track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
-            last_frame_seen = -1 # For distance and speed calculations
             for frame_no, frame in enumerate(video, start=0):
                 frame_start = time.time()
                 
@@ -1263,8 +1262,7 @@ class YOLO_octron:
                     save_txt=False,
                     save_conf=False,
                 )
-                #print(f'CONFIDENCE thresh: {conf_thresh}\nIOU thresh: {iou_thresh}')
-                
+
                 # Process results and save to zarr/CSV here
                 confidences = results[0].boxes.conf.cpu().numpy()
                 label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
@@ -1385,22 +1383,7 @@ class YOLO_octron:
                     tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
                     tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
                     tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
-                    
-                    if last_frame_seen >= 0:
-                        # Get distance between current and last analyzed frame
-                        centroid_last = tracking_df.loc[(last_frame_seen, track_id), 'pos_y'], \
-                            tracking_df.loc[(last_frame_seen, track_id), 'pos_x']
-                        distance = np.linalg.norm(np.array(centroid) - np.array(centroid_last))
-                        tracking_df.loc[(frame_no, track_id), 'distance'] = float(distance)
-                        # Calculate speed
-                        speed = distance / (frame_no - last_frame_seen)
-                        tracking_df.loc[(frame_no, track_id), 'speed'] = float(speed)
-                    else:
-                        tracking_df.loc[(frame_no, track_id), 'distance'] = 0.
-                        tracking_df.loc[(frame_no, track_id), 'speed'] = 0.
-                    
-                    last_frame_seen = frame_no
-                    
+
                 # A FRAME IS COMPLETE
                 
             # A VIDEO IS COMPLETE 
@@ -1464,7 +1447,7 @@ class YOLO_octron:
         import pandas as pd
         assert 'num_frames' in video_dict, "Video metadata must include 'num_frames'"
         # Create a flat column structure
-        columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity', 'distance', 'speed']
+        columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity']
         
         # Initialize the DataFrame with NaN values
         df = pd.DataFrame(
