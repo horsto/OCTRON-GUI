@@ -2320,8 +2320,10 @@ Recommended are at least ~50.</string>
                 </size>
                </property>
                <property name="toolTip">
-                <string> This threshold determines how much overlap between
-bounding boxes is allowed before they are considered to be detecting the same object.</string>
+                <string>This threshold determines how much overlap between bounding boxes
+is allowed before they are considered to be detecting the same object.
+At IOU=0 all detected objects &gt; conf. thresh
+of one label will be fused into one mask.</string>
                </property>
                <property name="text">
                 <string>IOU</string>
@@ -2374,7 +2376,7 @@ bounding boxes is allowed before they are considered to be detecting the same ob
                 </size>
                </property>
                <property name="toolTip">
-                <string>Gaussian smoothing of polygons. Keep this low.</string>
+                <string>Gaussian smoothing of polygons. Keep this low. 0=no smoothing.</string>
                </property>
                <property name="text">
                 <string>Polygon sigma</string>
@@ -2430,10 +2432,10 @@ bounding boxes is allowed before they are considered to be detecting the same ob
                 <double>5.000000000000000</double>
                </property>
                <property name="singleStep">
-                <double>0.500000000000000</double>
+                <double>0.100000000000000</double>
                </property>
                <property name="value">
-                <double>1.000000000000000</double>
+                <double>0.000000000000000</double>
                </property>
               </widget>
              </item>

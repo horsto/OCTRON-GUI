@@ -849,8 +849,8 @@ class Ui_octron_widgetui(object):
         self.octron.predict_polygo_sigma_spinbox.setMaximumSize(QSize(90, 25))
         self.octron.predict_polygo_sigma_spinbox.setDecimals(1)
         self.octron.predict_polygo_sigma_spinbox.setMaximum(5.000000000000000)
-        self.octron.predict_polygo_sigma_spinbox.setSingleStep(0.500000000000000)
-        self.octron.predict_polygo_sigma_spinbox.setValue(1.000000000000000)
+        self.octron.predict_polygo_sigma_spinbox.setSingleStep(0.100000000000000)
+        self.octron.predict_polygo_sigma_spinbox.setValue(0.000000000000000)
 
         self.octron.predict_grid_layout2.addWidget(self.octron.predict_polygo_sigma_spinbox, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignBottom)
 
@@ -1124,8 +1124,10 @@ class Ui_octron_widgetui(object):
         self.octron.predict_current_videoname_label.setText(QCoreApplication.translate("self", u"video name", None))
         self.octron.predict_finish_time_label.setText(QCoreApplication.translate("self", u"Current video finishes in:", None))
 #if QT_CONFIG(tooltip)
-        self.octron.prediction_iou_label.setToolTip(QCoreApplication.translate("self", u" This threshold determines how much overlap between\n"
-"bounding boxes is allowed before they are considered to be detecting the same object.", None))
+        self.octron.prediction_iou_label.setToolTip(QCoreApplication.translate("self", u"This threshold determines how much overlap between bounding boxes\n"
+"is allowed before they are considered to be detecting the same object.\n"
+"At IOU=0 all detected objects > conf. thresh\n"
+"of one label will be fused into one mask.", None))
 #endif // QT_CONFIG(tooltip)
         self.octron.prediction_iou_label.setText(QCoreApplication.translate("self", u"IOU", None))
 #if QT_CONFIG(tooltip)
@@ -1133,7 +1135,7 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.octron.predict_start_btn.setText(QCoreApplication.translate("self", u"Let's go!", None))
 #if QT_CONFIG(tooltip)
-        self.octron.prediction_poly_sigma_label.setToolTip(QCoreApplication.translate("self", u"Gaussian smoothing of polygons. Keep this low.", None))
+        self.octron.prediction_poly_sigma_label.setToolTip(QCoreApplication.translate("self", u"Gaussian smoothing of polygons. Keep this low. 0=no smoothing.", None))
 #endif // QT_CONFIG(tooltip)
         self.octron.prediction_poly_sigma_label.setText(QCoreApplication.translate("self", u"Polygon sigma", None))
 #if QT_CONFIG(tooltip)
