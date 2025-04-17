@@ -214,6 +214,8 @@ class octron_widget(QWidget):
         self.start_stop_training_btn.clicked.connect(self.init_yolo_training_threaded)
         self.predict_start_btn.setText('')
         self.predict_start_btn.clicked.connect(self.init_yolo_prediction_threaded)
+        # ... YOLO predictions 
+        self.predict_iou_thresh_spinbox.valueChanged.connect(self.on_iou_thresh_change)
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
         self.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
@@ -752,7 +754,23 @@ class octron_widget(QWidget):
             
     ###### YOLO PREDICTION ###########################################################################
     
+    def on_iou_thresh_change(self, value):
+        """
+        Callback for self.predict_iou_thresh_spinbox.
+        If IOU threshold is < 0.01, 
+        check and disable the 'single_subject_checkBox'.
+        This is because at IOU < 0.01, only one object will be tracked
+        by fusing all detections into 1 -> so it has the same effect. 
+        
+        """
+        if value < 0.01:
+            self.single_subject_checkBox.setChecked(True)
+            self.single_subject_checkBox.setEnabled(False)
+        else:
+            self.single_subject_checkBox.setEnabled(True)
+            self.single_subject_checkBox.setChecked(False)
             
+        
     def _update_prediction_progress(self, progress_info):
         """
         Handle prediction progress updates from the worker thread.
