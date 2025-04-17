@@ -1239,7 +1239,22 @@ class YOLO_octron:
             video = video_dict['video']
             tracking_df_dict = {}
             track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
+            frame_start = time.time()
             for frame_no, frame in enumerate(video, start=0):
+                # Before processing the results, yield progress information 
+                # This is because we want this information regardless of whether there 
+                # were any detections in the frame
+                # Update timing information
+                frame_time = time.time()-frame_start
+                yield {
+                    'stage': 'processing',
+                    'video_name': video_name,
+                    'video_index': video_index,
+                    'total_videos': total_videos,
+                    'frame': frame_no + 1,
+                    'total_frames': num_frames,
+                    'frame_time': frame_time,
+                }
                 frame_start = time.time()
                 
                 # Run tracking on this frame
@@ -1267,21 +1282,6 @@ class YOLO_octron:
                 confidences = results[0].boxes.conf.cpu().numpy()
                 label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
                 
-                # Before processing the results, yield progress information 
-                # This is because we want this information regardless of whether there 
-                # were any detections in the frame
-                # Update timing information
-                frame_time = time.time() - frame_start
-                yield {
-                    'stage': 'processing',
-                    'video_name': video_name,
-                    'video_index': video_index,
-                    'total_videos': total_videos,
-                    'frame': frame_no + 1,
-                    'total_frames': num_frames,
-                    'frame_time': frame_time,
-                }
-                
                 # Then process the results ...    
                 try:
                     masks_polys = results[0].masks.xy  
@@ -1297,7 +1297,7 @@ class YOLO_octron:
                                                             masks_polys, 
                                                             ):
                     
-                    if one_object_per_label:
+                    if one_object_per_label or iou_thresh < 0.01:
                         # ! Use 'label' as keys in track_id_label_dict
                         # There is only one object/track ID per label
                         if label in track_id_label_dict:
@@ -1350,39 +1350,65 @@ class YOLO_octron:
                         assert tracking_df.attrs['label'] == label, "Label mismatch"    
 
                     # Check if a row already exists and compare current confidence with existing one
-                    # This happens if one_object_per_label is True and there are multiple detections
+                    # This happens if one_object_per_label is True or iou_thresh < 0.01 
+                    # and there are multiple detections
                     if (frame_no, track_id) in tracking_df.index:
                         existing_conf = tracking_df.loc[(frame_no, track_id), 'confidence']
-                        if conf <= existing_conf:
-                            # Skip this detection
+                        if conf <= existing_conf and iou_thresh >= 0.01:
+                            # Skip this detection if a better one already exists
+                            # and we are not fusing masks (iou_thresh > 0)
                             continue
-                    # Otherwise, continue to create masks and extract properties
+                        else:
+                            # Average the confidence values
+                            conf = (conf + existing_conf) / 2
+                        
+                    # Continue to create masks and extract properties
                     dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
                     mask = polygon_to_mask(dummy_mask.astype('int8'), 
                                                 mask_poly, 
                                                 smooth_sigma=polygon_sigma,
                                                 )
-                    mask_store[frame_no,:,:] = mask
+                    if iou_thresh < 0.01:
+                        # Fuse this masks with prior masks already stored in the zarr
+                        # for this frame / label
+                        previous_mask = mask_store[frame_no,:,:].copy()
+                        previous_mask[previous_mask == -1] = 0
+                        mask = np.logical_or(previous_mask, mask)
+                        mask = mask.astype('int8')
                     
+                    mask_store[frame_no,:,:] = mask
+                        
                     # Get region properties and save them to the dataframe
                     _, regions_props = find_objects_in_mask(mask, min_area=0)
-                    assert len(regions_props) == 1
-                    region_prop = regions_props[0]
-                    # ... extract all the properties we want to track
-                    centroid = region_prop.centroid
-                    area = region_prop.area
-                    eccentricity = region_prop.eccentricity
-                    orientation = region_prop.orientation
-                    solidity = region_prop.solidity 
+                    # Instead of asserting single region, handle multiple regions
+                    if not regions_props:
+                        # Skip if no regions were found
+                        continue
+                    num_regions = len(regions_props)                    
+                    # Initialize accumulators for region properties
+                    pos_x_sum, pos_y_sum = 0, 0
+                    area_sum = 0
+                    eccentricity_sum = 0
+                    orientation_sum = 0
+                    solidity_sum = 0
+                    # Loop over all regions and accumulate properties
+                    for region_prop in regions_props:
+                        centroid = region_prop.centroid
+                        pos_x_sum += centroid[1]  # x coordinate
+                        pos_y_sum += centroid[0]  # y coordinate
+                        area_sum += region_prop.area
+                        eccentricity_sum += region_prop.eccentricity
+                        orientation_sum += region_prop.orientation
+                        solidity_sum += region_prop.solidity
                     
-                    # Store data in DataFrame with flat column names
-                    tracking_df.loc[(frame_no, track_id), 'pos_x'] = centroid[1]  # x coordinate
-                    tracking_df.loc[(frame_no, track_id), 'pos_y'] = centroid[0]  # y coordinate
-                    tracking_df.loc[(frame_no, track_id), 'area'] = area
-                    tracking_df.loc[(frame_no, track_id), 'eccentricity'] = eccentricity
-                    tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation
+                    # Store averages in DataFrame with flat column names
+                    tracking_df.loc[(frame_no, track_id), 'pos_x'] = pos_x_sum / num_regions
+                    tracking_df.loc[(frame_no, track_id), 'pos_y'] = pos_y_sum / num_regions
+                    tracking_df.loc[(frame_no, track_id), 'area'] = area_sum / num_regions
+                    tracking_df.loc[(frame_no, track_id), 'eccentricity'] = eccentricity_sum / num_regions
+                    tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation_sum / num_regions
                     tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
-                    tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity
+                    tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity_sum / num_regions
 
                 # A FRAME IS COMPLETE
                 
