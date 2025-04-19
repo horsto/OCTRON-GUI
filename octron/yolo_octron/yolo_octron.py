@@ -820,7 +820,6 @@ class YOLO_octron:
                     copy_paste=0.25,
                     copy_paste_mode='mixup', 
                     erasing=.0,
-                    crop_fraction=1.0,
                 )
             except Exception as e:
                 training_error = e
