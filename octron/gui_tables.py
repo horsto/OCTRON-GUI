@@ -68,7 +68,7 @@ class ExistingDataTable(QAbstractTableModel):
     def update_data(self, new_label_dict):
         """Update the model with new data"""
         self.beginResetModel()
-        self.label_dict = new_label_dict
+        self.label_dict = {**self.label_dict, **new_label_dict}
         self.refresh_data()
         self.endResetModel()
     

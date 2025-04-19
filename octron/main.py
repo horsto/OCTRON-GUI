@@ -973,7 +973,11 @@ class octron_widget(QWidget):
         Refresh the label list combobox with the current labels in the object organizer
         """
         # Check this folder for existing project data
-        label_dict = collect_labels(self.project_path, prune_empty_labels=False,  min_num_frames=0)  
+        label_dict = collect_labels(self.project_path, 
+                                    subfolder=self.current_video_hash, 
+                                    prune_empty_labels=False,  
+                                    min_num_frames=0
+                                    )  
         if not label_dict:
             return
         
@@ -1366,7 +1370,7 @@ class octron_widget(QWidget):
         # Starting here as an example with video layers, but 
         # this could be anything in the future ... let's see if we need it 
         video_layers = []
-        # Loop through all layers and check if they are video layers (TODO: Or others...)
+        # Loop through all layers and check if they are video layers
         for l in self._viewer.layers:
             try:
                 if l._basename() == 'Image' and 'VIDEO' in l.name:

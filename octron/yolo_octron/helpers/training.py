@@ -132,6 +132,7 @@ def pick_random_frames(frames, n=20):
         return np.array([], dtype=frames.dtype)
     
 def collect_labels(project_path, 
+                   subfolder=None,
                    prune_empty_labels=True, 
                    min_num_frames=5,
                    verbose=False,
@@ -189,6 +190,15 @@ def collect_labels(project_path,
     assert project_path.exists(), f'Project path not found at {project_path.as_posix()}'
     assert project_path.is_dir(), f'Project path should be a directory, not file'
 
+    # Check whether .json files should be found in only a subfolder
+    if subfolder is not None:
+        json_parent_path = project_path / subfolder
+        assert project_path.exists(), f'Subfolder not found at {project_path.as_posix()}'
+        assert project_path.is_dir(), f'Subfolder should be a directory, not file'
+    else:
+        # If no subfolder is provided, search in the project root directory
+        json_parent_path = project_path
+
     label_dict = {}
     # Create a (new) global mapping of label names to IDs for consistency across directories
     # This is important since the user might decide to add multiple labels with the same name
@@ -198,7 +208,7 @@ def collect_labels(project_path,
     label_id_map = {}
     current_label_id = 0
     
-    for object_organizer in find_files_with_depth_limit(project_path, 'object_organizer.json', 1):
+    for object_organizer in find_files_with_depth_limit(json_parent_path, 'object_organizer.json', 1):
         if verbose: print(object_organizer.parent)
         organizer_dict = load_object_organizer(object_organizer)  
         labels = {}
@@ -406,6 +416,7 @@ def draw_polygons(labels,
             for no_p, p in enumerate(polys):
                 ax.scatter(p[:,0], p[:,1], c='w', s=2, alpha=.5, marker='s')
                 ax.scatter(p[:,0], p[:,1], c='k', s=.5, alpha=.5, marker='.')
+                ax.plot(p[:,0], p[:,1], c='w')
                 center_coord = p.mean(axis=0)
                 ax.text(center_coord[0], center_coord[1], str(no_p), 
                         color='w',  # Text color
