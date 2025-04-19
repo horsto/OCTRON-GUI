@@ -1,12 +1,10 @@
 name: octron
 channels:
-  - nvidia  # [win]
   - conda-forge
   - defaults
 dependencies:
   - python=3.11.*
   - pip
-  - cuda=12.6.0  # [win]
   - pip:
       # Use native metal backend for macOS, CUDA for others
       - --extra-index-url https://download.pytorch.org/whl/cu126 # [win32 or linux]
