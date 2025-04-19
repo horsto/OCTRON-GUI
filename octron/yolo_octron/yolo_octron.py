@@ -383,6 +383,8 @@ class YOLO_octron:
                                     mask_labeled,
                                     properties=('area','label')
                                     )
+                            if not props: 
+                                continue
                             # Filter out small objects by setting them to 0
                             # and those that are smaller than a certain size ratio 
                             # smaller than the max object size
