@@ -11,8 +11,10 @@ Octron is built on [napari](https://www.napari.org), [segment anything](https://
     Just a heads up that there will be changes accumulating in the repo over these days. So the first thing that you should do before playing with OCTRON (after you installed it successfully once, see below), should be:<br>
     1. Pull latest changes from main (in the github desktop app for example)<br>
     2. In your terminal, browse to your cloned repository folder on disk and ...<br>
-    3. `pip install . -U` for installing the new code<br><br>
-    If you ever mess up completely, do not despair! You can trash everything with<br>`conda deactivate && conda env remove --name octron --yes`.<br>Then you have to start with the conda *.yml* again (see steps explained below). 
+    3. `pip install . -U` for installing the new code and to update existing packages.<br><br>
+    If you ever mess up completely, do not despair! You can trash everything with<br>
+        - `conda deactivate` and then<br>
+        - `conda env remove --name octron --yes`.<br>Then you have to start with the conda *.yml* again (see steps explained below). 
 
 
 Follow these steps: 
