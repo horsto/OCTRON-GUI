@@ -672,6 +672,7 @@ class YOLO_octron:
             self.yolo_settings.update({
                 'sync': False,
                 'hub': False,
+                'tensorboard': True,
                 'runs_dir': self.training_path.as_posix()
             })
         from ultralytics import YOLO   
