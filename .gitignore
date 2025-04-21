@@ -186,3 +186,4 @@ cython_debug/
 
 # Ignore zarr ZIP files
 *.zip
+/bash_utils
