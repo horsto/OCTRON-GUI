@@ -691,6 +691,39 @@ class YOLO_octron:
         self.model = model
         return model
     
+    def load_model_args(self, model_name_path):
+        """
+        Load the YOLO model args.yaml (model training settings).
+        This file is supposed to be one level up of the "weights" folder for 
+        custom trained models.
+        
+        Parameters
+        ----------
+        model_name_path : str or Path
+            Path to the model to load, or name of the model to load
+        
+        Returns
+        -------
+        args : dict
+            Dictionary containing the model arguments
+            Returns None if the args.yaml file is not found
+            
+        """
+        model_name_path = Path(model_name_path)
+                
+        assert model_name_path.exists(), f"Model path {model_name_path} does not exist."
+        model_parent_path = model_name_path.parent.parent
+        args = list(model_parent_path.glob('args.yaml'))
+        if len(args) > 0: 
+            args = args[0]  
+            # Read yaml as dict
+            with open(args, 'r') as f:
+                args = yaml.safe_load(f)
+        else: 
+            args = None
+        
+        return args
+    
 
     def train(self, 
               device='cpu',
@@ -1192,6 +1225,18 @@ class YOLO_octron:
         tracker_name = tracker_name.strip().lower()
         assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
         
+        model_path = Path(model_path)
+        assert model_path.exists(), f"Model path {model_path} does not exist."
+        # Try to find model args 
+        model_args = self.load_model_args(model_name_path=model_path)
+        if model_args is not None:
+            print('Model args loaded from', model_path.parent.parent.as_posix())
+            imgsz = model_args['imgsz']
+            print(f'Image size: {imgsz}')
+        else:
+            print('No model args found, using default image size of 640')
+            imgsz = 640
+        
         if one_object_per_label:
             print("⚠ Tracking only one object per label.")
         
@@ -1270,6 +1315,7 @@ class YOLO_octron:
                     show=False,
                     save=False,
                     verbose=False,
+                    imgsz=imgsz,
                     stream_buffer=True,
                     conf=conf_thresh,
                     iou=iou_thresh,
