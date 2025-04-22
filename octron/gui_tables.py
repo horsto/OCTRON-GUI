@@ -42,18 +42,25 @@ class ExistingDataTable(QAbstractTableModel):
             total_labels = 0
             unique_frames = set()  # Use a set to track unique frame indices
             
+            # before looping labels, init tooltip holder
+            full_video_hint = ""
+            label_names = [] 
             # Count labels and frames
             for label_id, label_data in labels.items():
                 if label_id == 'video':
                     continue
                 if label_id == 'video_file_path':
-                    video_file_path = label_data.stem[-7:]   
+                    p = Path(label_data)  
+                    full_video_hint = "/".join(p.parts[-3:])
+                    video_file_path = p.stem[-7:]
                     continue 
                 total_labels += 1
+                label_names.append(label_data['label']) 
                 # Add frame indices to the set of unique frames
                 if 'frames' in label_data:
                     unique_frames.update(label_data['frames'])
             
+            label_names.sort()
             # Create a row for this folder
             shortened_folder_name = Path(folder_name).name
             self._data.append(
@@ -62,13 +69,19 @@ class ExistingDataTable(QAbstractTableModel):
                               total_labels, 
                               len(unique_frames),
                               folder_name,  # folder_name is hidden in display
-                               ]
+                              full_video_hint,  # updated: truncated tooltip
+                              label_names] 
                               )
     
-    def update_data(self, new_label_dict):
+    def update_data(self, new_label_dict, delete_old=False):
         """Update the model with new data"""
         self.beginResetModel()
-        self.label_dict = {**self.label_dict, **new_label_dict}
+        if delete_old:
+            # Replace existing data with new data
+            self.label_dict = new_label_dict
+        else:
+            # Merge new data with existing data
+            self.label_dict = {**self.label_dict, **new_label_dict}
         self.refresh_data()
         self.endResetModel()
     
@@ -97,6 +110,12 @@ class ExistingDataTable(QAbstractTableModel):
         elif role == Qt.TextAlignmentRole and col > 0:
             # Center-align numeric columns
             return Qt.AlignCenter
+        
+        elif role == Qt.ToolTipRole and index.column() == 1:
+            return self._data[row][5]
+        
+        elif role == Qt.ToolTipRole and index.column() == 2:  
+            return ", ".join(self._data[row][6])
         
         elif role == Qt.UserRole:
             return self._data[row][3]  # Return full folder path
