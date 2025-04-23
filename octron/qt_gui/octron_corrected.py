@@ -502,7 +502,7 @@ class Ui_octron_widgetui(object):
         self.octron.train_prune_checkBox.setEnabled(False)
         self.octron.train_prune_checkBox.setMinimumSize(QSize(90, 25))
         self.octron.train_prune_checkBox.setMaximumSize(QSize(90, 25))
-        self.octron.train_prune_checkBox.setChecked(True)
+        self.octron.train_prune_checkBox.setChecked(False)
 
         self.octron.train_checkboxes_verticalLayout.addWidget(self.octron.train_prune_checkBox)
 

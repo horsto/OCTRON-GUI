@@ -501,7 +501,7 @@ class octron_widget(QWidget):
             self.yolo_octron.write_yolo_config()    
             # Enable next part (YOLO training) of the pipeline 
             self.train_train_groupbox.setEnabled(True)
-            self.launch_tensorboard_checkBox.setEnabled(True)
+            self.launch_tensorboard_checkBox.setEnabled(False)
             self.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
             self.start_stop_training_btn.setText(f'▷ Train')
         
@@ -760,7 +760,7 @@ class octron_widget(QWidget):
             return 
         self.image_size_yolo = int(self.yoloimagesize_list.currentText())                                     
         # Check status of "Launch Tensorboard" checkbox
-        self.launch_tensorbrd = self.launch_tensorboard_checkBox.isChecked()   
+        self.launch_tensorbrd = False #self.launch_tensorboard_checkBox.isChecked()   
         # TODO: Implement these options
         #resume_training = self.train_resume_checkBox.isChecked()    
         #overwrite = self.train_training_overwrite_checkBox.isChecked()  

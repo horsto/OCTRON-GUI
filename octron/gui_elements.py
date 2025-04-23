@@ -579,7 +579,7 @@ class octron_gui_elements(QWidget):
         self.octron.train_prune_checkBox.setEnabled(False)
         self.octron.train_prune_checkBox.setMinimumSize(QSize(90, 25))
         self.octron.train_prune_checkBox.setMaximumSize(QSize(90, 25))
-        self.octron.train_prune_checkBox.setChecked(True)
+        self.octron.train_prune_checkBox.setChecked(False)
 
         self.octron.train_checkboxes_verticalLayout.addWidget(self.octron.train_prune_checkBox)
 
@@ -1255,4 +1255,3 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
-
