@@ -92,7 +92,6 @@ class YOLO_octron:
         self.config_path = None
         self.models_dict = {}
         self.enable_watershed = False
-        self.overwrite_training_data = False
         
         if models_yaml_path is not None:
             self.models_yaml_path = Path(models_yaml_path) 
@@ -173,9 +172,10 @@ class YOLO_octron:
             self._setup_training_directories(self.clean_training_dir)
 
 
-    def _setup_training_directories(self, clean_training_dir=False):
+    def _setup_training_directories(self, clean_training_dir):
         """
-        Setup folders for training
+        Setup folders for training. 
+        This is called from the constructor and when the project path is set.
         
         Parameters
         ----------
@@ -186,8 +186,8 @@ class YOLO_octron:
             raise ValueError("Project path must be set before setting up training directories")
             
         # Setup folders for training
-        self.training_path = self._project_path / 'model'  # Path to all model output
-        self.data_path = self.training_path / 'training_data'  # Path to training data
+        self.training_path = self._project_path / 'model'  # Path to all training and model output
+        self.data_path = self.training_path / 'training_data' # Path to training data
         
         # Folder checks
         try:
@@ -196,14 +196,12 @@ class YOLO_octron:
             # Check if training data folder is empty
             if len(list(self.training_path.glob('*'))) > 0:
                 if not clean_training_dir:
-                    raise FileExistsError(
-                        f'"{self.training_path.as_posix()}" is not empty. Please remove subfolders first.')
+                    return
                 else:
                     shutil.rmtree(self.training_path)
                     self.training_path.mkdir()
-                    print(f'Created fresh training directory "{self.training_path.as_posix()}"')
-                    
-                    
+                    print(f'Created fresh training directory "{self.training_path.as_posix()}"')       
+        return
                     
                     
     ##### TRAINING DATA PREPARATION ###########################################################################    
@@ -500,20 +498,22 @@ class YOLO_octron:
         # Create the training root directory
         # If it already exists, delete it and create a new one
         "self.training_path"
-        if self.data_path.exists():
-            if self.overwrite_training_data:
-                print(f"Training data folder already exists. Deleting {self.data_path.as_posix()}")
-                shutil.rmtree(self.data_path)    
-                self.data_path.mkdir()
-            else:
-                print(f"Training data folder already exists. Please delete it manually or set overwrite_training_data=True to overwrite.")
-                return            
-            model_path = self.training_path / 'training'
-            shutil.rmtree(model_path)
-        else:
-            print(f"Creating new training data folder at {self.data_path.as_posix()}")
-            self.data_path.mkdir()
-        
+        if self.data_path.exists() and self.clean_training_dir:
+            raise FileExistsError(
+                f"Training data path '{self.data_path.as_posix()}' already exists. "
+                "Please remove it or set self.clean_training_dir=False."
+            )
+        if self.data_path.exists() and not self.clean_training_dir:
+            print(f"Training data path '{self.data_path.as_posix()}' already exists. Using existing directory.")
+            # Remove any model subdirectories
+            if self.training_path / 'training' in self.training_path.glob('*'):
+                shutil.rmtree(self.training_path / 'training')
+                print(f"Removed existing model subdirectory '{self.training_path / 'training'}'")
+            return
+        if not self.data_path.exists():
+            self.data_path.mkdir(parents=True, exist_ok=False)
+            print(f"Created training data directory '{self.data_path.as_posix()}'")
+            
 
         # Create subdirectories for train, val, and test
         # If they already exist, delete them and create new ones
@@ -652,7 +652,7 @@ class YOLO_octron:
             "val": val_path,
             "names": label_id_label_dict,
         }
-        header = "# OCTRON training dataset\n# Exported on {}\n\n".format(datetime.now())
+        header = "# OCTRON training config\n# Last edited on {}\n\n".format(datetime.now())
         
         # Write to file
         with open(self.config_path, 'w') as f:

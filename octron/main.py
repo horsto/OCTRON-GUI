@@ -390,8 +390,6 @@ class octron_widget(QWidget):
         
     def _create_worker_training_data(self):
         # Create a new worker for training data generation / export
-        overwrite_training_data = self.train_data_overwrite_checkBox.isChecked()
-        self.yolo_octron.overwrite_training_data = overwrite_training_data
         self.training_data_worker = create_worker(self.yolo_octron.create_training_data)
         self.training_data_worker.setAutoDelete(True) # auto destruct !!
         self.training_data_worker.yielded.connect(self._training_data_yielded)
@@ -587,7 +585,6 @@ class octron_widget(QWidget):
         if not hasattr(self, 'polygon_worker') and not hasattr(self, 'training_data_worker'):   
             self.polygons_generated = False
             self.training_data_generated = False   
-        
         # Sanity check 
         if not self.project_path:
             show_warning("Please select a project directory first.")
@@ -597,6 +594,9 @@ class octron_widget(QWidget):
             return
         # Check status of "Prune" checkbox
         prune = self.train_prune_checkBox.isChecked()
+        # Check whether training folder should be overwritten or not 
+        self.yolo_octron.clean_training_dir = self.train_data_overwrite_checkBox.isChecked()
+        # Set the project_path (which also takes care of setting up training subfolders)
         if not self.yolo_octron.project_path:
             self.yolo_octron.project_path = self.project_path
         elif self.yolo_octron.project_path != self.project_path: 
@@ -604,6 +604,8 @@ class octron_widget(QWidget):
             self.yolo_octron.project_path = self.project_path
 
         self.save_object_organizer() # This is safe, since it checks whether a video was loaded
+        
+        # TODO: Could make `prepare_labels` async as well ... 
         try:
             # After saving the object organizer, extract info from all 
             # available .json files in the project directory
@@ -612,12 +614,45 @@ class octron_widget(QWidget):
                         min_num_frames=5, # hardcoded ... less than 5 frames are not useful
                         verbose=True, 
             )
-      
         except AssertionError as e:
             print(f"😵 Error when preparing labels: {e}")
             return
+        
+        if not self.yolo_octron.clean_training_dir:
+            # Check if the training folder already exists
+            # If it does, we can skip everything after this step
+            
+            if self.yolo_octron.data_path.exists():
+                # Remove any model subdirectories
+                # Assuming /training as the model subfolder which is set during YOLO training initialization
+                if self.yolo_octron.training_path / 'training' in self.yolo_octron.training_path.glob('*'):
+                    shutil.rmtree(self.yolo_octron.training_path / 'training')
+                    print(f"Removed existing model subdirectory '{self.yolo_octron.training_path / 'training'}'")
+                # TODO: Since we just generated the labels_dict (in prepare_labels above), 
+                # a rudimentary check is actually possible, comparing the total number of expected labeled 
+                # frames and the number of images in the training folder. I am skipping any checks for now.
+                # Show a warning dialog that user must dismiss
+                warning_dialog = QMessageBox()
+                warning_dialog.setIcon(QMessageBox.Warning)
+                warning_dialog.setWindowTitle("Existing Training Data")
+                warning_dialog.setText("Training data directory already exists.")
+                warning_dialog.setInformativeText("The existing training data will be used without regeneration. "
+                                                  "No checks are performed on the training data folder. "
+                                                  "If you want to regenerate the data, please check the 'Overwrite' option.")
+                warning_dialog.setStandardButtons(QMessageBox.Ok)
+                warning_dialog.exec_()
+                self.polygons_generated = True
+                self.training_data_generated = True
+                self._on_training_data_finished()
+                
+                print(f"Training data path '{self.yolo_octron.data_path.as_posix()}' already exists. Using existing directory.")
+                return
+
+        # Else ... continue the training data generation pipeline
         # Kick off polygon generation - check are done within the following functions 
         self._polygon_generation()
+        return
+            
             
     ###### YOLO TRAINERS ###########################################################################
     
