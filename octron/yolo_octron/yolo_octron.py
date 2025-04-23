@@ -531,7 +531,7 @@ class YOLO_octron:
         for no_entry, (path, labels) in enumerate(self.label_dict.items(), start=1):  
             path_prefix = Path(path).name   
             video_data = labels.pop('video')
-            
+            _ = labels.pop('video_file_path')
             for entry in tqdm(labels,
                             total=len(labels),
                             position=0,
