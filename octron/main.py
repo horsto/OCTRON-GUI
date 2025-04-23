@@ -622,9 +622,10 @@ class octron_widget(QWidget):
             # Check if the training folder already exists
             # If it does, we can skip everything after this step
             
-            if self.yolo_octron.data_path.exists():
+            if self.yolo_octron.data_path is not None and self.yolo_octron.data_path.exists():
                 # Remove any model subdirectories
                 # Assuming /training as the model subfolder which is set during YOLO training initialization
+                assert self.yolo_octron.training_path is not None 
                 if self.yolo_octron.training_path / 'training' in self.yolo_octron.training_path.glob('*'):
                     shutil.rmtree(self.yolo_octron.training_path / 'training')
                     print(f"Removed existing model subdirectory '{self.yolo_octron.training_path / 'training'}'")
