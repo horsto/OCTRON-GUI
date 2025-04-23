@@ -390,6 +390,8 @@ class octron_widget(QWidget):
         
     def _create_worker_training_data(self):
         # Create a new worker for training data generation / export
+        overwrite_training_data = self.train_data_overwrite_checkBox.isChecked()
+        self.yolo_octron.overwrite_training_data = overwrite_training_data
         self.training_data_worker = create_worker(self.yolo_octron.create_training_data)
         self.training_data_worker.setAutoDelete(True) # auto destruct !!
         self.training_data_worker.yielded.connect(self._training_data_yielded)
@@ -1015,6 +1017,7 @@ class octron_widget(QWidget):
             self.train_train_groupbox.setEnabled(True)
             # Enable some buttons too 
             self.train_data_watershed_checkBox.setEnabled(True)
+            self.train_data_overwrite_checkBox.setEnabled(True)
             self.train_prune_checkBox.setEnabled(True)
 
     def on_label_table_double_clicked(self, index):

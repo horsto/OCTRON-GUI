@@ -92,6 +92,7 @@ class YOLO_octron:
         self.config_path = None
         self.models_dict = {}
         self.enable_watershed = False
+        self.overwrite_training_data = False
         
         if models_yaml_path is not None:
             self.models_yaml_path = Path(models_yaml_path) 
@@ -474,6 +475,10 @@ class YOLO_octron:
                      
         
         """
+        if self.data_path is None:
+            raise ValueError("No data path set. Please set 'project_path' first.")
+        if self.training_path is None:
+            raise ValueError("No training path set. Please set 'project_path' first.")
         if self.label_dict is None:
             raise ValueError("No labels found. Please run prepare_labels() first.")
         
@@ -494,11 +499,21 @@ class YOLO_octron:
 
         # Create the training root directory
         # If it already exists, delete it and create a new one
-        try:
-            self.data_path.mkdir(exist_ok=False)
-        except FileExistsError:
-            shutil.rmtree(self.data_path)    
+        "self.training_path"
+        if self.data_path.exists():
+            if self.overwrite_training_data:
+                print(f"Training data folder already exists. Deleting {self.data_path.as_posix()}")
+                shutil.rmtree(self.data_path)    
+                self.data_path.mkdir()
+            else:
+                print(f"Training data folder already exists. Please delete it manually or set overwrite_training_data=True to overwrite.")
+                return            
+            model_path = self.training_path / 'training'
+            shutil.rmtree(model_path)
+        else:
+            print(f"Creating new training data folder at {self.data_path.as_posix()}")
             self.data_path.mkdir()
+        
 
         # Create subdirectories for train, val, and test
         # If they already exist, delete them and create new ones
@@ -510,14 +525,12 @@ class YOLO_octron:
                 shutil.rmtree(path_to_split)    
                 path_to_split.mkdir()
 
-            
         #######################################################################################################
         # Export the training data
         
         for no_entry, (path, labels) in enumerate(self.label_dict.items(), start=1):  
             path_prefix = Path(path).name   
             video_data = labels.pop('video')
-            video_file_path = labels.pop('video_file_path')
             
             for entry in tqdm(labels,
                             total=len(labels),
@@ -576,7 +589,7 @@ class YOLO_octron:
                         yield((no_entry, len(self.label_dict), label, split, frame_no, len(current_indices)))  
                         
         if verbose: print(f"Training data exported to {self.data_path.as_posix()}")
-
+        return
 
     def write_yolo_config(self,
                          train_path="train",
@@ -600,6 +613,7 @@ class YOLO_octron:
             raise ValueError("No labels found.")
         
         dataset_path = self.data_path
+        assert dataset_path is not None, f"Data path not set. Please set 'project_path' first."
         assert dataset_path.exists(), f'Dataset path not found at {dataset_path}'
         assert dataset_path.is_dir(), f'Dataset path should be a directory, but found a file at {dataset_path}' 
         
@@ -628,7 +642,7 @@ class YOLO_octron:
                     label_id_label_dict[entry] = labels[entry]['label']
 
         ######## Write the YAML config
-        self.config_path = self.data_path / "yolo_config.yaml"
+        self.config_path = dataset_path / "yolo_config.yaml"
 
         # Create the config dictionary
         config = {
@@ -636,8 +650,8 @@ class YOLO_octron:
             "train": train_path,
             "test": test_path,
             "val": val_path,
+            "names": label_id_label_dict,
         }
-        config["names"] = label_id_label_dict
         header = "# OCTRON training dataset\n# Exported on {}\n\n".format(datetime.now())
         
         # Write to file
