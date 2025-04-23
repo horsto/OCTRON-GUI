@@ -334,7 +334,7 @@ class octron_widget(QWidget):
         # load the video data, plus we find out which indices have annotation data in the 
         # video. So, that is a lot of processing for just refreshing the table view for example 
         self.save_object_organizer()
-        self.refresh_label_table_list() # This is the table in the project tab
+        self.refresh_label_table_list(delete_old=False) # This is the table in the project tab
         self.batch_predict_progressbar.setMaximum(self.chunk_size)    
 
     def init_prediction_threaded(self):
@@ -968,9 +968,15 @@ class octron_widget(QWidget):
         organizer_path = self.project_path_video  / "object_organizer.json"
         self.object_organizer.save_to_disk(organizer_path)
 
-    def refresh_label_table_list(self):
+    def refresh_label_table_list(self, delete_old=False):
         """
         Refresh the label list combobox with the current labels in the object organizer
+        
+        Parameter
+        ----------
+        delete_old : bool
+            If True, delete the old entries from the combobox
+        
         """
         # Check this folder for existing project data
         label_dict = collect_labels(self.project_path, 
@@ -993,7 +999,7 @@ class octron_widget(QWidget):
             self.existing_data_table.doubleClicked.connect(self.on_label_table_double_clicked)
         
         # Update the table with new data
-        self.label_table_model.update_data(label_dict)
+        self.label_table_model.update_data(label_dict, delete_old=delete_old)
         
         # Enable the groupbox for existing data and the training generation box
         self.project_existing_data_groupbox.setEnabled(True)
@@ -1170,7 +1176,7 @@ class octron_widget(QWidget):
             
             self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
-            self.refresh_label_table_list()
+            self.refresh_label_table_list(delete_old=True)
             self.refresh_trained_model_list()
         else:
             print("No folder selected.")
