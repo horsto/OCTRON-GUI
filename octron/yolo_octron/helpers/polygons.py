@@ -1,6 +1,7 @@
 # Polygon helpers for training data extraction
 # Also contains helpers for mask manipulation / polygon generation
 import numpy as np  
+from skimage.morphology import binary_opening, disk
 
 def find_objects_in_mask(mask, min_area=10):
     """
@@ -271,7 +272,12 @@ def get_polygons(mask):
     return polygons
 
 
-def polygon_to_mask(empty_mask, polygons, smooth_sigma=1.):
+def polygon_to_mask(empty_mask, 
+                    polygons, 
+                    smooth_sigma=0., 
+                    opening_radius=2,
+                    model_imgsz=640,
+                    ):
     """
     Convert a polygon to a binary mask
     
@@ -279,16 +285,16 @@ def polygon_to_mask(empty_mask, polygons, smooth_sigma=1.):
     ----------
     empty_mask : np.array : Empty mask to fill with the polygon
     polygons : np.array : Polygon points for the extracted binary mask(s)
+    smooth_sigma : float : Sigma for Gaussian smoothing
+    opening_radius : int : Radius for binary opening
+    model_imgsz : int : Image size the model was using for training
+                        (default is 640) 
+                        This is used to scale the mask before opening
     
     Returns
     -------
     mask : np.array : Mask for the polygon(s) with dtype int8
     """
-
-    try:
-        from imantics import Mask
-    except ImportError:
-        raise ImportError('to_mask() requires imantics')
     try:
         import cv2
     except ImportError:
@@ -300,6 +306,37 @@ def polygon_to_mask(empty_mask, polygons, smooth_sigma=1.):
         from scipy.ndimage import gaussian_filter1d
         polygons = gaussian_filter1d(polygons, axis=0, sigma=smooth_sigma)
     
-    mask = cv2.fillPoly(empty_mask, [np.round(polygons).astype(np.int32)], color=(1,), lineType=cv2.LINE_8)
-    mask = Mask(mask).array
-    return mask.astype('int8')
+    # draw with AA 
+    mask = cv2.fillPoly(
+        empty_mask.copy(),
+        [np.round(polygons).astype(np.int32)],
+        color=(1,),
+        lineType=cv2.LINE_4,
+    )
+
+    # Check if opening should be applied
+    if opening_radius > 0:
+        scale = 1
+        h0, w0 = mask.shape
+        
+        # up‐scale if too small
+        if max(h0, w0) < model_imgsz:
+            scale = model_imgsz / max(h0, w0)
+            h1 = int(round(h0 * scale))
+            w1 = int(round(w0 * scale))
+            mask = cv2.resize(mask, (w1, h1), interpolation=cv2.INTER_NEAREST_EXACT)
+        
+        disk_el = disk(radius=opening_radius,
+                       strict_radius=False,
+                       decomposition=None,
+                       )
+        mask = binary_opening(mask, footprint=disk_el).astype('uint8')
+        # down‐scale back to exact original size
+        if scale > 1:
+            mask = cv2.resize(mask, (w0, h0), interpolation=cv2.INTER_AREA)
+    
+    # Convert mask to int8
+    # This is because the zarr array is created as int8 to use -1 as a placeholder
+    # ... and threshold to a binary mask
+    mask = mask.astype('int8')
+    return mask

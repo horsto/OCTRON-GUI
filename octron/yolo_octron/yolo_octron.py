@@ -1260,6 +1260,12 @@ class YOLO_octron:
             video_path = Path(video_dict['video_file_path'])
             num_frames = video_dict['num_frames']
             
+            if max(video_dict['height'], video_dict['width']) < imgsz:
+                print(f"⚠ Video resolution is smaller than the model image size ({imgsz}). Setting retina_masks to False.")
+                retina_masks = False
+            else:
+                retina_masks = True
+            
             # Set up prediction directory structure
             save_dir = video_path.parent / 'predictions' / f"{video_path.stem}_{tracker_name}"
             if save_dir.exists() and overwrite:
@@ -1320,7 +1326,7 @@ class YOLO_octron:
                     conf=conf_thresh,
                     iou=iou_thresh,
                     device=device, 
-                    retina_masks=True, # original image resolution, not inference resolution
+                    retina_masks=retina_masks, # original image resolution, not inference resolution?
                     show_boxes=False,
                     save_txt=False,
                     save_conf=False,
@@ -1413,9 +1419,11 @@ class YOLO_octron:
                     # Continue to create masks and extract properties
                     dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
                     mask = polygon_to_mask(dummy_mask.astype('int8'), 
-                                                mask_poly, 
-                                                smooth_sigma=polygon_sigma,
-                                                )
+                                           mask_poly, 
+                                           smooth_sigma=polygon_sigma,
+                                           opening_radius=2,
+                                           model_imgsz=imgsz,
+                                           )
                     if iou_thresh < 0.01:
                         # Fuse this masks with prior masks already stored in the zarr
                         # for this frame / label
