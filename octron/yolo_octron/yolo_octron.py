@@ -856,7 +856,10 @@ class YOLO_octron:
                     exist_ok=True,
                     # Augmentation
                     hsv_v=.25,
+                    hsv_s=0.0,
+                    hsv_h=0.0,
                     degrees=180,
+                    translate=0.1,
                     perspective=0,
                     scale=0.25,
                     shear=2,
@@ -866,7 +869,7 @@ class YOLO_octron:
                     mixup=0.25,
                     copy_paste=0.25,
                     copy_paste_mode='mixup', 
-                    erasing=.0,
+                    erasing=0.,
                 )
             except Exception as e:
                 training_error = e
