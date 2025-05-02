@@ -2460,7 +2460,7 @@ of one label will be fused into one mask.</string>
                 <double>0.050000000000000</double>
                </property>
                <property name="value">
-                <double>0.850000000000000</double>
+                <double>0.500000000000000</double>
                </property>
               </widget>
              </item>
@@ -2485,7 +2485,7 @@ of one label will be fused into one mask.</string>
                 <double>0.100000000000000</double>
                </property>
                <property name="value">
-                <double>0.600000000000000</double>
+                <double>0.750000000000000</double>
                </property>
               </widget>
              </item>

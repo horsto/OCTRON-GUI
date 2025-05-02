@@ -860,7 +860,7 @@ class Ui_octron_widgetui(object):
         self.octron.predict_conf_thresh_spinbox.setMaximumSize(QSize(90, 25))
         self.octron.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
         self.octron.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
-        self.octron.predict_conf_thresh_spinbox.setValue(0.850000000000000)
+        self.octron.predict_conf_thresh_spinbox.setValue(0.500000000000000)
 
         self.octron.predict_grid_layout2.addWidget(self.octron.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
@@ -870,7 +870,7 @@ class Ui_octron_widgetui(object):
         self.octron.predict_iou_thresh_spinbox.setMaximumSize(QSize(90, 25))
         self.octron.predict_iou_thresh_spinbox.setMaximum(1.000000000000000)
         self.octron.predict_iou_thresh_spinbox.setSingleStep(0.100000000000000)
-        self.octron.predict_iou_thresh_spinbox.setValue(0.600000000000000)
+        self.octron.predict_iou_thresh_spinbox.setValue(0.750000000000000)
 
         self.octron.predict_grid_layout2.addWidget(self.octron.predict_iou_thresh_spinbox, 0, 3, 1, 1, Qt.AlignmentFlag.AlignBottom)
 
