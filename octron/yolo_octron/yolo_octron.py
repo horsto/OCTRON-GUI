@@ -848,6 +848,7 @@ class YOLO_octron:
                     epochs=epochs,
                     imgsz=imagesz,
                     resume=False,
+                    patience=50,
                     plots=True,
                     batch=-1,
                     cache='disk',
