@@ -855,11 +855,11 @@ class YOLO_octron:
                     save=True,
                     save_period=save_period, 
                     exist_ok=True,
-                    nms=True, # non maximum supression (might help ... )
+                    nms=False, # non maximum supression (might help ... )
                     # Augmentation
                     hsv_v=.25,
-                    hsv_s=0.0,
-                    hsv_h=0.0,
+                    hsv_s=0.25,
+                    hsv_h=0.25,
                     degrees=180,
                     translate=0.1,
                     perspective=0,
