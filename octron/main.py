@@ -103,6 +103,8 @@ if app is not None:
 class octron_widget(QWidget):
     """
     Main OCTRON widget class.
+    It contains SAM2 methods for now. 
+    All YOLO methods are in the YoloHandler class, to be found in yolo_octron/gui/yolo_handler.py   
     """
 
     def __init__(self, viewer: 'napari.viewer.Viewer', parent=None):
@@ -1315,12 +1317,6 @@ class octron_widget(QWidget):
         
         self.create_projection_layer_btn.setEnabled(True) 
         
-
-
-
-
-
-
 
 
 

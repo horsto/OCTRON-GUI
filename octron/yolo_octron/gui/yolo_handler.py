@@ -199,7 +199,6 @@ class YoloHandler(QObject):
         polygon_worker()
         Callback for when polygon generation worker has finished executing. 
         """
-
         self.w.train_polygons_overall_progressbar.setValue(0)
         self.w.train_polygons_frames_progressbar.setValue(0)
         self.w.train_polygons_overall_progressbar.setEnabled(False)    
@@ -642,4 +641,3 @@ class YoloHandler(QObject):
             w.training_data_worker.quit()
         except Exception as e:
             print(f"Error when uncoupling training data worker: {e}")
-
