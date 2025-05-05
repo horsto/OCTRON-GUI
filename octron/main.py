@@ -371,7 +371,6 @@ class octron_widget(QWidget):
             self.prediction_worker_one.start()
         
 
-            
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     
     def closeEvent(self):
@@ -934,7 +933,7 @@ class octron_widget(QWidget):
     
     def on_video_prediction_change(self):
         """
-        Callback function for the video prediction list widget.
+        Callback function for the YOLO video prediction list widget.
         Handles the removal of videos from the prediction list.
         
         """
