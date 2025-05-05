@@ -18,9 +18,6 @@ cur_path  = Path(os.path.abspath(__file__)).parent.parent
 base_path = Path(os.path.dirname(__file__)) # Important for example for .svg files
 sys.path.append(cur_path.as_posix()) 
 
-# PyTorch
-import torch
-
 # Napari plugin QT components
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
@@ -123,33 +120,16 @@ class octron_widget(QWidget):
         self.video_zarr = None
         self.all_zarrs = [] # Collect zarrs in list so they can be cleaned up upon closing
         self.prefetcher_worker = None
-        self.predictor, self.device, self.device_label = None, None, None
+        self.predictor, self.device = None, None
         self.object_organizer = ObjectOrganizer() # Initialize top level object organizer
         self.remove_current_layer = False # Removal of layer yes/no
         self.layer_to_remove_idx = None # Index of layer to remove
         self.layer_to_remove = None # The actual layer to remove
-        self.polygon_interrupt  = False # Training data generation interrupt
-        self.polygons_generated = False
-        self.training_data_interrupt  = False # Training data generation interrupt
-        self.training_data_generated = False
-        self.training_finished = False # YOLO training
-        self.trained_models = {}
-        self.videos_to_predict = {}
         # ... and some parameters
         self.chunk_size = 15 # Global parameter valid for both creation of zarr array and batch prediction 
                              # For zarr arrays I set the minimum to ~50 frames for now
         self.skip_frames = 1 # Skip frames for prefetching images
-        
-        # Device label?
-        if torch.cuda.is_available():
-            self.device_label = "cuda" # torch.device("cuda")
-        elif torch.backends.mps.is_available():
-            self.device_label = "cpu" #"mps" # torch.device("mps")
-            print(f'MPS is available, but not yet supported. Using CPU instead.')
-        else:
-            self.device_label = "cpu" #torch.device("cpu")
-        print(f'Using YOLO device: "{self.device_label}"')
-        
+    
         # Model yaml for SAM2
         sam2models_yaml_path = self.base_path / 'sam2_octron/sam2_models.yaml'
         self.sam2models_dict = check_sam2_models(SAM2p1_BASE_URL='',
@@ -218,7 +198,6 @@ class octron_widget(QWidget):
         self.predict_start_btn.setText('')
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
-        self.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
         # Upon start, disable some of the toolbox tabs and functionality for video drop 
         self.project_video_drop_groupbox.setEnabled(False)
         self.toolBox.widget(1).setEnabled(False) # Annotation
@@ -898,77 +877,6 @@ class octron_widget(QWidget):
         add_layer = getattr(self._viewer, "add_image")
         add_layer(FastVideoReader(video_path, read_format='rgb24'), **layer_dict)
 
-
-    def on_mp4_predict_dropped_area(self, video_paths):
-        """
-        Adds mp4 files for prediction. 
-        Callback function for the file drop area.
-        """
-        
-        video_paths = [Path(v) for v in video_paths]
-        for v_path in video_paths:
-            if v_path.name in self.videos_to_predict:
-                print(f"Video {v_path.name} already in prediction list.")
-                return
-            if not v_path.exists():
-                print(f"File {v_path} does not exist.")
-                return
-            if not v_path.suffix == '.mp4':
-                print(f"File {v_path} is not an mp4 file.")
-                return
-            # Get video dictionary metadata
-            # contains 'file_path', 'num_frames', 'height', 'width'
-            video_dict = probe_video(v_path) 
-            self.videos_to_predict[v_path.name] = video_dict
-            video_reader= FastVideoReader(v_path, read_format='rgb24')
-            self.videos_to_predict[v_path.name]['video'] = video_reader
-            # Add video to self.videos_for_prediction_list
-            self.videos_for_prediction_list.addItem(v_path.name)
-            # Change the first entry of the list to "Choose video ..."
-            if len(self.videos_to_predict):
-                self.videos_for_prediction_list.setItemText(0, f"Videos (n={len(self.videos_to_predict)})")
-            else:
-                self.videos_for_prediction_list.setItemText(0, "Videos")
-            print(f"Added video {v_path.name} to prediction list.")
-        return
-    
-    
-    def on_video_prediction_change(self):
-        """
-        Callback function for the YOLO video prediction list widget.
-        Handles the removal of videos from the prediction list.
-        
-        """
-        index = self.videos_for_prediction_list.currentIndex()
-        all_list_entries = [self.videos_for_prediction_list.itemText(i) \
-            for i in range(self.videos_for_prediction_list.count())]
-        if index == 0:
-            return
-        
-        elif index == 1:
-            if len(all_list_entries) <= 2: 
-                self.videos_for_prediction_list.setCurrentIndex(0)
-                return
-             # User wants to remove a video from the list
-            dialog = remove_video_dialog(self, all_list_entries[2:])
-            dialog.exec_()
-            if dialog.result() == QDialog.Accepted:
-                selected_video = dialog.list_widget.currentItem().text()
-                item_to_remove = self.videos_for_prediction_list.findText(selected_video)
-                self.videos_for_prediction_list.removeItem(item_to_remove)
-                self.videos_for_prediction_list.setCurrentIndex(0)
-                self.videos_to_predict.pop(selected_video)
-                print(f'Removed video "{selected_video}"')
-                # Change the first entry of the list to "Choose video ..."
-                if len(self.videos_to_predict):
-                    self.videos_for_prediction_list.setItemText(0, f"Videos (n={len(self.videos_to_predict)})")
-                else:
-                    self.videos_for_prediction_list.setItemText(0, "Videos")
-            else:
-                self.videos_for_prediction_list.setCurrentIndex(0)
-                return
-        else:
-            pass
         
     def init_sam2_model(self):
         """
