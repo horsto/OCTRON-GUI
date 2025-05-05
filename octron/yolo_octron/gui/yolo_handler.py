@@ -13,8 +13,8 @@ class YoloHandler(QObject):
         self.trained_models = {}
 
     def connect_signals(self):
+        # Wire buttons/spinboxes to handler entrypoints 
         w = self.w
-        # --- wire buttons/spinboxes to handler entrypoints ---
         w.generate_training_data_btn.clicked.connect(self.init_training_data_threaded)
         w.start_stop_training_btn.clicked.connect(self.init_yolo_training_threaded)
         w.predict_start_btn.clicked.connect(self.init_yolo_prediction_threaded)
@@ -27,7 +27,6 @@ class YoloHandler(QObject):
         # Clear the old list, and re-instantiate
         self.w.yolomodel_trained_list.clear()
         self.w.yolomodel_trained_list.addItem('Choose model ...')
-        
         trained_models = self.yolo.find_trained_models(search_path=self.w.project_path)
         if not trained_models:
             self.w.toolBox.widget(3).setEnabled(False)
@@ -135,12 +134,12 @@ class YoloHandler(QObject):
         return
 
     def _polygon_generation(self):
-        w = self.w
         """
         MAIN MANAGER FOR POLYGON GENERATION
         polygon_worker()
         Manages thread worker for generating polygons
         """
+        w = self.w
         # Check if the worker has already run and was not interrupted.
         # If so, do not create a new worker, but just call the callback function.
         if not self.polygon_interrupt and self.polygons_generated:
@@ -168,8 +167,9 @@ class YoloHandler(QObject):
             self.polygon_interrupt = True
 
     def _create_worker_polygons(self):
-        w = self.w
         # Create a new worker for polygon generation
+        w = self.w
+        
         # Watershed? 
         enable_watershed = self.w.train_data_watershed_checkBox.isChecked()
         self.yolo.enable_watershed = enable_watershed
