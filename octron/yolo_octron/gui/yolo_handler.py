@@ -37,7 +37,6 @@ class YoloHandler(QObject):
         except Exception as e:
             print(f"Error when uncoupling training data worker: {e}")   
 
-
     def _training_data_export(self):
         w = self.w
         """
@@ -190,14 +189,15 @@ class YoloHandler(QObject):
             
 
     def _create_worker_polygons(self):
+        w = self.w
         # Create a new worker for polygon generation
         # Watershed? 
         enable_watershed = self.w.train_data_watershed_checkBox.isChecked()
         self.yolo.enable_watershed = enable_watershed
-        self.w.polygon_worker = create_worker(self.w.yolo.prepare_polygons)
-        self.w.polygon_worker.setAutoDelete(True) # auto destruct !!
-        self.w.polygon_worker.yielded.connect(self._polygon_yielded)
-        self.w.polygon_worker.finished.connect(self._on_polygon_finished)
+        w.polygon_worker = create_worker(self.yolo.prepare_polygons)
+        w.polygon_worker.setAutoDelete(True) # auto destruct !!
+        w.polygon_worker.yielded.connect(self._polygon_yielded)
+        w.polygon_worker.finished.connect(self._on_polygon_finished)
         self.w.train_polygons_overall_progressbar.setEnabled(True)    
         self.w.train_polygons_frames_progressbar.setEnabled(True)
         self.w.train_polygons_label.setEnabled(True)
@@ -239,18 +239,19 @@ class YoloHandler(QObject):
         # If self.w.polygons_generated is True, then start the 
         # training data export worker right after ...
         if self.w.polygons_generated and not self.w.training_data_generated:
-            # First call the data splitting function to split frames into train,test,val 
-            self.w.yolo.prepare_split() # This is so fast, we can just do it here
-            self.w._training_data_export() 
+            # split train/val/test then kick off data export
+            self.yolo.prepare_split()
+            self._training_data_export()
         else:
             pass
 
     def _create_worker_training_data(self):
+        w = self.w
         # Create a new worker for training data generation / export
-        self.w.training_data_worker = create_worker(self.w.yolo.create_training_data)
-        self.w.training_data_worker.setAutoDelete(True) # auto destruct !!
-        self.w.training_data_worker.yielded.connect(self._training_data_yielded)
-        self.w.training_data_worker.finished.connect(self._on_training_data_finished)
+        w.training_data_worker = create_worker(self.yolo.create_training_data)
+        w.training_data_worker.setAutoDelete(True) # auto destruct !!
+        w.training_data_worker.yielded.connect(self._training_data_yielded)
+        w.training_data_worker.finished.connect(self._on_training_data_finished)
         self.w.train_export_overall_progressbar.setEnabled(True)    
         self.w.train_export_frames_progressbar.setEnabled(True)
         self.w.train_polygons_label.setEnabled(True)
@@ -295,8 +296,7 @@ class YoloHandler(QObject):
             self.w.train_data_overwrite_checkBox.setEnabled(False)
             self.w.train_prune_checkBox.setEnabled(False)
             self.w.train_data_watershed_checkBox.setEnabled(False)
-            # Write yolo config file 
-            self.w.yolo.write_yolo_config()    
+            self.yolo.write_yolo_config()
             # Enable next part (YOLO training) of the pipeline 
             self.w.train_train_groupbox.setEnabled(True)
             self.w.launch_tensorboard_checkBox.setEnabled(False)
@@ -351,7 +351,7 @@ class YoloHandler(QObject):
             show_info(f"Training on device: {self.w.device_label}")
         
         # Call the training function which yields progress info
-        for progress_info in self.w.yolo.train(
+        for progress_info in self.yolo.train(
                                             device=self.w.device_label, 
                                             imagesz=self.w.image_size_yolo,
                                             epochs=self.w.num_epochs_yolo,
@@ -363,9 +363,10 @@ class YoloHandler(QObject):
             
     def _create_yolo_trainer(self):
         # Create a new worker for YOLO training 
-        self.w.yolo_trainer_worker = create_worker(self.w._yolo_trainer)
-        self.w.yolo_trainer_worker.setAutoDelete(True)  # auto destruct !!
-        self.w.yolo_trainer_worker.yielded.connect(self.w._update_training_progress)
+        w = self.w
+        w.yolo_trainer_worker = create_worker(self._yolo_trainer)
+        w.yolo_trainer_worker.setAutoDelete(True)  # auto destruct !!
+        w.yolo_trainer_worker.yielded.connect(self._update_training_progress)
         self.w.train_epochs_progressbar.setEnabled(True)    
         self.w.train_finishtime_label.setEnabled(True)
         self.w.train_finishtime_label.setText('↬ ... wait one epoch')    
@@ -377,8 +378,6 @@ class YoloHandler(QObject):
     def init_yolo_training_threaded(self):
         """
         This function manages the training of the YOLO model.
-        
-        
         """
         if self.w.training_finished:
             return
@@ -428,7 +427,7 @@ class YoloHandler(QObject):
         self.w.train_generate_groupbox.setEnabled(False)
         # Otherwise, create a new worker and manage interruptions
         if not hasattr(self, 'yolo_trainer_worker'):
-            self.w._create_yolo_trainer()
+            self._create_yolo_trainer()
             self.w.start_stop_training_btn.setStyleSheet('QPushButton { color: #e7a881;}')
             self.w.start_stop_training_btn.setText(f'↯ Training')
             self.w.yolo_trainer_worker.start()
@@ -554,9 +553,10 @@ class YoloHandler(QObject):
             
     def _create_yolo_predictor(self):
         # Create a new worker for YOLO prediction 
-        self.w.yolo_prediction_worker = create_worker(self.w._yolo_predictor)
-        self.w.yolo_prediction_worker.setAutoDelete(True)  # auto destruct !!
-        self.w.yolo_prediction_worker.yielded.connect(self.w._update_prediction_progress)
+        w = self.w
+        w.yolo_prediction_worker = create_worker(self._yolo_predictor)
+        w.yolo_prediction_worker.setAutoDelete(True)  # auto destruct !!
+        w.yolo_prediction_worker.yielded.connect(self._update_prediction_progress)
         self.w.predict_overall_progressbar.setEnabled(True)  
         self.w.predict_current_video_progressbar.setEnabled(True)   
         self.w.predict_current_videoname_label.setEnabled(True)
@@ -610,7 +610,7 @@ class YoloHandler(QObject):
         # Deactivate the training data generation box 
         self.w.train_generate_groupbox.setEnabled(False)
         # Create new prediction worker
-        self.w._create_yolo_predictor()
+        self._create_yolo_predictor()
         self.w.predict_start_btn.setStyleSheet('QPushButton { color: #e7a881;}')
         self.w.predict_start_btn.setText(f'↯ Predicting')
         self.w.yolo_prediction_worker.start()

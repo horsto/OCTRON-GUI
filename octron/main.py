@@ -215,13 +215,8 @@ class octron_widget(QWidget):
         self.hard_reset_layer_btn.setEnabled(False)
         # ... YOLO
         self.generate_training_data_btn.setText('')
-        self.generate_training_data_btn.clicked.connect(self.init_training_data_threaded)
         self.start_stop_training_btn.setText('')
-        self.start_stop_training_btn.clicked.connect(self.init_yolo_training_threaded)
         self.predict_start_btn.setText('')
-        self.predict_start_btn.clicked.connect(self.init_yolo_prediction_threaded)
-        # ... YOLO predictions 
-        self.predict_iou_thresh_spinbox.valueChanged.connect(self.on_iou_thresh_change)
         # Lists
         self.label_list_combobox.currentIndexChanged.connect(self.on_label_change)
         self.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
