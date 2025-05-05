@@ -49,7 +49,7 @@ class YoloHandler(QObject):
         self.w.start_stop_training_btn.clicked.connect(self.init_yolo_training_threaded)
         self.w.predict_start_btn.clicked.connect(self.init_yolo_prediction_threaded)
         self.w.predict_iou_thresh_spinbox.valueChanged.connect(self.on_iou_thresh_change)
-        self.w.predict_video_drop_groupbox.dropped.connect(self.on_mp4_predict_dropped_area)
+        self.w.predict_video_drop_widget.callback = self.on_mp4_predict_dropped_area
         self.w.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
         
     def refresh_trained_model_list(self):
@@ -270,7 +270,7 @@ class YoloHandler(QObject):
             self._create_worker_training_data()
             self.w.generate_training_data_btn.setStyleSheet('QPushButton { color: #e7a881;}')
             self.w.generate_training_data_btn.setText('🅧 Interrupt')
-            self.w.training_data_worker.start()
+            self.training_data_worker.start()
             self.training_data_interrupt = False
 
         else:

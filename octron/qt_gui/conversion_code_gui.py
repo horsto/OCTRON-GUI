@@ -66,14 +66,14 @@ content = re.sub(
 # Replace the video_file_drop_widget assignment line with the desired replacement.
 content = re.sub(
     r'self\.octron\.video_file_drop_widget\s*=\s*QWidget\(self\.octron\.project_video_drop_groupbox\)',
-    'self.octron.video_file_drop_widget = Mp4DropWidget(callback=self.octron.on_mp4_file_dropped_area)',
+    'self.octron.video_file_drop_widget = Mp4DropWidget()',
     content
 )
 
-# Replace the video_file_drop_widget assignment line with the desired replacement.
+# Replace the video_file_drop_widget assignment for YOLO predict line with the desired replacement.
 content = re.sub(
     r'self\.octron\.predict_video_drop_widget\s*=\s*QWidget\(self\.octron\.predict_video_drop_groupbox\)',
-    'self.octron.predict_video_drop_widget = Mp4DropWidget(callback=self.octron.on_mp4_predict_dropped_area)',
+    'self.octron.predict_video_drop_widget = Mp4DropWidget()',
     content
 )
 

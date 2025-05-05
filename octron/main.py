@@ -145,7 +145,7 @@ class octron_widget(QWidget):
         octron_gui = octron_gui_elements(self)
         octron_gui.setupUi(base_path=base_path_parent) # base_path is important for .svg files
         
-        # Initialize sub GUI handlers, like YOLO and SAM2 
+        # Initialize sub GUI handlers for YOLO
         self.yolo_handler = YoloHandler(self, self.yolo_octron)
         self.yolo_handler.connect_signals()
         
@@ -181,6 +181,9 @@ class octron_widget(QWidget):
         self._viewer.layers.events.removing.connect(self.on_layer_removing)
         self._viewer.layers.events.removed.connect(self.on_layer_removed)
         
+        # Main video drop area
+        self.video_file_drop_widget.callback = self.on_mp4_file_dropped_area
+
         # Buttons 
         # ... project 
         self.create_project_btn.clicked.connect(self.open_project_folder_dialog)
