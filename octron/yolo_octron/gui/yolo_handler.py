@@ -371,8 +371,8 @@ class YoloHandler(QObject):
         self.w.train_finishtime_label.setEnabled(True)
         self.w.train_finishtime_label.setText('↬ ... wait one epoch')    
         if self.w.launch_tensorbrd:
-            self.w.yolo.quit_tensorboard()
-            self.w.yolo.launch_tensorboard()
+            self.yolo.quit_tensorboard()
+            self.yolo.launch_tensorboard()
             
 
     def init_yolo_training_threaded(self):
@@ -418,7 +418,7 @@ class YoloHandler(QObject):
         
         # LOAD YOLO MODEL 
         print(f"Loading YOLO model {model_id}")
-        yolo_model = self.w.yolo.load_model(model_id)
+        yolo_model = self.yolo.load_model(model_id)
         if not yolo_model:
             show_warning("Could not load YOLO model.")
             return
@@ -499,7 +499,7 @@ class YoloHandler(QObject):
             # Show results? 
             save_dir = progress_info.get('save_dir', '')
             if self.w.view_prediction_resuts: 
-                for label, track_id, _, _, _  in self.w.yolo.show_predictions(save_dir=save_dir):
+                for label, track_id, _, _, _  in self.yolo.show_predictions(save_dir=save_dir):
                     print(f"Adding tracking result to viewer | Label: {label}, Track ID: {track_id}")     
             
         elif stage == 'complete':
@@ -535,7 +535,7 @@ class YoloHandler(QObject):
         
         one_object_per_label = self.w.single_subject_checkBox.isChecked()
         # Call the training function which yields progress info
-        for progress_info in self.w.yolo.predict_batch(
+        for progress_info in self.yolo.predict_batch(
                                             videos_dict=self.w.videos_to_predict,
                                             model_path=self.w.model_predict_path,
                                             device=self.w.device_label,
@@ -630,7 +630,7 @@ class YoloHandler(QObject):
         self.w.yolomodel_trained_list.clear()
         self.w.yolomodel_trained_list.addItem('Choose model ...')
         
-        trained_models = self.w.yolo.find_trained_models(search_path=self.w.project_path)
+        trained_models = self.yolo.find_trained_models(search_path=self.w.project_path)
         if not trained_models:
             self.w.toolBox.widget(3).setEnabled(False)
             return

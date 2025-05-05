@@ -4,7 +4,6 @@ Main GUI file
 
 """
 import os, sys
-import time
 from typing import List, Optional
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -12,8 +11,6 @@ import shutil
 from datetime import datetime
 import warnings
 # Suppress specific warnings
-# warnings.filterwarnings("ignore", message="Duplicate name: 'masks/c/")
-# warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.simplefilter("ignore")
 
 from pathlib import Path
@@ -374,12 +371,6 @@ class octron_widget(QWidget):
             self.prediction_worker_one.start()
         
 
-    ###### YOLO SPECIFIC CALLBACKS ####################################################################
-    
-            
-    ###### YOLO TRAINERS ###########################################################################
-    
-            
             
     ###### NAPARI SPECIFIC CALLBACKS ##################################################################
     
@@ -595,7 +586,7 @@ class octron_widget(QWidget):
             self.project_path = folder
             self.project_video_drop_groupbox.setEnabled(True)
             self.refresh_label_table_list(delete_old=True)
-            self.refresh_trained_model_list()
+            self.yolo_handler.refresh_trained_model_list()
         else:
             print("No folder selected.")
         return 
