@@ -1089,9 +1089,10 @@ class YOLO_octron:
         pass
     
     def find_trained_models(self, 
-                            project_path, 
-                            subfolder_route='training/weights'
-                            ):
+                           search_path, 
+                           subfolder_route='training/weights',
+                           model_suffix='.pt',
+                           ):
         """
         Find all trained models in the training directory
         
@@ -1102,12 +1103,14 @@ class YOLO_octron:
         subfolder_route : str
             Subfolder route to the models. 
             This defaults to 'training/weights' for trained OCTRON YOLO models.   
+        model_suffix : str
+            Suffix of the model files to search for (e.g. '.pt')
             
         """
-        project_path = Path(project_path)
-        assert project_path.exists(), f"Project path not found: {project_path}"
-        assert project_path.is_dir(), f"Project path must be a directory: {project_path}"
-        found_models_project = natsorted(project_path.rglob(f'*{subfolder_route}/*.pt'))
+        search_path = Path(search_path)
+        assert search_path.exists(), f"Search path {search_path} does not exist."
+        assert search_path.is_dir(), f"Search path {search_path} is not a directory"
+        found_models_project = natsorted(search_path.rglob(f'*{subfolder_route}/*{model_suffix}'))
         return found_models_project 
     
     def write_bot_sort_yaml(self, output_path):
@@ -1790,7 +1793,7 @@ class YOLO_octron:
                 opacity=0.5,
                 blending='translucent',  
                 colormap=color_dict[track_id_to_plot], 
-                visible=[True if video is None else False][0],
+                visible=True,#[True if video is None else False][0],
             )
             
             viewer.dims.set_point(0,0)

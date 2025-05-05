@@ -1170,7 +1170,7 @@ class octron_widget(QWidget):
         self.yolomodel_trained_list.clear()
         self.yolomodel_trained_list.addItem('Choose model ...')
         
-        trained_models = self.yolo_octron.find_trained_models(project_path=self.project_path)
+        trained_models = self.yolo_octron.find_trained_models(search_path=self.project_path)
         if not trained_models:
             self.toolBox.widget(3).setEnabled(False)
             return
