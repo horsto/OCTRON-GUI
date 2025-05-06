@@ -1,5 +1,5 @@
 # All main GUI elements
-
+import pathlib
 from qtpy.QtCore import QSize, QRect, Qt, QCoreApplication, Signal
 from qtpy.QtGui import QCursor, QPixmap, QIcon, QDragEnterEvent, QDropEvent
 from qtpy.QtWidgets import (
@@ -24,8 +24,10 @@ from qtpy.QtWidgets import (
     QGridLayout,
     QFileDialog,
     QAbstractItemView
-)
+)      
 
+from importlib.metadata import version
+__version__ = version("octron")
 
 class Mp4DropWidget(QWidget):
     # Signal emitted when one or more mp4 files are dropped; sends list of file paths.
@@ -82,18 +84,32 @@ class Mp4DropWidget(QWidget):
             super().mousePressEvent(event)
 
 class octron_gui_elements(QWidget):
-    """
-    Callback for octron and SAM2.
-    """
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QWidget, base_path: pathlib.Path):
+        """
+        Initializes the GUI elements for the OCTRON application.
+        
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget for the GUI elements.
+        base_path : pathlib.Path
+                The base path for loading resources (e.g., icons, images).
+        
+        """
         super().__init__(parent)
-        # Store the reference to the main OCTRON widget
         self.octron = parent
+        
+        # Iniatialize the GUI elements
+        self.setupUi(base_path)
+        
+        # Correct window title and app name post-hoc
+        self.octron.setWindowTitle(f"OCTRON v{__version__}")
+        self.octron.setObjectName(f"OCTRON v{__version__}")
         
     ###### GUI SETUP CODE FROM QT DESIGNER ############################################################
     def setupUi(self, base_path):
         if not self.octron.objectName():
-            self.octron.setObjectName(u"OCTRON")
+            self.octron.setObjectName(u"self")
         self.octron.setEnabled(True)
         self.octron.resize(410, 700)
         self.octron.setMinimumSize(QSize(410, 700))
@@ -1033,7 +1049,6 @@ class octron_gui_elements(QWidget):
 
 
     # setupUi
-        self.octron.setWindowTitle(QCoreApplication.translate("self", u"octron_gui", None))
         self.octron.octron_logo.setText("")
         self.octron.folder_sect_groupbox.setTitle(QCoreApplication.translate("self", u"Project folder", None))
         self.octron.create_project_btn.setText(QCoreApplication.translate("self", u"\u2295 Choose", None))

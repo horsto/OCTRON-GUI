@@ -18,6 +18,9 @@ cur_path  = Path(os.path.abspath(__file__)).parent.parent
 base_path = Path(os.path.dirname(__file__)) # Important for example for .svg files
 sys.path.append(cur_path.as_posix()) 
 
+from importlib.metadata import version
+__version__ = version("octron")
+
 # Napari plugin QT components
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
@@ -44,7 +47,6 @@ from napari_pyav._reader import FastVideoReader
 # GUI 
 from octron.gui_elements import octron_gui_elements
 from octron.gui_tables import ExistingDataTable
-
 
 # SAM2 specific 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -80,7 +82,6 @@ from octron.sam2_octron.object_organizer import Obj, ObjectOrganizer
 from octron.gui_dialog_elements import (
     add_new_label_dialog,
     remove_label_dialog,
-    remove_video_dialog,
 )
 
 # If there's already a QApplication instance (as may be the case when running as a napari plugin),
@@ -142,8 +143,7 @@ class octron_widget(QWidget):
         self.yolomodels_dict = self.yolo_octron.models_dict 
         
         # Initialize all UI components
-        octron_gui = octron_gui_elements(self)
-        octron_gui.setupUi(base_path=base_path_parent) # base_path is important for .svg files
+        octron_gui_elements(self, base_path=base_path_parent)
         
         # Initialize sub GUI handlers for YOLO
         self.yolo_handler = YoloHandler(self, self.yolo_octron)
@@ -167,6 +167,7 @@ class octron_widget(QWidget):
         self.gui_callback_functions()
         # Connect layer specific callbacks
         self.octron_sam2_callbacks = sam2_octron_callbacks(self)
+        print(f'OCTRON GUI v{__version__} initialized')
 
     ###################################################################################################
     
