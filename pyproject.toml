@@ -82,6 +82,6 @@ exclude = ["pics", "sample_data"]
 
 [tool.setuptools_scm]
 # write version into code for import
-write-to = "octron/_version.py"
+write_to = "octron/_version.py"
 version_scheme = "post-release"
 local_scheme = "no-local-version"
