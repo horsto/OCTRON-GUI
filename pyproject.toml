@@ -1,14 +1,14 @@
 [build-system]
 requires = [
-    "setuptools>=62.3.0,<75.8.1",
-    "wheel",
-    "tomli"
+  "setuptools>=62.3.0,<75.8.1",
+  "wheel",
+  "setuptools_scm[toml]>=6.3"
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "octron"
-version = "0.0.1"
+dynamic = ["version"]
 description = "OCTRON - a napari based tool for video segmentation, animal tracking and behavior quantification"
 authors = [
     { name = "Horst A. Obenhaus", email = "hobenhaus@gmail.com" }
@@ -79,3 +79,9 @@ exclude = ["pics", "sample_data"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.svg", "*.md"]
+
+[tool.setuptools_scm]
+# write version into code for import
+write-to = "octron/_version.py"
+version_scheme = "post-release"
+local_scheme = "no-local-version"
