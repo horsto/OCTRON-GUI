@@ -35,6 +35,7 @@ Follow these steps:
     ```sh
     conda env create -f environment.yaml
     ```
+
     > [!IMPORTANT]  
     > :warning: **If you have a CUDA compatible graphics card in your computer (NVIDIA card), do *instead***:<br>
     >    `conda env create -f environment_cuda.yaml`
