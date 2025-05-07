@@ -20,12 +20,12 @@ Octron is built on [napari](https://www.napari.org), [segment anything](https://
 
 Follow these steps: 
 
-1. Make sure **ffmpeg** is installed on the system. Some packages rely on it.<br><br>
-    ![FFmpeg Test](pics/ffmpeg_test.png)
-    - If this output fails for some reason, make sure you install ffmpeg first:
+1. Make sure **ffmpeg** is installed on the system. Some packages rely on it.<br>
+    - `ffmpeg -version` 
+    - If the command fails for some reason, make sure you install ffmpeg first:
         - [step by step guide for windows](ffmpeg_windows.md)
         - on MacOS you can use [homebrew](https://formulae.brew.sh/formula/ffmpeg) and `brew install ffmpeg`
-        - Linux users: You know what to do
+        - Linux users: You know what to do (:
 
 2. Download miniconda. Open your web browser and go to the official Miniconda download page: [Miniconda Download](https://docs.conda.io/en/latest/miniconda.html). Download and execute the installer for your operating system (Windows, macOS, or Linux). Then restart your terminal.
 
@@ -36,9 +36,9 @@ Follow these steps:
     conda env create -f environment.yaml
     ```
 > [!IMPORTANT]  
-> :warning: **If you have a CUDA compatible graphics card in your computer (NVIDIA card), do *instead***:<br>
+> **If you have a CUDA compatible graphics card in your computer, do *instead***:<br>
 >    `conda env create -f environment_cuda.yaml`
-> <br>This will download CUDA packages matching the requested pytorch version automatically on windows and linux systems.
+> <br>This will install the right pytorch version automatically on windows systems.
 
 5. Activate the new environment:
     ```sh
