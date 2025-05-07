@@ -63,6 +63,7 @@ Follow these steps:
 
 More instructions to follow ... stay tuned! 
 
+---
 
 ### Attributions
 - Interface button and icon images were created by user [Arkinasi](https://thenounproject.com/browse/collection-icon/marketing-agency-239829/) from Noun Project (CC BY 3.0)
