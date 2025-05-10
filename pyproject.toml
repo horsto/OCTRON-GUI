@@ -9,7 +9,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "octron"
 dynamic = ["version"]
-description = "OCTRON - a napari based tool for video segmentation, animal tracking and behavior quantification"
+description = "OCTRON - segmentation and tracking for animal behavior quantification"
+
 authors = [
     { name = "Horst A. Obenhaus", email = "hobenhaus@gmail.com" }
 ]
