@@ -1575,13 +1575,14 @@ class YOLO_octron:
         
         return df
 
-    def show_predictions(self, 
+    def load_predictions(self, 
                          save_dir,
-                         sigma_tracking_pos=2
+                         sigma_tracking_pos=2,
+                         open_viewer=True,
                          ):
         """
-        Show the predictions in the current save directory in a 
-        new napari viewer.
+        Load the predictions in a OCTRON (YOLO) output directory 
+        and optionally display them in a new napari viewer.
         
         Parameters
         ----------
@@ -1590,18 +1591,26 @@ class YOLO_octron:
         sigma_tracking_pos : int
             Sigma value for tracking position smoothing
             CURRENTLY FIXED TO 1
-            
+        open_viewer : bool
+            Whether to open the napari viewer or not
+
+
         Yields
         -------
+        6 objects in total
         label : str
-            Label of the tracked object
+            Label of the object
         track_id : int
-            Track ID of the tracked object
-        track_df_napari : pd.DataFrame
-            DataFrame with tracking data for the object (xy coordinates)
-        features_df_napari: pd.DataFrame
-            DataFrame with features for the object (area, eccentricity, etc.)
-                    
+            Track ID of the object
+        color : list
+            Color of the object
+        track_df_napari : pd.DataFrame  
+            DataFrame with tracking data for the object
+        features_df_napari : pd.DataFrame
+            DataFrame with features data for the object
+        mask_zarr : zarr.Array  
+            Zarr array with masks for the object
+            
             
         """
         # Some heavy imports are hidden here
@@ -1659,6 +1668,7 @@ class YOLO_octron:
         indices_max_diff_subcolors = sample_maximally_different(list(range(50)))
         
         track_df_dict = {}
+        mask_dict = {}
         color_dict = {}
         label_trackid_dict = {}
         label_counter_dict = {} # This is to find the right color in all_labels_submaps
@@ -1689,6 +1699,7 @@ class YOLO_octron:
             mask_shape = mask_zarr.shape[1:]
             classes = mask_zarr.attrs.get('classes', None) # These are the original classes from the model
             original_class_id = _find_class_by_name(classes, label)
+            assert original_class_id is not None, f"Class ID for {label} not found in classes"
             # Check if an index was already given for the current label
             # This is to extract the right color from the colormap
             if label not in label_counter_dict:
@@ -1699,27 +1710,32 @@ class YOLO_octron:
             obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]]\
                 [indices_max_diff_subcolors[label_counter_dict[label]['track_counter']]]
            
-            mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
+            mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 
+                                                          1: obj_color}, 
                                                     use_selection=True, 
                                                     selection=1,
                                                     )
-                
+            # Add color, track_df, and mask to the dictionaries
             color_dict[int(track_id)] = mask_colors
             track_df_dict[int(track_id)] = track_df
             assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
-            mask_zarr = root[f'{track_id}_masks']
+            mask_dict[int(track_id)] = root[f'{track_id}_masks']
             
-        viewer = napari.Viewer()    
-        if video is not None:
-            add_layer = getattr(viewer, "add_image")
-            layer_dict = {'name': video_path.stem,
-                        'metadata': video_dict,   
-                        }
-            add_layer(video, **layer_dict)
-        else:
-            add_layer = getattr(viewer, "add_image")
-            layer_dict = {'name': 'dummy mask'}
-            add_layer(np.zeros((mask_shape)), **layer_dict)
+        ####### NAPARI VIEWER ######################################################################################
+        # Interpolate and plot tracks + masks
+        
+        if open_viewer:
+            viewer = napari.Viewer()    
+            if video is not None:
+                add_layer = getattr(viewer, "add_image")
+                layer_dict = {'name': video_path.stem,
+                            'metadata': video_dict,   
+                            }
+                add_layer(video, **layer_dict)
+            else:
+                add_layer = getattr(viewer, "add_image")
+                layer_dict = {'name': 'dummy mask'}
+                add_layer(np.zeros((mask_shape)), **layer_dict)
         
         min_frame_number = 0
         # Loop over each track and add it to the viewer
@@ -1749,17 +1765,14 @@ class YOLO_octron:
                 for col in pos_cols:
                     merged_df_tracking[col] = merged_df_tracking[col].interpolate(method='linear')
 
-                # # For any remaining NaN values at the start or end, use forward/backward fill
-                #merged_df_tracking = merged_df_tracking.ffill()
-                #merged_df_tracking = merged_df_tracking.bfill()
                 # After interpolation, get the valid frame indices from the tracking DataFrame
                 valid_frames = merged_df_tracking.dropna()['frame'].values
                 # Use these valid frames to filter both DataFrames
                 merged_df_tracking = merged_df_tracking[merged_df_tracking['frame'].isin(valid_frames)].reset_index(drop=True)
                 merged_df_features = merged_df_features[merged_df_features['frame'].isin(valid_frames)].reset_index(drop=True)
                 # Double-check that the frames match
-                assert np.array_equal(merged_df_tracking['frame'].values, 
-                                      merged_df_features['frame'].values),\
+                assert np.array_equal(merged_df_tracking['frame'].to_numpy(), 
+                                      merged_df_features['frame'].to_numpy()),\
                                           "Frame mismatch between tracking and features"
                    
                 track_df_napari = merged_df_tracking.copy()
@@ -1776,25 +1789,29 @@ class YOLO_octron:
             for col in features_df_napari.columns:
                 features_df_napari[col] = features_df_napari[col].astype(float)
             features_dict = features_df_napari.to_dict(orient='list')
-            viewer.add_tracks(track_df_napari.values, 
-                            features=features_dict,
-                            blending='translucent', 
-                            name=f'{label} - id {track_id_to_plot}', 
-                            colormap='hsv',
-                        )
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 3
-            viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = len(track_df_napari)
-            viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
-            # Add masks
-            mask_zarr = root[f'{track_id_to_plot}_masks']
-            _ = viewer.add_labels(
-                mask_zarr,
-                name=f'{label} - MASKS - id {track_id_to_plot}',  
-                opacity=0.5,
-                blending='translucent',  
-                colormap=color_dict[track_id_to_plot], 
-                visible=True,#[True if video is None else False][0],
-            )
             
-            viewer.dims.set_point(0,0)
-            yield label, track_id, track_df_napari, features_df_napari, mask_zarr
+            mask_zarr = mask_dict[track_id_to_plot]
+            color = color_dict[track_id_to_plot]
+            
+            if open_viewer:
+                viewer.add_tracks(track_df_napari.values, 
+                                features=features_dict,
+                                blending='translucent', 
+                                name=f'{label} - id {track_id_to_plot}', 
+                                colormap='hsv',
+                            )
+                viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 3
+                viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = len(track_df_napari)
+                viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
+                # Add masks
+                _ = viewer.add_labels(
+                    mask_zarr,
+                    name=f'{label} - MASKS - id {track_id_to_plot}',  
+                    opacity=0.5,
+                    blending='translucent',  
+                    colormap=color_dict[track_id_to_plot], 
+                    visible=True,#[True if video is None else False][0],
+                )
+                viewer.dims.set_point(0,0)
+                
+            yield label, track_id, color, track_df_napari, features_df_napari, mask_zarr

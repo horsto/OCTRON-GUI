@@ -46,7 +46,7 @@ def read_octron_file(path: "PathOrPaths") -> List["LayerData"]:
     )
     return [(None,)]
 
-def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
+def read_octron_folder(path: "Path") -> List["LayerData"]:
     path = Path(path)
     # Check what kind of folder you are dealing with.
     # There are three options:
@@ -73,7 +73,7 @@ def read_octron_folder(path: "PathOrPaths") -> List["LayerData"]:
         # Load predictions
         from octron.yolo_octron.yolo_octron import YOLO_octron
         yolo_octron = YOLO_octron()
-        for label, track_id, _, _, _ in yolo_octron.show_predictions(
+        for label, track_id, _, _, _, _ in yolo_octron.load_predictions(
             save_dir = path,
             sigma_tracking_pos = 2, # Fixed for now 
         ):

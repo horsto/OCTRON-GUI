@@ -682,7 +682,7 @@ class YoloHandler(QObject):
             # Show results? 
             save_dir = progress_info.get('save_dir', '')
             if self.view_prediction_results: 
-                for label, track_id, _, _, _  in self.yolo.show_predictions(save_dir=save_dir):
+                for label, track_id, _, _, _, _  in self.yolo.load_predictions(save_dir=save_dir):
                     print(f"Adding tracking result to viewer | Label: {label}, Track ID: {track_id}")     
             
         elif stage == 'complete':
