@@ -1676,21 +1676,14 @@ class YOLO_octron:
         # Load the tracking data
         for csv in save_dir.glob('*.csv'):
             
-            try:
-                track_df = pd.read_csv(csv, header=5)
-                assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
-                assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
-                label = track_df.iloc[0].label
-                track_id = track_df.iloc[0].track_id
-                label_trackid_dict[label] = track_id
-            except (AttributeError, pd.errors.ParserError):
-                print("Error reading .csv file. Trying old format ... ")
-                track_df = pd.read_csv(csv)
-                assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
-                assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
-                label = track_df.iloc[0].label
-                track_id = track_df.iloc[0].track_id
-                label_trackid_dict[label] = track_id
+
+            track_df = pd.read_csv(csv, header=5)
+            assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
+            assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
+            label = track_df.iloc[0].label
+            track_id = track_df.iloc[0].track_id
+            label_trackid_dict[label] = track_id
+
             
             # Check zarr
             assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
@@ -1738,7 +1731,8 @@ class YOLO_octron:
                 add_layer(np.zeros((mask_shape)), **layer_dict)
         
         min_frame_number = 0
-        # Loop over each track and add it to the viewer
+        
+        # Loop over each track, interpolate and add it to the viewer
         for track_id in track_df_dict.keys():
             
             label = track_df_dict[track_id].iloc[0].label   
@@ -1812,5 +1806,4 @@ class YOLO_octron:
                     visible=True,#[True if video is None else False][0],
                 )
                 viewer.dims.set_point(0,0)
-                
             yield label, track_id, color, track_df_napari, features_df_napari, mask_zarr
