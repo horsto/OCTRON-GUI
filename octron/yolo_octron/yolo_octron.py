@@ -1739,12 +1739,11 @@ class YOLO_octron:
         
         min_frame_number = 0
         # Loop over each track and add it to the viewer
-        for track_id_to_plot in track_df_dict.keys():
+        for track_id in track_df_dict.keys():
             
-            label = track_df_dict[track_id_to_plot].iloc[0].label   
-
-            track_df_napari = track_df_dict[track_id_to_plot][['track_id','frame','pos_y','pos_x']].copy()
-            features_df_napari = track_df_dict[track_id_to_plot][['frame','confidence','area','eccentricity','orientation','solidity']].copy()
+            label = track_df_dict[track_id].iloc[0].label   
+            track_df_napari = track_df_dict[track_id][['track_id','frame','pos_y','pos_x']].copy()
+            features_df_napari = track_df_dict[track_id][['frame','confidence','area','eccentricity','orientation','solidity']].copy()
 
             check_continuous = np.all(np.diff(track_df_napari['frame']) == 1)   
             if not check_continuous:
@@ -1753,7 +1752,7 @@ class YOLO_octron:
                 complete_features   = pd.DataFrame({'frame': range(int(min_frame_number), int(max_frame_number))})
                 # Merge with existing data to identify missing frames
                 merged_df_tracking = complete_tracking.merge(track_df_napari, on='frame', how='left')
-                merged_df_tracking['track_id'] = track_id_to_plot
+                merged_df_tracking['track_id'] = track_id
                 merged_df_features = complete_features.merge(features_df_napari, on='frame', how='left')
                 merged_df_features.fillna(0, inplace=True)
                 # Make sure frame and track_id are the right types for interpolation
@@ -1790,26 +1789,26 @@ class YOLO_octron:
                 features_df_napari[col] = features_df_napari[col].astype(float)
             features_dict = features_df_napari.to_dict(orient='list')
             
-            mask_zarr = mask_dict[track_id_to_plot]
-            color = color_dict[track_id_to_plot]
+            mask_zarr = mask_dict[track_id]
+            color = color_dict[track_id]
             
             if open_viewer:
                 viewer.add_tracks(track_df_napari.values, 
                                 features=features_dict,
                                 blending='translucent', 
-                                name=f'{label} - id {track_id_to_plot}', 
+                                name=f'{label} - id {track_id}', 
                                 colormap='hsv',
                             )
-                viewer.layers[f'{label} - id {track_id_to_plot}'].tail_width = 3
-                viewer.layers[f'{label} - id {track_id_to_plot}'].tail_length = len(track_df_napari)
-                viewer.layers[f'{label} - id {track_id_to_plot}'].color_by = 'frame'
+                viewer.layers[f'{label} - id {track_id}'].tail_width = 3
+                viewer.layers[f'{label} - id {track_id}'].tail_length = len(track_df_napari)
+                viewer.layers[f'{label} - id {track_id}'].color_by = 'frame'
                 # Add masks
                 _ = viewer.add_labels(
                     mask_zarr,
-                    name=f'{label} - MASKS - id {track_id_to_plot}',  
+                    name=f'{label} - MASKS - id {track_id}',  
                     opacity=0.5,
                     blending='translucent',  
-                    colormap=color_dict[track_id_to_plot], 
+                    colormap=color_dict[track_id], 
                     visible=True,#[True if video is None else False][0],
                 )
                 viewer.dims.set_point(0,0)
