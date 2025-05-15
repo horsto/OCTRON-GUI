@@ -19,8 +19,6 @@ class YoloHandler(QObject):
         super().__init__()
         self.w = parent_widget # main.py -> octron_widget
         self.yolo = yolo_octron
-        self.trained_models = {}
-        
         
          # Device label?
         if torch.cuda.is_available():

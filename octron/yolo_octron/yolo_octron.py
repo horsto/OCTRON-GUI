@@ -1110,8 +1110,37 @@ class YOLO_octron:
         search_path = Path(search_path)
         assert search_path.exists(), f"Search path {search_path} does not exist."
         assert search_path.is_dir(), f"Search path {search_path} is not a directory"
-        found_models_project = natsorted(search_path.rglob(f'*{subfolder_route}/*{model_suffix}'))
-        return found_models_project 
+        
+        found_models_project = []
+        
+        route_as_path = Path(subfolder_route)
+        route_parts = route_as_path.parts
+        # Handle empty or '.' subfolder_route, meaning no specific intermediate path
+        if not route_parts or route_parts == ('.',):
+            route_parts = tuple()
+
+        for dirpath_str, dirnames, filenames in os.walk(search_path.as_posix(), topdown=True):
+            # Prune directories: if a directory name itself contains '.zarr'
+            # This modification happens in-place and affects os.walk's traversal
+            dirnames[:] = [d for d in dirnames if '.zarr' not in d]
+            
+            current_dir_path = Path(dirpath_str)
+            current_dir_parts = current_dir_path.parts
+
+            # Check if current_dir_path ends with the components of subfolder_route
+            path_matches_route = False
+            if not route_parts: # If subfolder_route was empty or '.', any directory matches
+                path_matches_route = True
+            elif len(current_dir_parts) >= len(route_parts):
+                if current_dir_parts[-len(route_parts):] == route_parts:
+                    path_matches_route = True
+            
+            if path_matches_route:
+                for fname in filenames:
+                    if fname.endswith(model_suffix):
+                        found_models_project.append(current_dir_path / fname)
+                        
+        return natsorted(found_models_project)
     
     def write_bot_sort_yaml(self, output_path):
         """
@@ -1244,7 +1273,7 @@ class YOLO_octron:
         """
 
         available_trackers = ['bytetrack','botsort']
-        tracker_name = tracker_name.strip().lower()
+        tracker_name = tracker_name.strip().toLowerCase()
         assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
         
         model_path = Path(model_path)
