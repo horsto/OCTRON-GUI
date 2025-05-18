@@ -162,7 +162,7 @@
           <x>0</x>
           <y>-1</y>
           <width>402</width>
-          <height>402</height>
+          <height>412</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="project_vertical_layout">
@@ -183,13 +183,13 @@
            <property name="minimumSize">
             <size>
              <width>400</width>
-             <height>70</height>
+             <height>80</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>70</height>
+             <height>80</height>
             </size>
            </property>
            <property name="title">
@@ -203,13 +203,13 @@
              <number>9</number>
             </property>
             <property name="topMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="rightMargin">
              <number>9</number>
             </property>
             <property name="bottomMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QPushButton" name="create_project_btn">
@@ -238,13 +238,13 @@
               <property name="minimumSize">
                <size>
                 <width>250</width>
-                <height>35</height>
+                <height>40</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>250</width>
-                <height>35</height>
+                <height>40</height>
                </size>
               </property>
               <property name="text">
@@ -289,19 +289,19 @@
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout">
             <property name="spacing">
-             <number>20</number>
+             <number>9</number>
             </property>
             <property name="leftMargin">
              <number>9</number>
             </property>
             <property name="topMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="rightMargin">
              <number>9</number>
             </property>
             <property name="bottomMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <item>
              <widget class="QWidget" name="video_file_drop_widget" native="true">
@@ -359,13 +359,13 @@
              <number>9</number>
             </property>
             <property name="topMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="rightMargin">
              <number>9</number>
             </property>
             <property name="bottomMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <item alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QTableView" name="existing_data_table">
@@ -498,13 +498,13 @@
            <property name="minimumSize">
             <size>
              <width>400</width>
-             <height>60</height>
+             <height>70</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>60</height>
+             <height>70</height>
             </size>
            </property>
            <property name="title">
@@ -518,13 +518,13 @@
              <number>9</number>
             </property>
             <property name="topMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="rightMargin">
              <number>9</number>
             </property>
             <property name="bottomMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QComboBox" name="sam2model_list">
@@ -580,13 +580,13 @@
            <property name="minimumSize">
             <size>
              <width>400</width>
-             <height>90</height>
+             <height>100</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>90</height>
+             <height>100</height>
             </size>
            </property>
            <property name="title">
@@ -600,13 +600,13 @@
              <number>9</number>
             </property>
             <property name="topMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="rightMargin">
              <number>9</number>
             </property>
             <property name="bottomMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="horizontalSpacing">
              <number>20</number>
@@ -841,13 +841,13 @@ and octo and suffix 2 for the second octo </string>
            <property name="minimumSize">
             <size>
              <width>400</width>
-             <height>60</height>
+             <height>70</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>60</height>
+             <height>70</height>
             </size>
            </property>
            <property name="title">
@@ -855,19 +855,19 @@ and octo and suffix 2 for the second octo </string>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <property name="spacing">
-             <number>4</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>9</number>
             </property>
             <property name="topMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <property name="rightMargin">
              <number>9</number>
             </property>
             <property name="bottomMargin">
-             <number>9</number>
+             <number>12</number>
             </property>
             <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
              <widget class="QProgressBar" name="batch_predict_progressbar">
