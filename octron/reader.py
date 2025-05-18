@@ -212,7 +212,7 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
                 
                 # Check if file exists and overwrite is not selected
                 if not overwrite_existing and output_path.exists():
-                    print(f"⏩ Skipped: "{output_path.name}" already exists and overwrite is disabled.")
+                    print(f"⏩ Skipped: '{output_path.name}' already exists and overwrite is disabled.")
                     continue
 
                 # Define FFmpeg command
