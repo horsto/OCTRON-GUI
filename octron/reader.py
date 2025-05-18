@@ -135,6 +135,11 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
         subfolder_check.setChecked(True)
         options_layout.addWidget(subfolder_check)
         
+        # Overwrite existing files? 
+        overwrite_check = QCheckBox("Overwrite existing")
+        overwrite_check.setChecked(False) 
+        options_layout.addWidget(overwrite_check)
+        
         # CRF value option
         crf_layout = QHBoxLayout()
         crf_layout.addWidget(QLabel(" CRF (lower is better):"))
@@ -180,6 +185,7 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
             # Get options
             create_subfolder = subfolder_check.isChecked()
             crf_value = crf_spin.value()
+            overwrite_existing = overwrite_check.isChecked()
             
             # Get selected videos
             selected_indices = [i.row() for i in file_list.selectedIndexes()]
@@ -204,6 +210,11 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
                 print(f"Processing {i}/{len(selected_videos)}: {video_path.name}")
                 output_path = output_folder / f"{video_path.stem}.mp4"
                 
+                # Check if file exists and overwrite is not selected
+                if not overwrite_existing and output_path.exists():
+                    print(f"⏩ Skipped: "{output_path.name}" already exists and overwrite is disabled.")
+                    continue
+
                 # Define FFmpeg command
                 cmd = [
                     "ffmpeg", "-i", str(video_path), 
@@ -211,8 +222,9 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
                     "-crf", str(crf_value),
                     "-c:a", "aac", "-b:a", "128k",  # Audio settings
                     str(output_path),
-                    "-y"  # Overwrite output if it exists
                 ]
+                if overwrite_existing:
+                    cmd.append("-y") # Overwrite output if it exists
                 
                 # Time the transcoding process
                 start_time = time.time()
