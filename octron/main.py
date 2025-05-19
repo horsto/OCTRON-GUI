@@ -194,6 +194,8 @@ class octron_widget(QWidget):
         self.predict_next_batch_btn.clicked.connect(self.init_prediction_threaded)
         self.predict_next_oneframe_btn.clicked.connect(self.init_prediction_threaded)    
         self.create_projection_layer_btn.clicked.connect(self.create_annotation_projections)
+        self.annotation_jump_previous_btn.clicked.connect(self.jump_to_previous_annotated_frame)
+        self.annotation_jump_next_btn.clicked.connect(self.jump_to_next_annotated_frame)
         self.hard_reset_layer_btn.clicked.connect(self.reset_predictor)
         self.hard_reset_layer_btn.setEnabled(False)
         # ... YOLO
@@ -1226,12 +1228,64 @@ class octron_widget(QWidget):
                                       self.object_organizer,
                                       label,
                                       )
-        
         self.create_projection_layer_btn.setEnabled(True) 
         
 
 
-
+    def jump_to_next_annotated_frame(self):
+        """
+        Jump to next annotated frame in viewer timeline
+        """
+        current_timeline_idx = self._viewer.dims.current_step[0]
+        # Go through all prediction_layers and check if they have a mask for the current frame
+        # If so, jump to the next frame with a mask
+        prediction_layers = self.object_organizer.get_prediction_layers()
+        if not prediction_layers:
+            show_warning("No prediction layers found.")
+            return
+        
+        indices = []
+        for layer in prediction_layers:
+            data = layer.data
+            annotated_indices = np.where(data[:,0,0] >= 0)[0]
+            # Get the next index after the current one
+            next_idx = np.where(annotated_indices > current_timeline_idx)[0]
+            if next_idx.size > 0:
+                indices.append(annotated_indices[next_idx[0]])
+        if not indices:
+            show_warning("No further annotated frames found.")
+            return
+        else:
+            next_idx = min(indices)
+            self._viewer.dims.set_point(0, next_idx)
+        return      
+        
+        
+    def jump_to_previous_annotated_frame(self):
+        """
+        Jump to previous annotated frame in viewer timeline
+        """
+        current_timeline_idx = self._viewer.dims.current_step[0]
+        # Go through all prediction_layers and check if they have a mask for the current frame
+        # If so, jump to the next frame with a mask
+        prediction_layers = self.object_organizer.get_prediction_layers()
+        if not prediction_layers:
+            return
+        
+        indices = []
+        for layer in prediction_layers:
+            data = layer.data
+            annotated_indices = np.where(data[:,0,0] >= 0)[0]
+            # Get the next index after the current one
+            prev_idx = np.where(annotated_indices < current_timeline_idx)[0]
+            if prev_idx.size > 0:
+                indices.append(annotated_indices[prev_idx[-1]])
+        if not indices:
+            return
+        else:
+            prev_idx = max(indices)
+            self._viewer.dims.set_point(0, prev_idx)
+        return
 
 ###############################################################################################################
 ###############################################################################################################
