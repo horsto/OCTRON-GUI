@@ -70,7 +70,7 @@ class Ui_octron_widgetui(object):
         self.verticalLayoutWidget_3.setObjectName(u"verticalLayoutWidget_3")
         self.verticalLayoutWidget_3.setGeometry(QRect(0, -1, 402, 412))
         self.project_vertical_layout = QVBoxLayout(self.verticalLayoutWidget_3)
-        self.project_vertical_layout.setSpacing(30)
+        self.project_vertical_layout.setSpacing(20)
         self.project_vertical_layout.setObjectName(u"project_vertical_layout")
         self.project_vertical_layout.setContentsMargins(0, 0, 0, 15)
         self.folder_sect_groupbox = QGroupBox(self.verticalLayoutWidget_3)
@@ -111,37 +111,37 @@ class Ui_octron_widgetui(object):
         self.project_video_drop_groupbox.setObjectName(u"project_video_drop_groupbox")
         sizePolicy2.setHeightForWidth(self.project_video_drop_groupbox.sizePolicy().hasHeightForWidth())
         self.project_video_drop_groupbox.setSizePolicy(sizePolicy2)
-        self.project_video_drop_groupbox.setMinimumSize(QSize(400, 150))
-        self.project_video_drop_groupbox.setMaximumSize(QSize(400, 150))
+        self.project_video_drop_groupbox.setMinimumSize(QSize(400, 100))
+        self.project_video_drop_groupbox.setMaximumSize(QSize(400, 100))
         self.horizontalLayout = QHBoxLayout(self.project_video_drop_groupbox)
         self.horizontalLayout.setSpacing(9)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(9, 12, 9, 12)
         self.video_file_drop_widget = QWidget(self.project_video_drop_groupbox)
         self.video_file_drop_widget.setObjectName(u"video_file_drop_widget")
-        self.video_file_drop_widget.setMinimumSize(QSize(380, 110))
-        self.video_file_drop_widget.setMaximumSize(QSize(380, 110))
+        self.video_file_drop_widget.setMinimumSize(QSize(380, 60))
+        self.video_file_drop_widget.setMaximumSize(QSize(380, 60))
 
         self.horizontalLayout.addWidget(self.video_file_drop_widget)
 
 
-        self.project_vertical_layout.addWidget(self.project_video_drop_groupbox, 0, Qt.AlignmentFlag.AlignTop)
+        self.project_vertical_layout.addWidget(self.project_video_drop_groupbox)
 
         self.project_existing_data_groupbox = QGroupBox(self.verticalLayoutWidget_3)
         self.project_existing_data_groupbox.setObjectName(u"project_existing_data_groupbox")
         self.project_existing_data_groupbox.setEnabled(False)
         sizePolicy2.setHeightForWidth(self.project_existing_data_groupbox.sizePolicy().hasHeightForWidth())
         self.project_existing_data_groupbox.setSizePolicy(sizePolicy2)
-        self.project_existing_data_groupbox.setMinimumSize(QSize(400, 140))
-        self.project_existing_data_groupbox.setMaximumSize(QSize(400, 140))
+        self.project_existing_data_groupbox.setMinimumSize(QSize(400, 180))
+        self.project_existing_data_groupbox.setMaximumSize(QSize(400, 180))
         self.horizontalLayout_9 = QHBoxLayout(self.project_existing_data_groupbox)
         self.horizontalLayout_9.setSpacing(20)
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.horizontalLayout_9.setContentsMargins(9, 12, 9, 12)
         self.existing_data_table = QTableView(self.project_existing_data_groupbox)
         self.existing_data_table.setObjectName(u"existing_data_table")
-        self.existing_data_table.setMinimumSize(QSize(380, 100))
-        self.existing_data_table.setMaximumSize(QSize(380, 100))
+        self.existing_data_table.setMinimumSize(QSize(380, 140))
+        self.existing_data_table.setMaximumSize(QSize(380, 130))
         self.existing_data_table.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.EditKeyPressed|QAbstractItemView.EditTrigger.SelectedClicked)
         self.existing_data_table.setProperty("showDropIndicator", False)
         self.existing_data_table.setDragDropOverwriteMode(False)
@@ -176,7 +176,7 @@ class Ui_octron_widgetui(object):
         self.annotate_tab.setMaximumSize(QSize(405, 700))
         self.verticalLayoutWidget_2 = QWidget(self.annotate_tab)
         self.verticalLayoutWidget_2.setObjectName(u"verticalLayoutWidget_2")
-        self.verticalLayoutWidget_2.setGeometry(QRect(0, 0, 402, 341))
+        self.verticalLayoutWidget_2.setGeometry(QRect(0, 0, 402, 366))
         self.annotate_vertical_layout = QVBoxLayout(self.verticalLayoutWidget_2)
         self.annotate_vertical_layout.setSpacing(20)
         self.annotate_vertical_layout.setObjectName(u"annotate_vertical_layout")
@@ -288,6 +288,35 @@ class Ui_octron_widgetui(object):
 
 
         self.annotate_vertical_layout.addWidget(self.annotate_layer_create_groupbox, 0, Qt.AlignmentFlag.AlignTop)
+
+        self.annotate_layer_timeline_groupbox = QGroupBox(self.verticalLayoutWidget_2)
+        self.annotate_layer_timeline_groupbox.setObjectName(u"annotate_layer_timeline_groupbox")
+        sizePolicy3.setHeightForWidth(self.annotate_layer_timeline_groupbox.sizePolicy().hasHeightForWidth())
+        self.annotate_layer_timeline_groupbox.setSizePolicy(sizePolicy3)
+        self.annotate_layer_timeline_groupbox.setMinimumSize(QSize(400, 60))
+        self.annotate_layer_timeline_groupbox.setMaximumSize(QSize(400, 60))
+        self.gridLayout_4 = QGridLayout(self.annotate_layer_timeline_groupbox)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
+        self.gridLayout_4.setHorizontalSpacing(20)
+        self.gridLayout_4.setVerticalSpacing(9)
+        self.gridLayout_4.setContentsMargins(9, 12, 9, 12)
+        self.annotation_jump_previous_btn = QPushButton(self.annotate_layer_timeline_groupbox)
+        self.annotation_jump_previous_btn.setObjectName(u"annotation_jump_previous_btn")
+        self.annotation_jump_previous_btn.setMinimumSize(QSize(150, 25))
+        self.annotation_jump_previous_btn.setMaximumSize(QSize(70, 25))
+
+        self.gridLayout_4.addWidget(self.annotation_jump_previous_btn, 0, 0, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+
+        self.annotation_jump_next_btn = QPushButton(self.annotate_layer_timeline_groupbox)
+        self.annotation_jump_next_btn.setObjectName(u"annotation_jump_next_btn")
+        self.annotation_jump_next_btn.setMinimumSize(QSize(150, 25))
+        self.annotation_jump_next_btn.setMaximumSize(QSize(70, 25))
+
+        self.gridLayout_4.addWidget(self.annotation_jump_next_btn, 0, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+
+
+        self.annotate_vertical_layout.addWidget(self.annotate_layer_timeline_groupbox)
 
         self.annotate_layer_predict_groupbox = QGroupBox(self.verticalLayoutWidget_2)
         self.annotate_layer_predict_groupbox.setObjectName(u"annotate_layer_predict_groupbox")
@@ -717,7 +746,7 @@ class Ui_octron_widgetui(object):
         self.predict_video_predict_groupbox.setMaximumSize(QSize(400, 280))
         self.layoutWidget_2 = QWidget(self.predict_video_predict_groupbox)
         self.layoutWidget_2.setObjectName(u"layoutWidget_2")
-        self.layoutWidget_2.setGeometry(QRect(11, 193, 387, 29))
+        self.layoutWidget_2.setGeometry(QRect(11, 193, 381, 29))
         self.predict_progress_bar_layout = QHBoxLayout(self.layoutWidget_2)
         self.predict_progress_bar_layout.setObjectName(u"predict_progress_bar_layout")
         self.predict_progress_bar_layout.setContentsMargins(0, 0, 0, 0)
@@ -769,83 +798,11 @@ class Ui_octron_widgetui(object):
 
         self.layoutWidget8 = QWidget(self.predict_video_predict_groupbox)
         self.layoutWidget8.setObjectName(u"layoutWidget8")
-        self.layoutWidget8.setGeometry(QRect(10, 120, 381, 73))
-        self.predict_grid_layout2 = QGridLayout(self.layoutWidget8)
-        self.predict_grid_layout2.setObjectName(u"predict_grid_layout2")
-        self.predict_grid_layout2.setContentsMargins(0, 0, 0, 0)
-        self.prediction_iou_label = QLabel(self.layoutWidget8)
-        self.prediction_iou_label.setObjectName(u"prediction_iou_label")
-        sizePolicy5.setHeightForWidth(self.prediction_iou_label.sizePolicy().hasHeightForWidth())
-        self.prediction_iou_label.setSizePolicy(sizePolicy5)
-        self.prediction_iou_label.setMinimumSize(QSize(40, 0))
-        self.prediction_iou_label.setMaximumSize(QSize(40, 25))
-        self.prediction_iou_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-
-        self.predict_grid_layout2.addWidget(self.prediction_iou_label, 0, 2, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignBottom)
-
-        self.predict_start_btn = QPushButton(self.layoutWidget8)
-        self.predict_start_btn.setObjectName(u"predict_start_btn")
-        self.predict_start_btn.setMinimumSize(QSize(90, 25))
-        self.predict_start_btn.setMaximumSize(QSize(90, 25))
-
-        self.predict_grid_layout2.addWidget(self.predict_start_btn, 1, 3, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTop)
-
-        self.prediction_poly_sigma_label = QLabel(self.layoutWidget8)
-        self.prediction_poly_sigma_label.setObjectName(u"prediction_poly_sigma_label")
-        sizePolicy5.setHeightForWidth(self.prediction_poly_sigma_label.sizePolicy().hasHeightForWidth())
-        self.prediction_poly_sigma_label.setSizePolicy(sizePolicy5)
-        self.prediction_poly_sigma_label.setMinimumSize(QSize(100, 0))
-        self.prediction_poly_sigma_label.setMaximumSize(QSize(100, 25))
-
-        self.predict_grid_layout2.addWidget(self.prediction_poly_sigma_label, 0, 0, 1, 1, Qt.AlignmentFlag.AlignBottom)
-
-        self.prediction_conf_thresh_label = QLabel(self.layoutWidget8)
-        self.prediction_conf_thresh_label.setObjectName(u"prediction_conf_thresh_label")
-        sizePolicy5.setHeightForWidth(self.prediction_conf_thresh_label.sizePolicy().hasHeightForWidth())
-        self.prediction_conf_thresh_label.setSizePolicy(sizePolicy5)
-        self.prediction_conf_thresh_label.setMinimumSize(QSize(100, 0))
-        self.prediction_conf_thresh_label.setMaximumSize(QSize(100, 25))
-
-        self.predict_grid_layout2.addWidget(self.prediction_conf_thresh_label, 1, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
-
-        self.predict_polygo_sigma_spinbox = QDoubleSpinBox(self.layoutWidget8)
-        self.predict_polygo_sigma_spinbox.setObjectName(u"predict_polygo_sigma_spinbox")
-        self.predict_polygo_sigma_spinbox.setMinimumSize(QSize(90, 25))
-        self.predict_polygo_sigma_spinbox.setMaximumSize(QSize(90, 25))
-        self.predict_polygo_sigma_spinbox.setDecimals(1)
-        self.predict_polygo_sigma_spinbox.setMaximum(5.000000000000000)
-        self.predict_polygo_sigma_spinbox.setSingleStep(0.100000000000000)
-        self.predict_polygo_sigma_spinbox.setValue(0.000000000000000)
-
-        self.predict_grid_layout2.addWidget(self.predict_polygo_sigma_spinbox, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignBottom)
-
-        self.predict_conf_thresh_spinbox = QDoubleSpinBox(self.layoutWidget8)
-        self.predict_conf_thresh_spinbox.setObjectName(u"predict_conf_thresh_spinbox")
-        self.predict_conf_thresh_spinbox.setMinimumSize(QSize(90, 25))
-        self.predict_conf_thresh_spinbox.setMaximumSize(QSize(90, 25))
-        self.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
-        self.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
-        self.predict_conf_thresh_spinbox.setValue(0.500000000000000)
-
-        self.predict_grid_layout2.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
-
-        self.predict_iou_thresh_spinbox = QDoubleSpinBox(self.layoutWidget8)
-        self.predict_iou_thresh_spinbox.setObjectName(u"predict_iou_thresh_spinbox")
-        self.predict_iou_thresh_spinbox.setMinimumSize(QSize(90, 25))
-        self.predict_iou_thresh_spinbox.setMaximumSize(QSize(90, 25))
-        self.predict_iou_thresh_spinbox.setMaximum(1.000000000000000)
-        self.predict_iou_thresh_spinbox.setSingleStep(0.100000000000000)
-        self.predict_iou_thresh_spinbox.setValue(0.750000000000000)
-
-        self.predict_grid_layout2.addWidget(self.predict_iou_thresh_spinbox, 0, 3, 1, 1, Qt.AlignmentFlag.AlignBottom)
-
-        self.layoutWidget9 = QWidget(self.predict_video_predict_groupbox)
-        self.layoutWidget9.setObjectName(u"layoutWidget9")
-        self.layoutWidget9.setGeometry(QRect(10, 30, 381, 86))
-        self.gridLayout_2 = QGridLayout(self.layoutWidget9)
+        self.layoutWidget8.setGeometry(QRect(10, 30, 381, 86))
+        self.gridLayout_2 = QGridLayout(self.layoutWidget8)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 10)
-        self.yolomodel_trained_list = QComboBox(self.layoutWidget9)
+        self.yolomodel_trained_list = QComboBox(self.layoutWidget8)
         self.yolomodel_trained_list.addItem("")
         self.yolomodel_trained_list.setObjectName(u"yolomodel_trained_list")
         self.yolomodel_trained_list.setEnabled(True)
@@ -854,7 +811,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_trained_list, 0, 0, 2, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.yolomodel_tracker_list = QComboBox(self.layoutWidget9)
+        self.yolomodel_tracker_list = QComboBox(self.layoutWidget8)
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.addItem("")
@@ -864,7 +821,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_tracker_list, 0, 1, 2, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.open_when_finish_checkBox = QCheckBox(self.layoutWidget9)
+        self.open_when_finish_checkBox = QCheckBox(self.layoutWidget8)
         self.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
@@ -872,7 +829,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.open_when_finish_checkBox, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.single_subject_checkBox = QCheckBox(self.layoutWidget9)
+        self.single_subject_checkBox = QCheckBox(self.layoutWidget8)
         self.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
         self.single_subject_checkBox.setEnabled(True)
         self.single_subject_checkBox.setMinimumSize(QSize(90, 25))
@@ -881,7 +838,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.single_subject_checkBox, 1, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.videos_for_prediction_list = QComboBox(self.layoutWidget9)
+        self.videos_for_prediction_list = QComboBox(self.layoutWidget8)
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.setObjectName(u"videos_for_prediction_list")
@@ -895,7 +852,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.videos_for_prediction_list, 2, 0, 1, 2, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget9)
+        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget8)
         self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
         self.overwrite_prediction_checkBox.setEnabled(False)
         self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
@@ -903,6 +860,102 @@ class Ui_octron_widgetui(object):
         self.overwrite_prediction_checkBox.setChecked(True)
 
         self.gridLayout_2.addWidget(self.overwrite_prediction_checkBox, 2, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
+
+        self.widget = QWidget(self.predict_video_predict_groupbox)
+        self.widget.setObjectName(u"widget")
+        self.widget.setGeometry(QRect(12, 120, 378, 71))
+        self.horizontalLayout_4 = QHBoxLayout(self.widget)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3.setSpacing(4)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.prediction_poly_sigma_label = QLabel(self.widget)
+        self.prediction_poly_sigma_label.setObjectName(u"prediction_poly_sigma_label")
+        sizePolicy5.setHeightForWidth(self.prediction_poly_sigma_label.sizePolicy().hasHeightForWidth())
+        self.prediction_poly_sigma_label.setSizePolicy(sizePolicy5)
+        self.prediction_poly_sigma_label.setMinimumSize(QSize(50, 0))
+        self.prediction_poly_sigma_label.setMaximumSize(QSize(40, 25))
+
+        self.gridLayout_3.addWidget(self.prediction_poly_sigma_label, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+
+        self.predict_polygo_sigma_spinbox = QDoubleSpinBox(self.widget)
+        self.predict_polygo_sigma_spinbox.setObjectName(u"predict_polygo_sigma_spinbox")
+        self.predict_polygo_sigma_spinbox.setMinimumSize(QSize(70, 25))
+        self.predict_polygo_sigma_spinbox.setMaximumSize(QSize(80, 25))
+        self.predict_polygo_sigma_spinbox.setDecimals(1)
+        self.predict_polygo_sigma_spinbox.setMaximum(5.000000000000000)
+        self.predict_polygo_sigma_spinbox.setSingleStep(0.250000000000000)
+        self.predict_polygo_sigma_spinbox.setValue(0.000000000000000)
+
+        self.gridLayout_3.addWidget(self.predict_polygo_sigma_spinbox, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
+        self.prediction_iou_label = QLabel(self.widget)
+        self.prediction_iou_label.setObjectName(u"prediction_iou_label")
+        sizePolicy5.setHeightForWidth(self.prediction_iou_label.sizePolicy().hasHeightForWidth())
+        self.prediction_iou_label.setSizePolicy(sizePolicy5)
+        self.prediction_iou_label.setMinimumSize(QSize(40, 0))
+        self.prediction_iou_label.setMaximumSize(QSize(40, 25))
+        self.prediction_iou_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.prediction_iou_label, 0, 2, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+
+        self.predict_iou_thresh_spinbox = QDoubleSpinBox(self.widget)
+        self.predict_iou_thresh_spinbox.setObjectName(u"predict_iou_thresh_spinbox")
+        self.predict_iou_thresh_spinbox.setMinimumSize(QSize(70, 25))
+        self.predict_iou_thresh_spinbox.setMaximumSize(QSize(80, 25))
+        self.predict_iou_thresh_spinbox.setMaximum(1.000000000000000)
+        self.predict_iou_thresh_spinbox.setSingleStep(0.100000000000000)
+        self.predict_iou_thresh_spinbox.setValue(0.400000000000000)
+
+        self.gridLayout_3.addWidget(self.predict_iou_thresh_spinbox, 0, 3, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+
+        self.prediction_conf_thresh_label = QLabel(self.widget)
+        self.prediction_conf_thresh_label.setObjectName(u"prediction_conf_thresh_label")
+        sizePolicy5.setHeightForWidth(self.prediction_conf_thresh_label.sizePolicy().hasHeightForWidth())
+        self.prediction_conf_thresh_label.setSizePolicy(sizePolicy5)
+        self.prediction_conf_thresh_label.setMinimumSize(QSize(50, 0))
+        self.prediction_conf_thresh_label.setMaximumSize(QSize(40, 25))
+
+        self.gridLayout_3.addWidget(self.prediction_conf_thresh_label, 1, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+
+        self.predict_conf_thresh_spinbox = QDoubleSpinBox(self.widget)
+        self.predict_conf_thresh_spinbox.setObjectName(u"predict_conf_thresh_spinbox")
+        self.predict_conf_thresh_spinbox.setMinimumSize(QSize(70, 25))
+        self.predict_conf_thresh_spinbox.setMaximumSize(QSize(80, 25))
+        self.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
+        self.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
+        self.predict_conf_thresh_spinbox.setValue(0.600000000000000)
+
+        self.gridLayout_3.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
+        self.prediction_skip_label = QLabel(self.widget)
+        self.prediction_skip_label.setObjectName(u"prediction_skip_label")
+        sizePolicy5.setHeightForWidth(self.prediction_skip_label.sizePolicy().hasHeightForWidth())
+        self.prediction_skip_label.setSizePolicy(sizePolicy5)
+        self.prediction_skip_label.setMinimumSize(QSize(40, 0))
+        self.prediction_skip_label.setMaximumSize(QSize(40, 25))
+        self.prediction_skip_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.prediction_skip_label, 1, 2, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+
+        self.skip_frames_analysis_spinBox = QSpinBox(self.widget)
+        self.skip_frames_analysis_spinBox.setObjectName(u"skip_frames_analysis_spinBox")
+        self.skip_frames_analysis_spinBox.setMinimumSize(QSize(70, 25))
+        self.skip_frames_analysis_spinBox.setMaximumSize(QSize(80, 25))
+        self.skip_frames_analysis_spinBox.setMaximum(1000)
+
+        self.gridLayout_3.addWidget(self.skip_frames_analysis_spinBox, 1, 3, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+
+
+        self.horizontalLayout_4.addLayout(self.gridLayout_3)
+
+        self.predict_start_btn = QPushButton(self.widget)
+        self.predict_start_btn.setObjectName(u"predict_start_btn")
+        self.predict_start_btn.setMinimumSize(QSize(90, 25))
+        self.predict_start_btn.setMaximumSize(QSize(90, 25))
+
+        self.horizontalLayout_4.addWidget(self.predict_start_btn, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
 
         self.predict_verticalLayout.addWidget(self.predict_video_predict_groupbox)
@@ -979,6 +1032,15 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.hard_reset_layer_btn.setText(QCoreApplication.translate("octron_widgetui", u"\u3004 Reset", None))
         self.create_annotation_layer_btn.setText(QCoreApplication.translate("octron_widgetui", u"\u2295 Create", None))
+        self.annotate_layer_timeline_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Timeline control", None))
+#if QT_CONFIG(tooltip)
+        self.annotation_jump_previous_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Jump to last annotated frame", None))
+#endif // QT_CONFIG(tooltip)
+        self.annotation_jump_previous_btn.setText(QCoreApplication.translate("octron_widgetui", u"\u226a Jump to previous", None))
+#if QT_CONFIG(tooltip)
+        self.annotation_jump_next_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Jump to next annotated frame", None))
+#endif // QT_CONFIG(tooltip)
+        self.annotation_jump_next_btn.setText(QCoreApplication.translate("octron_widgetui", u"Jump to next \u226b", None))
         self.annotate_layer_predict_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Batch prediction", None))
 #if QT_CONFIG(tooltip)
         self.batch_predict_progressbar.setToolTip(QCoreApplication.translate("octron_widgetui", u"<html><head/><body><p>Batch predict progress bar</p></body></html>", None))
@@ -1091,25 +1153,6 @@ class Ui_octron_widgetui(object):
         self.predict_current_video_progressbar.setFormat(QCoreApplication.translate("octron_widgetui", u"%p%", None))
         self.predict_current_videoname_label.setText(QCoreApplication.translate("octron_widgetui", u"video name", None))
         self.predict_finish_time_label.setText(QCoreApplication.translate("octron_widgetui", u"Current video finishes in:", None))
-#if QT_CONFIG(tooltip)
-        self.prediction_iou_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"This threshold determines how much overlap between bounding boxes\n"
-"is allowed before they are considered to be detecting the same object.\n"
-"At IOU=0 all detected objects > conf. thresh\n"
-"of one label will be fused into one mask.", None))
-#endif // QT_CONFIG(tooltip)
-        self.prediction_iou_label.setText(QCoreApplication.translate("octron_widgetui", u"IOU", None))
-#if QT_CONFIG(tooltip)
-        self.predict_start_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Yeah!", None))
-#endif // QT_CONFIG(tooltip)
-        self.predict_start_btn.setText(QCoreApplication.translate("octron_widgetui", u"Let's go!", None))
-#if QT_CONFIG(tooltip)
-        self.prediction_poly_sigma_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Gaussian smoothing of polygons. Keep this low. 0=no smoothing.", None))
-#endif // QT_CONFIG(tooltip)
-        self.prediction_poly_sigma_label.setText(QCoreApplication.translate("octron_widgetui", u"Polygon sigma", None))
-#if QT_CONFIG(tooltip)
-        self.prediction_conf_thresh_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Confidence threshold for accepting prediction results as real", None))
-#endif // QT_CONFIG(tooltip)
-        self.prediction_conf_thresh_label.setText(QCoreApplication.translate("octron_widgetui", u"Conf. thresh.", None))
         self.yolomodel_trained_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Choose model ...", None))
 
 #if QT_CONFIG(tooltip)
@@ -1141,6 +1184,29 @@ class Ui_octron_widgetui(object):
         self.overwrite_prediction_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Overwrite previous analysis results? ", None))
 #endif // QT_CONFIG(tooltip)
         self.overwrite_prediction_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Overwrite", None))
+#if QT_CONFIG(tooltip)
+        self.prediction_poly_sigma_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Gaussian smoothing of polygons. Keep this low. 0=no smoothing.", None))
+#endif // QT_CONFIG(tooltip)
+        self.prediction_poly_sigma_label.setText(QCoreApplication.translate("octron_widgetui", u"Sigma", None))
+#if QT_CONFIG(tooltip)
+        self.prediction_iou_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Intersection over union. This threshold determines how much overlap between bounding boxes\n"
+"is allowed before they are considered to be detecting the same object.\n"
+"At IOU=0 all detected objects > conf. thresh\n"
+"of one label will be fused into one mask.", None))
+#endif // QT_CONFIG(tooltip)
+        self.prediction_iou_label.setText(QCoreApplication.translate("octron_widgetui", u"IOU", None))
+#if QT_CONFIG(tooltip)
+        self.prediction_conf_thresh_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Confidence threshold for accepting prediction results as real", None))
+#endif // QT_CONFIG(tooltip)
+        self.prediction_conf_thresh_label.setText(QCoreApplication.translate("octron_widgetui", u"Cutoff", None))
+#if QT_CONFIG(tooltip)
+        self.prediction_skip_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Skip frames in videos? 0: All frames are analyzed, >0: This many frames are being skipped. ", None))
+#endif // QT_CONFIG(tooltip)
+        self.prediction_skip_label.setText(QCoreApplication.translate("octron_widgetui", u"Skip", None))
+#if QT_CONFIG(tooltip)
+        self.predict_start_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Yeah!", None))
+#endif // QT_CONFIG(tooltip)
+        self.predict_start_btn.setText(QCoreApplication.translate("octron_widgetui", u"Let's go!", None))
         self.toolBox.setItemText(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("octron_widgetui", u"Analyze (new) videos", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("octron_widgetui", u"Use trained models to run predictions on new videos", None))

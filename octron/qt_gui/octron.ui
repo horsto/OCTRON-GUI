@@ -167,7 +167,7 @@
         </property>
         <layout class="QVBoxLayout" name="project_vertical_layout">
          <property name="spacing">
-          <number>30</number>
+          <number>20</number>
          </property>
          <property name="bottomMargin">
           <number>15</number>
@@ -264,7 +264,7 @@
            </layout>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignTop">
+         <item>
           <widget class="QGroupBox" name="project_video_drop_groupbox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
@@ -275,13 +275,13 @@
            <property name="minimumSize">
             <size>
              <width>400</width>
-             <height>150</height>
+             <height>100</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>150</height>
+             <height>100</height>
             </size>
            </property>
            <property name="title">
@@ -308,13 +308,13 @@
               <property name="minimumSize">
                <size>
                 <width>380</width>
-                <height>110</height>
+                <height>60</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>380</width>
-                <height>110</height>
+                <height>60</height>
                </size>
               </property>
               <property name="toolTip">
@@ -339,13 +339,13 @@
            <property name="minimumSize">
             <size>
              <width>400</width>
-             <height>140</height>
+             <height>180</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>140</height>
+             <height>180</height>
             </size>
            </property>
            <property name="title">
@@ -372,13 +372,13 @@
               <property name="minimumSize">
                <size>
                 <width>380</width>
-                <height>100</height>
+                <height>140</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>380</width>
-                <height>100</height>
+                <height>130</height>
                </size>
               </property>
               <property name="editTriggers">
@@ -477,7 +477,7 @@
           <x>0</x>
           <y>0</y>
           <width>402</width>
-          <height>341</height>
+          <height>366</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="annotate_vertical_layout">
@@ -824,6 +824,98 @@ and octo and suffix 2 for the second octo </string>
               </property>
               <property name="text">
                <string>⊕ Create</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="annotate_layer_timeline_groupbox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>400</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>400</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>Timeline control</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <property name="sizeConstraint">
+             <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+            </property>
+            <property name="leftMargin">
+             <number>9</number>
+            </property>
+            <property name="topMargin">
+             <number>12</number>
+            </property>
+            <property name="rightMargin">
+             <number>9</number>
+            </property>
+            <property name="bottomMargin">
+             <number>12</number>
+            </property>
+            <property name="horizontalSpacing">
+             <number>20</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>9</number>
+            </property>
+            <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="annotation_jump_previous_btn">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>70</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Jump to last annotated frame</string>
+              </property>
+              <property name="text">
+               <string>≪ Jump to previous</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="annotation_jump_next_btn">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>70</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Jump to next annotated frame</string>
+              </property>
+              <property name="text">
+               <string>Jump to next ≫</string>
               </property>
              </widget>
             </item>
@@ -2054,7 +2146,7 @@ Recommended are at least ~50.</string>
              <rect>
               <x>11</x>
               <y>193</y>
-              <width>387</width>
+              <width>381</width>
               <height>29</height>
              </rect>
             </property>
@@ -2186,208 +2278,6 @@ Recommended are at least ~50.</string>
                </property>
                <property name="text">
                 <string>Current video finishes in:</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-           <widget class="QWidget" name="layoutWidget">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>120</y>
-              <width>381</width>
-              <height>73</height>
-             </rect>
-            </property>
-            <layout class="QGridLayout" name="predict_grid_layout2">
-             <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignBottom">
-              <widget class="QLabel" name="prediction_iou_label">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>40</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>40</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>This threshold determines how much overlap between bounding boxes
-is allowed before they are considered to be detecting the same object.
-At IOU=0 all detected objects &gt; conf. thresh
-of one label will be fused into one mask.</string>
-               </property>
-               <property name="text">
-                <string>IOU</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTop">
-              <widget class="QPushButton" name="predict_start_btn">
-               <property name="minimumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Yeah!</string>
-               </property>
-               <property name="text">
-                <string>Let's go!</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignBottom">
-              <widget class="QLabel" name="prediction_poly_sigma_label">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>100</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Gaussian smoothing of polygons. Keep this low. 0=no smoothing.</string>
-               </property>
-               <property name="text">
-                <string>Polygon sigma</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
-              <widget class="QLabel" name="prediction_conf_thresh_label">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>100</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Confidence threshold for accepting prediction results as real</string>
-               </property>
-               <property name="text">
-                <string>Conf. thresh.</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignBottom">
-              <widget class="QDoubleSpinBox" name="predict_polygo_sigma_spinbox">
-               <property name="minimumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="decimals">
-                <number>1</number>
-               </property>
-               <property name="maximum">
-                <double>5.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.100000000000000</double>
-               </property>
-               <property name="value">
-                <double>0.000000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
-              <widget class="QDoubleSpinBox" name="predict_conf_thresh_spinbox">
-               <property name="minimumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximum">
-                <double>1.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.050000000000000</double>
-               </property>
-               <property name="value">
-                <double>0.500000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignBottom">
-              <widget class="QDoubleSpinBox" name="predict_iou_thresh_spinbox">
-               <property name="minimumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximum">
-                <double>1.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.100000000000000</double>
-               </property>
-               <property name="value">
-                <double>0.750000000000000</double>
                </property>
               </widget>
              </item>
@@ -2595,6 +2485,265 @@ of one label will be fused into one mask.</string>
                </property>
                <property name="checked">
                 <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="">
+            <property name="geometry">
+             <rect>
+              <x>12</x>
+              <y>120</y>
+              <width>378</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <layout class="QGridLayout" name="gridLayout_3">
+               <property name="spacing">
+                <number>4</number>
+               </property>
+               <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+                <widget class="QLabel" name="prediction_poly_sigma_label">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>50</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>40</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Gaussian smoothing of polygons. Keep this low. 0=no smoothing.</string>
+                 </property>
+                 <property name="text">
+                  <string>Sigma</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
+                <widget class="QDoubleSpinBox" name="predict_polygo_sigma_spinbox">
+                 <property name="minimumSize">
+                  <size>
+                   <width>70</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>80</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="decimals">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <double>5.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.250000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+                <widget class="QLabel" name="prediction_iou_label">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>40</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>40</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Intersection over union. This threshold determines how much overlap between bounding boxes
+is allowed before they are considered to be detecting the same object.
+At IOU=0 all detected objects &gt; conf. thresh
+of one label will be fused into one mask.</string>
+                 </property>
+                 <property name="text">
+                  <string>IOU</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignVCenter">
+                <widget class="QDoubleSpinBox" name="predict_iou_thresh_spinbox">
+                 <property name="minimumSize">
+                  <size>
+                   <width>70</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>80</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximum">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.400000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+                <widget class="QLabel" name="prediction_conf_thresh_label">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>50</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>40</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Confidence threshold for accepting prediction results as real</string>
+                 </property>
+                 <property name="text">
+                  <string>Cutoff</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
+                <widget class="QDoubleSpinBox" name="predict_conf_thresh_spinbox">
+                 <property name="minimumSize">
+                  <size>
+                   <width>70</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>80</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximum">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.050000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.600000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+                <widget class="QLabel" name="prediction_skip_label">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>40</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>40</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Skip frames in videos? 0: All frames are analyzed, &gt;0: This many frames are being skipped. </string>
+                 </property>
+                 <property name="text">
+                  <string>Skip</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignVCenter">
+                <widget class="QSpinBox" name="skip_frames_analysis_spinBox">
+                 <property name="minimumSize">
+                  <size>
+                   <width>70</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>80</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="maximum">
+                  <number>1000</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="predict_start_btn">
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>Yeah!</string>
+               </property>
+               <property name="text">
+                <string>Let's go!</string>
                </property>
               </widget>
              </item>
