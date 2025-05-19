@@ -1223,7 +1223,8 @@ class YOLO_octron:
                       model_path,
                       device,
                       tracker_name,
-                      one_object_per_label,
+                      skip_frames=0,
+                      one_object_per_label=False,
                       iou_thresh=.9,
                       conf_thresh=.8,
                       polygon_sigma=1.,
@@ -1242,11 +1243,13 @@ class YOLO_octron:
             Device to run prediction on ('cpu', 'cuda', etc.)
         tracker_name : str
             Name of the tracker to use ('bytetrack' or 'botsort')
+        skip_frames : int
+            Number of frames to skip between predictions.
         one_object_per_label : bool
             Whether to track only one object per label.
             If True, only the first detected object of each label will be tracked
             and if more than one object is detected, only the first one with the highest confidence
-            will be kept.
+            will be kept. Defaults to False.
         iou_thresh : float
             IOU threshold for detection
         conf_thresh : float
@@ -1288,15 +1291,25 @@ class YOLO_octron:
             print('No model args found, using default image size of 640')
             imgsz = 640
         
+        skip_frames = int(max(0, skip_frames))
+        
         if one_object_per_label:
             print("⚠ Tracking only one object per label.")
         
         # Calculate total frames across all videos
         total_videos = len(videos_dict)
-        total_frames = sum(v['num_frames'] for v in videos_dict.values())
+        # Create dictionary of frame iterators, considering skip_frames
+        for video_name, video_dict in videos_dict.items():
+            num_frames_total_video = video_dict['num_frames']
+            frame_iterator = range(0, num_frames_total_video, skip_frames + 1)
+            videos_dict[video_name]['frame_iterator'] = frame_iterator
+            videos_dict[video_name]['num_frames_analyzed'] = len(frame_iterator)
+        
+        total_frames = sum(v['num_frames_analyzed'] for v in videos_dict.values())
         
         # Process each video
         for video_index, (video_name, video_dict) in enumerate(videos_dict.items(), start=0):
+            num_frames = video_dict['num_frames_analyzed']
             # Load model anew for every video since the tracker persists
             try:
                 model = self.load_model(model_name_path=model_path)
@@ -1309,7 +1322,6 @@ class YOLO_octron:
 
             print(f'\nProcessing video {video_index+1}/{total_videos}: {video_name}')
             video_path = Path(video_dict['video_file_path'])
-            num_frames = video_dict['num_frames']
             
             if max(video_dict['height'], video_dict['width']) < imgsz:
                 print(f"⚠ Video resolution is smaller than the model image size ({imgsz}). Setting retina_masks to False.")
@@ -1344,12 +1356,21 @@ class YOLO_octron:
             tracking_df_dict = {}
             track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
             frame_start = time.time()
-            for frame_no, frame in enumerate(video, start=0):
+            for frame_no, frame_idx in enumerate(video_dict['frame_iterator'], start=0):
+                try:
+                    frame = video[frame_idx]
+                except StopIteration:
+                    print(f"Could not read frame {frame_idx} from video {video_name}")
+                    continue
+                    
                 # Before processing the results, yield progress information 
                 # This is because we want this information regardless of whether there 
                 # were any detections in the frame
                 # Update timing information
-                frame_time = time.time()-frame_start
+                if frame_no > 0:
+                    frame_time = time.time()-frame_start
+                else:
+                    frame_time = 0
                 yield {
                     'stage': 'processing',
                     'video_name': video_name,
@@ -1428,6 +1449,7 @@ class YOLO_octron:
                         
                     # Initialize mask zarr array if needed
                     if f'{track_id}_masks' not in list(zarr_root.array_keys()):
+                        # Initialize mask store to original length of video, regardless of skipped frames
                         video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
                         mask_store = create_prediction_zarr(prediction_store, 
                                         f'{track_id}_masks',
@@ -1457,8 +1479,8 @@ class YOLO_octron:
                     # Check if a row already exists and compare current confidence with existing one
                     # This happens if one_object_per_label is True or iou_thresh < 0.01 
                     # and there are multiple detections
-                    if (frame_no, track_id) in tracking_df.index:
-                        existing_conf = tracking_df.loc[(frame_no, track_id), 'confidence']
+                    if (frame_no, frame_idx, track_id) in tracking_df.index:
+                        existing_conf = tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence']
                         if conf <= existing_conf and iou_thresh >= 0.01:
                             # Skip this detection if a better one already exists
                             # and we are not fusing masks (iou_thresh > 0)
@@ -1478,12 +1500,12 @@ class YOLO_octron:
                     if iou_thresh < 0.01:
                         # Fuse this masks with prior masks already stored in the zarr
                         # for this frame / label
-                        previous_mask = mask_store[frame_no,:,:].copy()
+                        previous_mask = mask_store[frame_idx,:,:].copy()
                         previous_mask[previous_mask == -1] = 0
                         mask = np.logical_or(previous_mask, mask)
                         mask = mask.astype('int8')
                     
-                    mask_store[frame_no,:,:] = mask
+                    mask_store[frame_idx,:,:] = mask
                         
                     # Get region properties and save them to the dataframe
                     _, regions_props = find_objects_in_mask(mask, min_area=0)
@@ -1509,13 +1531,13 @@ class YOLO_octron:
                         solidity_sum += region_prop.solidity
                     
                     # Store averages in DataFrame with flat column names
-                    tracking_df.loc[(frame_no, track_id), 'pos_x'] = pos_x_sum / num_regions
-                    tracking_df.loc[(frame_no, track_id), 'pos_y'] = pos_y_sum / num_regions
-                    tracking_df.loc[(frame_no, track_id), 'area'] = area_sum / num_regions
-                    tracking_df.loc[(frame_no, track_id), 'eccentricity'] = eccentricity_sum / num_regions
-                    tracking_df.loc[(frame_no, track_id), 'orientation'] = orientation_sum / num_regions
-                    tracking_df.loc[(frame_no, track_id), 'confidence'] = conf
-                    tracking_df.loc[(frame_no, track_id), 'solidity'] = solidity_sum / num_regions
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = pos_x_sum / num_regions
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_y'] = pos_y_sum / num_regions
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'area'] = area_sum / num_regions
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'eccentricity'] = eccentricity_sum / num_regions
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence'] = conf
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'solidity'] = solidity_sum / num_regions
 
                 # A FRAME IS COMPLETE
                 
@@ -1535,6 +1557,7 @@ class YOLO_octron:
                 header = [
                     f"video_name: {tr_df.attrs.get('video_name', 'unknown')}",
                     f"frame_count: {tr_df.attrs.get('frame_count', '')}",
+                    f"frame_count_analyzed: {tr_df.attrs.get('frame_count_analyzed', '')}",
                     f"video_height: {tr_df.attrs.get('video_height', '')}",
                     f"video_width: {tr_df.attrs.get('video_width', '')}",
                     f"created_at: {tr_df.attrs.get('created_at', str(datetime.now()))}",
@@ -1578,16 +1601,17 @@ class YOLO_octron:
             Empty DataFrame initialized for tracking data
         """
         import pandas as pd
-        assert 'num_frames' in video_dict, "Video metadata must include 'num_frames'"
+        assert 'num_frames_analyzed' in video_dict, "Video metadata must include 'num_frames_analyzed'"
         # Create a flat column structure
         columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity']
         
         # Initialize the DataFrame with NaN values
         df = pd.DataFrame(
             index=pd.MultiIndex.from_product([
-                range(video_dict['num_frames']),  # Frame numbers
+                range(video_dict['num_frames_analyzed']), 
+                [], # Empty frame_idx list - will be populated during tracking
                 []  # Empty track_id list - will be populated during tracking
-            ], names=['frame', 'track_id']),
+            ], names=['frame_counter', 'frame_idx', 'track_id']),
             columns=columns,
 
         )
@@ -1599,6 +1623,7 @@ class YOLO_octron:
             'video_height': video_dict.get('height', np.nan),
             'video_width': video_dict.get('width', np.nan),
             'frame_count': video_dict['num_frames'],
+            'frame_count_analyzed': video_dict['num_frames_analyzed'],
             'created_at': str(datetime.now())
         }
         
@@ -1706,7 +1731,7 @@ class YOLO_octron:
         for csv in save_dir.glob('*.csv'):
             
 
-            track_df = pd.read_csv(csv, header=5)
+            track_df = pd.read_csv(csv, header=6)
             assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
             assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
             label = track_df.iloc[0].label
@@ -1733,7 +1758,8 @@ class YOLO_octron:
                 [indices_max_diff_subcolors[label_counter_dict[label]['track_counter']]]
            
             mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 
-                                                          1: obj_color}, 
+                                                             1: obj_color,
+                                                          }, 
                                                     use_selection=True, 
                                                     selection=1,
                                                     )
@@ -1760,26 +1786,25 @@ class YOLO_octron:
                 add_layer(np.zeros((mask_shape)), **layer_dict)
         
         min_frame_number = 0
-        
         # Loop over each track, interpolate and add it to the viewer
         for track_id in track_df_dict.keys():
             
             label = track_df_dict[track_id].iloc[0].label   
-            track_df_napari = track_df_dict[track_id][['track_id','frame','pos_y','pos_x']].copy()
-            features_df_napari = track_df_dict[track_id][['frame','confidence','area','eccentricity','orientation','solidity']].copy()
+            track_df_napari = track_df_dict[track_id][['track_id','frame_idx','pos_y','pos_x']].copy()
+            features_df_napari = track_df_dict[track_id][['frame_idx','confidence','area','eccentricity','orientation','solidity']].copy()
 
-            check_continuous = np.all(np.diff(track_df_napari['frame']) == 1)   
+            check_continuous = np.all(np.diff(track_df_napari['frame_idx']) == 1)   
             if not check_continuous:
                 print("Frames are not continuous ... interpolating")
-                complete_tracking   = pd.DataFrame({'frame': range(int(min_frame_number), int(max_frame_number))})
-                complete_features   = pd.DataFrame({'frame': range(int(min_frame_number), int(max_frame_number))})
+                complete_tracking   = pd.DataFrame({'frame_idx': range(int(min_frame_number), int(max_frame_number))})
+                complete_features   = pd.DataFrame({'frame_idx': range(int(min_frame_number), int(max_frame_number))})
                 # Merge with existing data to identify missing frames
-                merged_df_tracking = complete_tracking.merge(track_df_napari, on='frame', how='left')
+                merged_df_tracking = complete_tracking.merge(track_df_napari, on='frame_idx', how='left')
                 merged_df_tracking['track_id'] = track_id
-                merged_df_features = complete_features.merge(features_df_napari, on='frame', how='left')
+                merged_df_features = complete_features.merge(features_df_napari, on='frame_idx', how='left')
                 merged_df_features.fillna(0, inplace=True)
-                # Make sure frame and track_id are the right types for interpolation
-                merged_df_tracking['frame'] = merged_df_tracking['frame'].astype(int)
+                # Make sure frame_idx and track_id are the right types for interpolation
+                merged_df_tracking['frame_idx'] = merged_df_tracking['frame_idx'].astype(int)
                 merged_df_tracking['track_id'] = merged_df_tracking['track_id'].astype(int)
 
                 # Interpolate the position columns
@@ -1788,19 +1813,19 @@ class YOLO_octron:
                     merged_df_tracking[col] = merged_df_tracking[col].interpolate(method='linear')
 
                 # After interpolation, get the valid frame indices from the tracking DataFrame
-                valid_frames = merged_df_tracking.dropna()['frame'].values
+                valid_frames = merged_df_tracking.dropna()['frame_idx'].values
                 # Use these valid frames to filter both DataFrames
-                merged_df_tracking = merged_df_tracking[merged_df_tracking['frame'].isin(valid_frames)].reset_index(drop=True)
-                merged_df_features = merged_df_features[merged_df_features['frame'].isin(valid_frames)].reset_index(drop=True)
+                merged_df_tracking = merged_df_tracking[merged_df_tracking['frame_idx'].isin(valid_frames)].reset_index(drop=True)
+                merged_df_features = merged_df_features[merged_df_features['frame_idx'].isin(valid_frames)].reset_index(drop=True)
                 # Double-check that the frames match
-                assert np.array_equal(merged_df_tracking['frame'].to_numpy(), 
-                                      merged_df_features['frame'].to_numpy()),\
+                assert np.array_equal(merged_df_tracking['frame_idx'].to_numpy(), 
+                                      merged_df_features['frame_idx'].to_numpy()),\
                                           "Frame mismatch between tracking and features"
                    
                 track_df_napari = merged_df_tracking.copy()
                 features_df_napari = merged_df_features.copy()
                 # Before adding to Napari, change the column order
-                track_df_napari = track_df_napari[['track_id', 'frame', 'pos_y', 'pos_x' ]]
+                track_df_napari = track_df_napari[['track_id', 'frame_idx', 'pos_y', 'pos_x' ]]
                 
             # Smooth the positions
             pos_cols = ['pos_x', 'pos_y']
@@ -1824,7 +1849,7 @@ class YOLO_octron:
                             )
                 viewer.layers[f'{label} - id {track_id}'].tail_width = 3
                 viewer.layers[f'{label} - id {track_id}'].tail_length = len(track_df_napari)
-                viewer.layers[f'{label} - id {track_id}'].color_by = 'frame'
+                viewer.layers[f'{label} - id {track_id}'].color_by = 'frame_idx'
                 # Add masks
                 _ = viewer.add_labels(
                     mask_zarr,

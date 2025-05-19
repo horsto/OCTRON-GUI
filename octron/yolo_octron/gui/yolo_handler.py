@@ -619,12 +619,14 @@ class YoloHandler(QObject):
             show_info(f"Predicting on device: '{self.device_label}'")
         
         one_object_per_label = self.w.single_subject_checkBox.isChecked()
+        skip_frames = self.w.skip_frames_analysis_spinBox.value()
         # Call the training function which yields progress info
         for progress_info in self.yolo.predict_batch(
                                             videos_dict=self.videos_to_predict,
                                             model_path=self.model_predict_path,
                                             device=self.device_label,
                                             tracker_name=self.yolo_tracker_name,
+                                            skip_frames=skip_frames,
                                             one_object_per_label=one_object_per_label,
                                             iou_thresh=self.iou_thresh,
                                             conf_thresh=self.conf_thresh,
