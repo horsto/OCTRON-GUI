@@ -670,7 +670,7 @@ class YoloHandler(QObject):
             shortened_video_name = f'{prefix}{video_name[-21:]}'
             
             self.w.predict_current_videoname_label.setText(f"{shortened_video_name}")
-            self.w.predict_finish_time_label.setText(f"{frame_time:.2f}s per frame | Video completes ~ {finish_time_str}")
+            self.w.predict_finish_time_label.setText(f"{frame_time:.2f}s per frame | ~ {finish_time_str}")
             
             # Update progress bars
             self.w.predict_overall_progressbar.setMaximum(total_videos)
