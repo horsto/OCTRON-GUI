@@ -1273,7 +1273,7 @@ class YOLO_octron:
         """
 
         available_trackers = ['bytetrack','botsort']
-        tracker_name = tracker_name.strip().toLowerCase()
+        tracker_name = tracker_name.strip().lower()
         assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
         
         model_path = Path(model_path)
