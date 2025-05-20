@@ -22,11 +22,6 @@ from skimage import measure
 
 import napari
 from napari.utils import DirectLabelColormap
-# color handling
-from octron.sam2_octron.helpers.sam2_colors import (create_label_colors, 
-                                                    sample_maximally_different)
-
-from octron.sam2_octron.helpers.video_loader import probe_video
 
 from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
@@ -45,7 +40,8 @@ from octron.yolo_octron.helpers.training import (
     collect_labels,
     train_test_val,
 )
-                                                
+
+                                    
 
 class YOLO_octron:
     """
@@ -1667,59 +1663,15 @@ class YOLO_octron:
             
             
         """
+        from .helpers.yolo_results import YOLO_results
         # Some heavy imports are hidden here
         from scipy.ndimage import gaussian_filter1d
         import pandas as pd 
-        # Napari PyAV reader 
-        from napari_pyav._reader import FastVideoReader
-        
 
-        
-        def _find_class_by_name(classes, class_name):
-            return (next((k for k, v in classes.items() if v == class_name), None))
-        
-        save_dir = Path(save_dir)
-        if not save_dir.exists():
-            print(f"Save directory not found: {save_dir}")
-            return
-        # Check if video is present in the parent directory
-        video = None
-        for video_path in save_dir.parent.parent.glob('*.mp4'):
-            if video_path.stem == '_'.join(save_dir.name.split('_')[:-1]):
-                video = FastVideoReader(video_path, read_format='rgb24')
-                video_dict = probe_video(video_path)
-                break
-        if video is None:
-            print(f"No video found for {save_dir.name}")
-            
-        
-        # Load the predictions
-        csvs = list(save_dir.rglob('*.csv'))
-        if not csvs:    
-            print(f"No tracking CSV files found in {save_dir}")
-            return
-        
-        print(f"Found {len(csvs)} tracking CSV files")
-        zarr_files = list(save_dir.rglob('*.zarr'))
-        assert len(zarr_files) == 1, "Expected exactly one predictions zarr file"
-        zarr_file = zarr_files[0]
-        print(f"Found predictions zarr file: {zarr_file}")
-        # Load zarr
-        store = zarr.storage.LocalStore(zarr_file, read_only=False)
-        root = zarr.open_group(store=store, mode='a')
-        print("Existing keys in zarr archive:", list(root.array_keys()))
-        
-        # Color handling
-        # Recreate the colors here for the masks 
-        # This is a bit of a hack, but it works if the n_labels and n_colors_submap 
-        # match the original parameters used to create the colormap. 
-        # So, if we don't change these parameters, the colors will be the same, because 
-        # we are looking up object IDs from the original model classes
-        all_labels_submaps = create_label_colors(n_labels=10,
-                                                n_colors_submap=50
-                                                )
-        indices_max_diff_labels = sample_maximally_different(list(range(10)))
-        indices_max_diff_subcolors = sample_maximally_different(list(range(50)))
+        yolo_results = YOLO_results(save_dir)
+        assert yolo_results.csvs is not None, "No CSV files found in the results directory"
+        assert yolo_results.zarr is not None, "No Zarr files found in the results directory"
+        all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors = yolo_results.define_colors()
         
         track_df_dict = {}
         mask_dict = {}
@@ -1728,9 +1680,8 @@ class YOLO_octron:
         label_counter_dict = {} # This is to find the right color in all_labels_submaps
 
         # Load the tracking data
-        for csv in save_dir.glob('*.csv'):
-            
-
+        for csv in yolo_results.csvs:
+        
             track_df = pd.read_csv(csv, header=6)
             assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
             assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
@@ -1738,14 +1689,13 @@ class YOLO_octron:
             track_id = track_df.iloc[0].track_id
             label_trackid_dict[label] = track_id
 
-            
             # Check zarr
-            assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
-            mask_zarr = root[f'{track_id}_masks']
+            assert f'{track_id}_masks' in list(yolo_results.zarr_root.array_keys()), "Mask not found in zarr archive" 
+            mask_zarr = yolo_results.zarr_root[f'{track_id}_masks']
             max_frame_number = mask_zarr.shape[0] # This should be the same across all masks
             mask_shape = mask_zarr.shape[1:]
             classes = mask_zarr.attrs.get('classes', None) # These are the original classes from the model
-            original_class_id = _find_class_by_name(classes, label)
+            original_class_id = yolo_results.find_class_by_name(classes, label)
             assert original_class_id is not None, f"Class ID for {label} not found in classes"
             # Check if an index was already given for the current label
             # This is to extract the right color from the colormap
@@ -1766,20 +1716,20 @@ class YOLO_octron:
             # Add color, track_df, and mask to the dictionaries
             color_dict[int(track_id)] = mask_colors
             track_df_dict[int(track_id)] = track_df
-            assert f'{track_id}_masks' in list(root.array_keys()), "Mask not found in zarr archive" 
-            mask_dict[int(track_id)] = root[f'{track_id}_masks']
+            assert f'{track_id}_masks' in list(yolo_results.zarr_root.array_keys()), "Mask not found in zarr archive" 
+            mask_dict[int(track_id)] = yolo_results.zarr_root[f'{track_id}_masks']
             
         ####### NAPARI VIEWER ######################################################################################
         # Interpolate and plot tracks + masks
         
         if open_viewer:
             viewer = napari.Viewer()    
-            if video is not None:
+            if yolo_results.video is not None:
                 add_layer = getattr(viewer, "add_image")
-                layer_dict = {'name': video_path.stem,
-                            'metadata': video_dict,   
-                            }
-                add_layer(video, **layer_dict)
+                layer_dict = {'name'    : yolo_results.video_dict['video_name'],
+                              'metadata': yolo_results.video_dict,   
+                              }
+                add_layer(yolo_results.video, **layer_dict)
             else:
                 add_layer = getattr(viewer, "add_image")
                 layer_dict = {'name': 'dummy mask'}

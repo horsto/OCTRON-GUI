@@ -3,7 +3,7 @@ import hashlib
 import av
 
 
-def probe_video(file_path):
+def probe_video(file_path, verbose=True):
     """
     Open video file with pyav and return some basic information about the video.
     
@@ -11,7 +11,9 @@ def probe_video(file_path):
     ----------
     file_path : str or Path
         Path to the video file.
-        
+    verbose : bool
+        If True, print video information. Default is True.
+    
     Returns
     -------
     video_dict : dict
@@ -39,15 +41,17 @@ def probe_video(file_path):
     assert fps > 0, f"Invalid frame rate: {fps}"
     duration = float(num_frames) / fps
 
-    print(f'File: {file_path}')
-    print(f"Codec: {codec}")
-    print(f"Resolution: {width} x {height}")
-    print(f"Frame Rate: {fps}")
-    print(f"Number of frames: {num_frames}")
-    print(f"Duration: {duration:.2f} seconds")
+    if verbose:
+        print(f'File: {Path(file_path).name}')
+        print(f"Codec: {codec}")
+        print(f"Resolution: {width} x {height}")
+        print(f"Frame Rate: {fps:.2f} fps")
+        print(f"Number of frames: {num_frames}")
+        print(f"Duration: {duration:.2f} seconds")
     container.close()
     
     video_dict = {'codec': codec,
+                  'video_name': Path(file_path).name,   
                   'video_file_path': file_path,
                   'height': height,
                   'width': width,
