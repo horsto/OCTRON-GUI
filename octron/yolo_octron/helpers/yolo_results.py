@@ -409,6 +409,46 @@ class YOLO_results:
         return mask_data[track_id]['data'], frame_indices
     
     
+    def get_masked_video_frames(self, label, frame_indices): 
+        """
+        Get the masked video frames for a given label and frame indices.
+        
+        Parameters
+        ----------
+        label : str
+            The label to search for.
+        frame_indices : numpy.ndarray
+            The frame indices to search for.
+            
+        Returns
+        -------
+        masked_frames : list or numpy.ndarray
+            The masked video frames for the given label and frame indices.
+            If only one frame is requested, a numpy array is returned.
+            If multiple frames are requested, a list of numpy arrays is returned, one for each frame.
+            
+        """
+        if self.video is None:
+            raise ValueError("No video found, cannot extract masked video frames.")
+        if isinstance(frame_indices, int):
+            frame_indices = [frame_indices]
+        mask_data, _ = self.get_masks_for_label(label)
+        masked_frames = []
+        for frame_idx in frame_indices:
+            frame = self.video[frame_idx]
+            mask = mask_data[frame_idx]
+            if frame.ndim == 3:
+                mask = mask[:,:, np.newaxis]
+            masked_frame = frame.copy()
+            masked_frame = np.multiply(masked_frame, mask)
+            masked_frames.append(masked_frame)
+        
+        if len(masked_frames) == 1:
+            masked_frames = masked_frames[0]
+        return masked_frames
+    
+
+    
     def __repr__(self) -> str:
         if self.num_frames is not None and self.width is not None and self.height is not None:
             return f"YOLO_results\n{self.results_dir}\n{self.num_frames} frames, {self.width}x{self.height}"
