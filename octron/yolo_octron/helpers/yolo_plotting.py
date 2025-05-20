@@ -75,3 +75,30 @@ def make_linear_colormap(array,
         
     return np.array(colors)
 
+def get_outline(mask):  
+    """
+    Get the outline of a binary mask using distance transform.
+    
+    Parameters
+    ----------
+    mask : np.ndarray
+        Binary mask where the object is represented by 1s and the background by 0s.
+    
+    Returns
+    -------
+    outline : np.ndarray    
+        Coordinates of the outline of the object in the mask.
+        
+    """
+    # Hide imports here 
+    import numpy as np
+    from scipy.ndimage import distance_transform_edt
+    
+    # Create binary mask outline for the current frame
+    roi_mask_outlines = np.zeros_like(mask, dtype=np.uint8)
+    roi_mask_outlines[mask > 0] = 1
+    distance = distance_transform_edt(roi_mask_outlines)
+    distance = np.array(distance)
+    distance[distance != 1] = 0
+    outline = np.where(distance == 1)
+    return np.stack(outline).T
