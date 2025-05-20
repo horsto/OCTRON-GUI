@@ -1,12 +1,12 @@
 from pathlib import Path
 import zarr
-
+import pandas as pd
 # Plugins
 from napari_pyav._reader import FastVideoReader
 
 
 class YOLO_results:
-    def __init__(self, results_dir, verbose=True):
+    def __init__(self, results_dir, verbose=True, **kwargs):
         """
         
         
@@ -16,11 +16,17 @@ class YOLO_results:
         
         
         """
-        # Initiliaze some variables 
+        # Process kwargs
+        self.csv_header_lines = kwargs.get('csv_header_lines', 6)
+        
+        # Initialize some variables 
         self.verbose = verbose
         self.video, self.video_dict = None, None
         self.csvs = None
-        self.zarr = None
+        self.zarr, self.zarr_root = None, None
+        self.track_ids = None
+        self.labels = None
+        self.track_id_label = None
         
         results_dir = Path(results_dir)
         assert results_dir.exists(), f"Path {results_dir.as_posix()} does not exist"
@@ -28,8 +34,8 @@ class YOLO_results:
         self.find_video()
         self.find_csv()
         self.find_zarr_root()
+        _,  _, _ = self.get_track_ids_labels(csv_header_lines=self.csv_header_lines)
         
-    
     def find_video(self):
         """
         Check if video is present in the second parent directory
@@ -67,7 +73,7 @@ class YOLO_results:
         def _find_zarr():
             results_dir = self.results_dir
             zarrs = list(results_dir.rglob('*.zarr'))
-            assert len(zarrs) == 1, f"Expected exactly one predictions zarr file, got {len(zarrs)}"
+            assert len(zarrs) == 1, f"Expected exactly one predictions zarr file, got {len(zarrs)}."
             zarr = zarrs[0]
             if not zarr and self.verbose:
                 print(f"No tracking zarr found in '{results_dir.name}'")
@@ -106,9 +112,140 @@ class YOLO_results:
         indices_max_diff_subcolors = sample_maximally_different(list(range(n_colors_submap)))
         return all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors
     
+    def get_track_ids_labels(self, csv_header_lines=None): 
+        """
+        Compare track IDs that are present across csv files and the zarr archive.
+        Track IDs are stored in the csvs (column "track_id"),
+        and the zarr root as ".array_keys()".
+        Corresponding label names are stored in the csvs (column "label").
+        
+        Returns
+        -------
+        track_ids : list
+            Set of list of track IDs that are present in both the csvs and the zarr archive.
+        labels : list
+            Set of list of labels that are present in the csvs.
+        track_id_label : dict
+            Dictionary of track IDs and their corresponding labels.
+            The keys are the track IDs and the values are the labels.
+                
+        """
+        if csv_header_lines is not None:
+            self.csv_header_lines = csv_header_lines
+            
+        def _track_ids_zarr():
+            if self.zarr_root is not None:
+                track_ids_zarr_keys = self.zarr_root.array_keys()
+                # Keys are like "0_label", "1_label", etc.
+                track_ids = [int(key.split('_')[0]) for key in track_ids_zarr_keys if key.split('_')[0].isdigit()]
+                return sorted(list(set(track_ids)))
+            else:
+                if self.verbose:
+                    print("Zarr root not found.")
+                return []
+        
+        def _track_ids_labels_csv(header_lines):
+            if self.csvs is not None:
+                track_ids_from_csv = []
+                labels_from_csv = []
+                track_id_label_dict = {}
+                for csv_file in self.csvs:
+                    try:
+                        df = pd.read_csv(csv_file, skiprows=header_lines, usecols=['track_id','label'])
+                        if 'track_id' in df.columns:
+                            assert set(df['track_id'].unique()) == set(df['track_id']), f"Duplicate track IDs found in {csv_file.name}"
+                            track_ids_from_csv.extend(df['track_id'].unique().tolist())
+                        elif self.verbose:
+                            print(f"Column 'track_id' not found in {csv_file.name}")
+                        if 'label' in df.columns:
+                            assert set(df['label'].unique()) == set(df['label']), f"Duplicate labels found in {csv_file.name}"
+                            labels_from_csv.extend(df['label'].unique().tolist())
+                        elif self.verbose:
+                            print(f"Column 'label' not found in {csv_file.name}")
+                    except Exception as e:
+                        if self.verbose:
+                            print(f"Could not read track_ids and labels from {csv_file.name}: {e}")
+                            
+                # Write to a dictionary, sort the track_id key 
+                for track_id, label in zip(track_ids_from_csv, labels_from_csv):
+                    if track_id not in track_id_label_dict:
+                        track_id_label_dict[track_id] = label
+                    else:
+                        raise ValueError(f"Duplicate track ID {track_id} found.")
+                # Sort the dictionary by track_id
+                track_id_label_dict = dict(sorted(track_id_label_dict.items()))
+                return list(set(track_ids_from_csv)), list(set(labels_from_csv)), track_id_label_dict
+            else:
+                if self.verbose:
+                    print("No CSV files found, cannot extract track IDs from CSVs.")
+                return [], [], {}
+
+        zarr_ids = _track_ids_zarr()
+        csv_ids, csv_labels, track_id_label  = _track_ids_labels_csv(self.csv_header_lines)
+
+        if not zarr_ids: 
+            raise ValueError("No track IDs found in zarr archive.")
+        if not csv_ids:
+            raise ValueError("No track IDs found in CSV files.")
+        if not csv_labels:
+            raise ValueError("No labels found in CSV files.")
+        assert set(zarr_ids) == set(csv_ids), f"Track IDs zarr and CSVs do not match: {set(zarr_ids) - set(csv_ids)}"
+        self.track_ids = sorted(csv_ids)
+        self.labels = sorted(csv_labels)
+        self.track_id_label = track_id_label
+        if self.verbose:
+            print(f"Found {len(self.track_id_label)} unique track IDs in zarr and CSVs: {self.track_id_label}")
+
+        return self.track_ids, self.labels, self.track_id_label
+    
+    
+    #### CORE DATA EXTRACTION ##############################################################
+    
+    def get_tracking_data(self):
+        """
+        Get the tracking data for all csvs in a dictionary
+        of track_id -> tracking columns
+        
+        Returns
+        -------
+        tracking_data : dict
+            Dictionary of track_id -> dict (label, data)
+            Where data is a pandas dataframe with the tracking data.
+            
+        """
+        if self.csvs is None:
+            raise ValueError("No CSV files found, cannot extract tracking data.")
+        
+        tracking_data = {}
+        for csv_file in self.csvs:
+            try:
+                df = pd.read_csv(csv_file, skiprows=self.csv_header_lines)
+                track_id = df.iloc[0].track_id
+                label = df.iloc[0].label
+                if track_id not in tracking_data:
+                    tracking_data[track_id] = {
+                        'label': label,
+                        'data': df
+                    }
+                else:
+                    raise ValueError(f"Duplicate track ID {track_id} found.")
+            except Exception as e:
+                if self.verbose:
+                    print(f"Could not read tracking data from {csv_file.name}: {e}")
+        return tracking_data
+        
+        
+    
+    
+    
+    
+    def __repr__(self) -> str:
+        return f"YOLO_results ({self.results_dir})"
+    def __str__(self) -> str:
+        return f"YOLO_results ({self.results_dir})"
+    
     
     #### OTHER HELPERS #######################################################################
     
     def find_class_by_name(self, classes, class_name):
             return (next((k for k, v in classes.items() if v == class_name), None))
-        

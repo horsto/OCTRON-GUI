@@ -1676,7 +1676,6 @@ class YOLO_octron:
         track_df_dict = {}
         mask_dict = {}
         color_dict = {}
-        label_trackid_dict = {}
         label_counter_dict = {} # This is to find the right color in all_labels_submaps
 
         # Load the tracking data
@@ -1687,7 +1686,6 @@ class YOLO_octron:
             assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
             label = track_df.iloc[0].label
             track_id = track_df.iloc[0].track_id
-            label_trackid_dict[label] = track_id
 
             # Check zarr
             assert f'{track_id}_masks' in list(yolo_results.zarr_root.array_keys()), "Mask not found in zarr archive" 
