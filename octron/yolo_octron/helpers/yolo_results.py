@@ -71,7 +71,7 @@ class YOLO_results:
             
     def find_csv(self):
         results_dir = self.results_dir
-        csvs = list(results_dir.rglob('*.csv'))
+        csvs = list(results_dir.rglob('*track_*.csv'))
         if not csvs and self.verbose:
             print(f"No tracking CSV files found in '{results_dir.name}'")
             self.csvs = None
@@ -87,7 +87,7 @@ class YOLO_results:
         """
         def _find_zarr():
             results_dir = self.results_dir
-            zarrs = list(results_dir.rglob('*.zarr'))
+            zarrs = list(results_dir.rglob('predictions.zarr'))
             assert len(zarrs) == 1, f"Expected exactly one predictions zarr file, got {len(zarrs)}."
             zarr = zarrs[0]
             if not zarr and self.verbose:
