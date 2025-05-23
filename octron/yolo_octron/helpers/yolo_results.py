@@ -218,20 +218,18 @@ class YOLO_results:
             
         Returns
         -------
-        track_id : int
-            The track ID for the given label.
+        track_ids : list of int
+            A list of track IDs associated with the given label.
             
         """
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
         
-        track_id = self.find_class_by_name(self.track_id_label, label)
-        if track_id is None:
+        track_ids = self._find_keys_for_value(self.track_id_label, label)
+        if not track_ids:
             raise ValueError(f"Label '{label}' not found in track IDs.")
-        # TODO:
-        # Check what happens with multiple track IDs for the same label 
         
-        return track_id
+        return track_ids
     
     
     def get_label_for_track_id(self, track_id): 
@@ -306,31 +304,39 @@ class YOLO_results:
 
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
-        label = self.track_id_label[track_id]
-        masks = self.get_mask_data()[track_id]['data']
-        classes = masks.attrs.get('classes', None) # These are the original class associations from training
-        # Get the color for this track_id label com
-        original_class_id = self.find_class_by_name(classes, label)
-        assert original_class_id is not None, f"Class ID for {label} not found in classes"
         
-        # Find all the same labels in the track_id_label dictionary,
-        # and count how many times they occur
-        label_counter_dict = {}
-        for id_, label_ in self.track_id_label.items():
-            if label_ not in label_counter_dict:
-                label_counter_dict[label_] = {
-                    'track_counter': 0,
-                    'track_id' : id_,
-                }
-            else:
-                label_counter_dict[label_]['track_counter'] += 1
-                label_counter_dict[label_]['track_id'] = id_
-        track_counter = [label_counter_dict[label]['track_counter'] for id_ in label_counter_dict[label].values() if id_ == track_id][0]
+        # Ensure track_id is an int, as it's used as a dict key
+        track_id = int(track_id)
+        label = self.track_id_label[track_id] # Get the label for this specific track_id
+
+        # Get mask data for this specific track_id to access its attributes
+        all_mask_data = self.get_mask_data() # This might be inefficient if called repeatedly
+        if track_id not in all_mask_data:
+            raise ValueError(f"Mask data for track_id {track_id} not found.")
+        current_mask_attrs = all_mask_data[track_id]['data'].attrs
         
+        classes = current_mask_attrs.get('classes', None) # Original model class definitions {int_id: str_label}
+        if classes is None:
+            raise ValueError(f"Model class definitions not found in Zarr attributes for track_id {track_id}.")
+
+        # Find the original integer class ID from the model's definition for this track's label
+        original_class_id_keys = self._find_keys_for_value(classes, label)
+        if not original_class_id_keys:
+            raise ValueError(f"Label '{label}' not found in model class definitions: {classes}")
+        if len(original_class_id_keys) > 1 and self.verbose:
+            print(f"Warning: Label '{label}' maps to multiple original class IDs in model definition: {original_class_id_keys}. Using first one: {original_class_id_keys[0]}.")
+        original_class_id = int(original_class_id_keys[0])
+        
+        # Determine the occurrence index of this track_id among all tracks sharing the same label string
+        # This is used to pick a distinct sub-color.
+        all_track_ids_for_this_label_str = sorted(self._find_keys_for_value(self.track_id_label, label))
+        track_occurrence_index = all_track_ids_for_this_label_str.index(track_id)
         # Get the color for the label
         all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors = self.define_colors()
-        obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]]\
-                                          [indices_max_diff_subcolors[track_counter]]
+        # Ensure indices are within bounds
+        label_color_index = indices_max_diff_labels[original_class_id % len(indices_max_diff_labels)]
+        subcolor_index = indices_max_diff_subcolors[track_occurrence_index % len(indices_max_diff_subcolors)]
+        obj_color =  all_labels_submaps[label_color_index][subcolor_index]
                                           
         napari_color = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
                                            use_selection=True, 
@@ -488,36 +494,56 @@ class YOLO_results:
                                sigma=0,
                                ):
         """
-        Get the tracking data for only one label.
+        Get the tracking data (positions) for a given label.
+        If the label maps to multiple track IDs, a warning is issued (if verbose=True)
+        and data for the first track ID is returned.
         
         Parameters
         ----------
         label : str
             The label to search for.
+        interpolate : bool, optional
+            Whether to interpolate missing frames. Default is True.
+        interpolate_method : str, optional
+            Method for interpolation if `interpolate` is True. Default is 'linear'.
+        interpolate_limit : int, optional
+            Maximum number of consecutive NaNs to fill. Default is None (no limit).
+        sigma : float, optional
+            Sigma for Gaussian smoothing of position data. If 0, no smoothing. Default is 0.
             
         Returns
         -------
-        tracking_data : pandas.DataFrame
-            The tracking data for the given label.
-        frame_indices : numpy.ndarray
-            The frame indices for which tracking data exist.
+        pandas.DataFrame
+            The tracking data (positions) for the (first) track ID associated with the given label.
         """
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
-        track_id = self.get_track_id_for_label(label)
-        tracking_data = self.get_tracking_data(interpolate=interpolate,
-                                               interpolate_method=interpolate_method,
-                                               interpolate_limit=interpolate_limit,
-                                               sigma=sigma,
-                                              )
-        if track_id not in tracking_data:
-            raise ValueError(f"Track ID '{track_id}' not found in tracking data.")
+        
+        list_of_track_ids = self.get_track_id_for_label(label) # Returns a list
+        
+        if not list_of_track_ids: # Should be caught by get_track_id_for_label, but defensive
+            raise ValueError(f"Label '{label}' did not resolve to any track IDs.")
 
-        return tracking_data[track_id]['data']
+        track_id_to_use = list_of_track_ids[0]
+        if len(list_of_track_ids) > 1 and self.verbose:
+            print(f"Warning: Label '{label}' maps to multiple track IDs: {list_of_track_ids}. "
+                  f"Using data for the first track ID: {track_id_to_use}.")
+            
+        all_tracking_data = self.get_tracking_data(interpolate=interpolate,
+                                                   interpolate_method=interpolate_method,
+                                                   interpolate_limit=interpolate_limit,
+                                                   sigma=sigma,
+                                                  )
+        if track_id_to_use not in all_tracking_data:
+            raise ValueError(f"Track ID '{track_id_to_use}' (for label '{label}') not found in processed tracking data.")
+
+        return all_tracking_data[track_id_to_use]['data']
     
     def get_features_for_label(self, label):
         """
-        Get the features for only one label.
+        Get the features for a given label.
+        If the label maps to multiple track IDs, a warning is issued (if verbose=True)
+        and features for the first track ID are returned.
         
         Parameters
         ----------
@@ -526,17 +552,30 @@ class YOLO_results:
             
         Returns
         -------
-        features : pandas.DataFrame
-            The features for the given label.
+        pandas.DataFrame
+            The features for the (first) track ID associated with the given label.
         """
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
-        track_id = self.get_track_id_for_label(label)
-        tracking_data = self.get_tracking_data()
-        if track_id not in tracking_data:
-            raise ValueError(f"Track ID '{track_id}' not found in tracking data.")
         
-        return tracking_data[track_id]['features']
+        list_of_track_ids = self.get_track_id_for_label(label)
+        
+        if not list_of_track_ids:
+            raise ValueError(f"Label '{label}' did not resolve to any track IDs.")
+
+        track_id_to_use = list_of_track_ids[0]
+        if len(list_of_track_ids) > 1 and self.verbose:
+            print(f"Warning: Label '{label}' maps to multiple track IDs: {list_of_track_ids}. "
+                  f"Using features for the first track ID: {track_id_to_use}.")
+
+        # Note: get_tracking_data() computes both 'data' and 'features'.
+        # We call it here without interpolation/smoothing args as features are typically not interpolated/smoothed.
+        all_tracking_data = self.get_tracking_data(interpolate=False, sigma=0) 
+        
+        if track_id_to_use not in all_tracking_data:
+            raise ValueError(f"Track ID '{track_id_to_use}' (for label '{label}') not found in processed tracking data.")
+        
+        return all_tracking_data[track_id_to_use]['features']
 
     
     def get_mask_data(self):
@@ -589,7 +628,9 @@ class YOLO_results:
     
     def get_masks_for_label(self, label):
         """
-        Get the mask data for only one label.
+        Get the mask data for a given label.
+        If the label maps to multiple track IDs, a warning is issued (if verbose=True)
+        and masks for the first track ID are returned.
         
         Parameters
         ----------
@@ -598,30 +639,42 @@ class YOLO_results:
             
         Returns
         -------
-        mask_data : zarr.Array
-            The mask data for the given label.
+        mask_data_array : zarr.Array
+            The mask data for the (first) track ID associated with the given label.
         frame_indices : numpy.ndarray
-            The frame indices for which data exist in the mask data.
+            The frame indices for which data exist in this mask data array.
         """
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
-        track_id = self.get_track_id_for_label(label)
-        mask_data = self.get_mask_data()
-        if track_id not in mask_data:
-            raise ValueError(f"Track ID '{track_id}' not found in mask data.")
         
+        list_of_track_ids = self.get_track_id_for_label(label)
+        if not list_of_track_ids:
+            raise ValueError(f"Label '{label}' did not resolve to any track IDs.")
+
+        track_id_to_use = list_of_track_ids[0]
+        if len(list_of_track_ids) > 1 and self.verbose:
+            print(f"Warning: Label '{label}' maps to multiple track IDs: {list_of_track_ids}. "
+                  f"Using masks for the first track ID: {track_id_to_use}.")
+            
+        all_mask_data = self.get_mask_data()
+        if track_id_to_use not in all_mask_data:
+            raise ValueError(f"Track ID '{track_id_to_use}' (for label '{label}') not found in mask data.")
+        
+        specific_mask_data = all_mask_data[track_id_to_use]['data']
         # Find out which indices have data
         frame_indices = np.where(
-            (mask_data[track_id]['data'][:,0,0] != -1)
+            (specific_mask_data[:,0,0] != -1) # Assuming -1 indicates no data for the frame
         )[0]
-        if len(frame_indices) == 0:
-            raise ValueError(f"No valid frames found for track ID '{track_id}' in mask data.")
-        return mask_data[track_id]['data'], frame_indices
+        if len(frame_indices) == 0 and self.verbose: # Changed to warning, not error
+            print(f"Warning: No valid frames found for track ID '{track_id_to_use}' (label '{label}') in mask data.")
+        return specific_mask_data, frame_indices
     
     
     def get_masked_video_frames(self, label, frame_indices): 
         """
         Get the masked video frames for a given label and frame indices.
+        If the label maps to multiple track IDs, a warning is issued (if verbose=True)
+        and masks for the first track ID are used.
         
         Parameters
         ----------
@@ -657,7 +710,6 @@ class YOLO_results:
             masked_frames = masked_frames[0]
         return masked_frames
     
-
     
     def __repr__(self) -> str:
         if self.num_frames is not None and self.width is not None and self.height is not None:
@@ -672,5 +724,8 @@ class YOLO_results:
     
     #### OTHER HELPERS #######################################################################
     
-    def find_class_by_name(self, classes, class_name):
-            return (next((k for k, v in classes.items() if v == class_name), None))
+    def _find_keys_for_value(self, data_dict, value_to_find):
+        """Helper to find all keys in a dictionary that map to a specific value."""
+        if data_dict is None:
+            return []
+        return [key for key, value in data_dict.items() if value == value_to_find]
