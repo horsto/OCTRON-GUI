@@ -41,7 +41,8 @@ from octron.yolo_octron.helpers.training import (
     train_test_val,
 )
 
-                                    
+from .helpers.yolo_results import YOLO_results
+                      
 
 class YOLO_octron:
     """
@@ -1640,7 +1641,7 @@ class YOLO_octron:
             Path to the directory with the predictions
         sigma_tracking_pos : int
             Sigma value for tracking position smoothing
-            CURRENTLY FIXED TO 1
+            CURRENTLY FIXED TO 2
         open_viewer : bool
             Whether to open the napari viewer or not
 
@@ -1652,160 +1653,67 @@ class YOLO_octron:
             Label of the object
         track_id : int
             Track ID of the object
-        color : list
-            Color of the object
-        track_df_napari : pd.DataFrame  
+        color : array-like
+            RGBA color of the object (range 0-1)
+        tracking_data : pd.DataFrame  
             DataFrame with tracking data for the object
-        features_df_napari : pd.DataFrame
+        features_data : pd.DataFrame
             DataFrame with features data for the object
-        mask_zarr : zarr.Array  
+        masks : zarr.Array  
             Zarr array with masks for the object
             
             
         """
-        from .helpers.yolo_results import YOLO_results
-        # Some heavy imports are hidden here
-        from scipy.ndimage import gaussian_filter1d
-        import pandas as pd 
-
         yolo_results = YOLO_results(save_dir)
-        assert yolo_results.csvs is not None, "No CSV files found in the results directory"
-        assert yolo_results.zarr is not None, "No Zarr files found in the results directory"
-        all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors = yolo_results.define_colors()
-        
-        track_df_dict = {}
-        mask_dict = {}
-        color_dict = {}
-        label_counter_dict = {} # This is to find the right color in all_labels_submaps
+        track_id_label = yolo_results.track_id_label
+        assert track_id_label is not None, "No track ID - label mapping found in the results"
+        tracking_data = yolo_results.get_tracking_data(interpolate=True,
+                                                       interpolate_method='linear',
+                                                       interpolate_limit=None,
+                                                       sigma=sigma_tracking_pos,
+                                                       )
+        mask_data = yolo_results.get_mask_data()
 
-        # Load the tracking data
-        for csv in yolo_results.csvs:
-        
-            track_df = pd.read_csv(csv, header=6)
-            assert len(track_df.label.unique()) == 1, "Multiple labels found in tracking data"  
-            assert len(track_df.track_id.unique()) == 1, "Multiple track_ids found in tracking data"  
-            label = track_df.iloc[0].label
-            track_id = track_df.iloc[0].track_id
-
-            # Check zarr
-            assert f'{track_id}_masks' in list(yolo_results.zarr_root.array_keys()), "Mask not found in zarr archive" 
-            mask_zarr = yolo_results.zarr_root[f'{track_id}_masks']
-            max_frame_number = mask_zarr.shape[0] # This should be the same across all masks
-            mask_shape = mask_zarr.shape[1:]
-            classes = mask_zarr.attrs.get('classes', None) # These are the original classes from the model
-            original_class_id = yolo_results.find_class_by_name(classes, label)
-            assert original_class_id is not None, f"Class ID for {label} not found in classes"
-            # Check if an index was already given for the current label
-            # This is to extract the right color from the colormap
-            if label not in label_counter_dict:
-                label_counter_dict[label] = {'track_counter' : 0}
-            else:
-                label_counter_dict[label]['track_counter'] += 1
-            # Find color 
-            obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]]\
-                [indices_max_diff_subcolors[label_counter_dict[label]['track_counter']]]
-           
-            mask_colors = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 
-                                                             1: obj_color,
-                                                          }, 
-                                                    use_selection=True, 
-                                                    selection=1,
-                                                    )
-            # Add color, track_df, and mask to the dictionaries
-            color_dict[int(track_id)] = mask_colors
-            track_df_dict[int(track_id)] = track_df
-            assert f'{track_id}_masks' in list(yolo_results.zarr_root.array_keys()), "Mask not found in zarr archive" 
-            mask_dict[int(track_id)] = yolo_results.zarr_root[f'{track_id}_masks']
-            
-        ####### NAPARI VIEWER ######################################################################################
-        # Interpolate and plot tracks + masks
-        
         if open_viewer:
             viewer = napari.Viewer()    
-            if yolo_results.video is not None:
+            if yolo_results.video is not None and yolo_results.video_dict is not None:
                 add_layer = getattr(viewer, "add_image")
                 layer_dict = {'name'    : yolo_results.video_dict['video_name'],
                               'metadata': yolo_results.video_dict,   
                               }
                 add_layer(yolo_results.video, **layer_dict)
-            else:
+            elif yolo_results.height is not None and yolo_results.width is not None:
                 add_layer = getattr(viewer, "add_image")
                 layer_dict = {'name': 'dummy mask'}
-                add_layer(np.zeros((mask_shape)), **layer_dict)
+                add_layer(np.zeros((yolo_results.height, yolo_results.width)), **layer_dict)
+            else:
+                raise ValueError("Could not load video or mask metadata for viewer")
         
-        min_frame_number = 0
-        # Loop over each track, interpolate and add it to the viewer
-        for track_id in track_df_dict.keys():
-            
-            label = track_df_dict[track_id].iloc[0].label   
-            track_df_napari = track_df_dict[track_id][['track_id','frame_idx','pos_y','pos_x']].copy()
-            features_df_napari = track_df_dict[track_id][['frame_idx','confidence','area','eccentricity','orientation','solidity']].copy()
-
-            check_continuous = np.all(np.diff(track_df_napari['frame_idx']) == 1)   
-            if not check_continuous:
-                print("Frames are not continuous ... interpolating")
-                complete_tracking   = pd.DataFrame({'frame_idx': range(int(min_frame_number), int(max_frame_number))})
-                complete_features   = pd.DataFrame({'frame_idx': range(int(min_frame_number), int(max_frame_number))})
-                # Merge with existing data to identify missing frames
-                merged_df_tracking = complete_tracking.merge(track_df_napari, on='frame_idx', how='left')
-                merged_df_tracking['track_id'] = track_id
-                merged_df_features = complete_features.merge(features_df_napari, on='frame_idx', how='left')
-                merged_df_features.fillna(0, inplace=True)
-                # Make sure frame_idx and track_id are the right types for interpolation
-                merged_df_tracking['frame_idx'] = merged_df_tracking['frame_idx'].astype(int)
-                merged_df_tracking['track_id'] = merged_df_tracking['track_id'].astype(int)
-
-                # Interpolate the position columns
-                pos_cols = ['pos_x', 'pos_y']
-                for col in pos_cols:
-                    merged_df_tracking[col] = merged_df_tracking[col].interpolate(method='linear')
-
-                # After interpolation, get the valid frame indices from the tracking DataFrame
-                valid_frames = merged_df_tracking.dropna()['frame_idx'].values
-                # Use these valid frames to filter both DataFrames
-                merged_df_tracking = merged_df_tracking[merged_df_tracking['frame_idx'].isin(valid_frames)].reset_index(drop=True)
-                merged_df_features = merged_df_features[merged_df_features['frame_idx'].isin(valid_frames)].reset_index(drop=True)
-                # Double-check that the frames match
-                assert np.array_equal(merged_df_tracking['frame_idx'].to_numpy(), 
-                                      merged_df_features['frame_idx'].to_numpy()),\
-                                          "Frame mismatch between tracking and features"
-                   
-                track_df_napari = merged_df_tracking.copy()
-                features_df_napari = merged_df_features.copy()
-                # Before adding to Napari, change the column order
-                track_df_napari = track_df_napari[['track_id', 'frame_idx', 'pos_y', 'pos_x' ]]
-                
-            # Smooth the positions
-            pos_cols = ['pos_x', 'pos_y']
-            if sigma_tracking_pos > 0:
-                for col in pos_cols:
-                    track_df_napari[col] = gaussian_filter1d(track_df_napari[col], sigma=sigma_tracking_pos)
-                
-            for col in features_df_napari.columns:
-                features_df_napari[col] = features_df_napari[col].astype(float)
-            features_dict = features_df_napari.to_dict(orient='list')
-            
-            mask_zarr = mask_dict[track_id]
-            color = color_dict[track_id]
+        for track_id, label in track_id_label.items(): 
+            color, napari_colormap = yolo_results.get_color_for_track_id(track_id)
+            tracking_df = tracking_data[track_id]['data']
+            features_df = tracking_data[track_id]['features']
+            masks = mask_data[track_id]['data']
             
             if open_viewer:
-                viewer.add_tracks(track_df_napari.values, 
-                                features=features_dict,
-                                blending='translucent', 
-                                name=f'{label} - id {track_id}', 
-                                colormap='hsv',
+                viewer.add_tracks(tracking_df.values, 
+                                  features=features_df.to_dict(orient='list'),
+                                  blending='translucent', 
+                                  name=f'{label} - id {track_id}', 
+                                  colormap='hsv',
                             )
                 viewer.layers[f'{label} - id {track_id}'].tail_width = 3
-                viewer.layers[f'{label} - id {track_id}'].tail_length = len(track_df_napari)
+                viewer.layers[f'{label} - id {track_id}'].tail_length = yolo_results.num_frames
                 viewer.layers[f'{label} - id {track_id}'].color_by = 'frame_idx'
                 # Add masks
                 _ = viewer.add_labels(
-                    mask_zarr,
+                    masks,
                     name=f'{label} - MASKS - id {track_id}',  
                     opacity=0.5,
                     blending='translucent',  
-                    colormap=color_dict[track_id], 
-                    visible=True,#[True if video is None else False][0],
+                    colormap=napari_colormap,
+                    visible=True,
                 )
                 viewer.dims.set_point(0,0)
-            yield label, track_id, color, track_df_napari, features_df_napari, mask_zarr
+                
+            yield label, track_id, color, tracking_df, features_df, masks

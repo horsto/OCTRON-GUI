@@ -1,11 +1,14 @@
 from pathlib import Path
+from natsort import natsorted
 import zarr
 import numpy as np
 import pandas as pd
 import warnings
+from typing import Literal # Added import
 # Plugins
 from napari_pyav._reader import FastVideoReader
-
+from napari.utils import DirectLabelColormap
+from scipy.ndimage import gaussian_filter1d
 
 class YOLO_results:
     def __init__(self, results_dir, verbose=True, **kwargs):
@@ -14,12 +17,20 @@ class YOLO_results:
         
         Parameters
         ----------
-        
+        results_dir : str or Path
+            Path to the results directory. This should be the directory
+            where the predictions are stored.
+        verbose : bool, optional
+            If True, print additional information. The default is True.
+        **kwargs : dict, optional
+            Additional keyword arguments. The default is None.
+            - csv_header_lines : int, optional
+                Number of header lines in the CSV files. The default is 6.
         
         
         """
         # Ignore specific Zarr warning about .DS_Store
-        # That happens on Mac ... might include more here.
+        # That happens on Mac ... might exception handling here.
         warnings.filterwarnings(
             "ignore",
             message="Object at .DS_Store is not recognized as a component of a Zarr hierarchy.",
@@ -71,7 +82,7 @@ class YOLO_results:
             
     def find_csv(self):
         results_dir = self.results_dir
-        csvs = list(results_dir.rglob('*track_*.csv'))
+        csvs = natsorted(results_dir.rglob('*track_*.csv'))
         if not csvs and self.verbose:
             print(f"No tracking CSV files found in '{results_dir.name}'")
             self.csvs = None
@@ -104,29 +115,11 @@ class YOLO_results:
             store = zarr.storage.LocalStore(self.zarr, read_only=False)
             root = zarr.open_group(store=store, mode='a')
             if self.verbose:
-                print("Existing keys in zarr archive:", list(root.array_keys()))
+                print("Existing keys in zarr archive:", natsorted(root.array_keys()))
             self.zarr_root = root
         else:
             raise ValueError("No zarr file found. Please run find_zarr() first.")   
         
-    def define_colors(self, label_n=10, n_colors_submap=50):
-        """
-        Color handling: Recreate the colors here for the masks 
-        This is a bit of a hack, but it works if the n_labels and n_colors_submap 
-        match the original parameters used to create the colormap. 
-        So, if we don't change these parameters, the colors will be the same, because 
-        we are looking up object IDs from the original model classes
-        """
-        from octron.sam2_octron.helpers.sam2_colors import (create_label_colors, 
-                                                            sample_maximally_different
-                                                           )
-        all_labels_submaps = create_label_colors(n_labels=label_n,
-                                                 n_colors_submap=n_colors_submap,
-                                                )
-        indices_max_diff_labels    = sample_maximally_different(list(range(label_n)))
-        indices_max_diff_subcolors = sample_maximally_different(list(range(n_colors_submap)))
-        return all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors
-    
     def get_track_ids_labels(self, csv_header_lines=None): 
         """
         Compare track IDs that are present across csv files and the zarr archive.
@@ -265,11 +258,96 @@ class YOLO_results:
         
         return label
     
+    def define_colors(self, label_n=10, n_colors_submap=50):
+        """
+        Color handling: Recreate the colors here for the masks 
+        This is a bit of a hack, but it works if the n_labels and n_colors_submap 
+        match the original parameters used to create the colormap. 
+        So, if we don't change these parameters, the colors will be the same, because 
+        we are looking up object IDs from the original model classes
+        (See self.get_color_for_track_id())
+        """
+        from octron.sam2_octron.helpers.sam2_colors import (create_label_colors, 
+                                                            sample_maximally_different
+                                                           )
+        all_labels_submaps = create_label_colors(n_labels=label_n,
+                                                 n_colors_submap=n_colors_submap,
+                                                )
+        indices_max_diff_labels    = sample_maximally_different(list(range(label_n)))
+        indices_max_diff_subcolors = sample_maximally_different(list(range(n_colors_submap)))
+        return all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors
+    
+    
+    
+    def get_color_for_track_id(self, track_id):
+        """
+        Get the color for a given track ID.
+        I am using the same method here that I use to define the colors
+        during annotation in OCTRON.
+        This is a bit of a hack, but it works if the n_labels and n_colors_submap
+        match the original parameters used to create the colormap.
+        So, if we don't change these parameters, the colors will be the same, because
+        we are looking up object IDs from the original model classes.
+        
+        Parameters
+        ----------
+        track_id : int
+            The track ID to search for.
+
+
+        Returns
+        -------
+        obj_color : list
+            The RGBA color for the given track ID [0-1 range].
+        napari_color : DirectLabelColormap
+            This can be used during plotting in napari.
+            
+        """
+
+        if self.track_id_label is None:
+            raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
+        label = self.track_id_label[track_id]
+        masks = self.get_mask_data()[track_id]['data']
+        classes = masks.attrs.get('classes', None) # These are the original class associations from training
+        # Get the color for this track_id label com
+        original_class_id = self.find_class_by_name(classes, label)
+        assert original_class_id is not None, f"Class ID for {label} not found in classes"
+        
+        # Find all the same labels in the track_id_label dictionary,
+        # and count how many times they occur
+        label_counter_dict = {}
+        for id_, label_ in self.track_id_label.items():
+            if label_ not in label_counter_dict:
+                label_counter_dict[label_] = {
+                    'track_counter': 0,
+                    'track_id' : id_,
+                }
+            else:
+                label_counter_dict[label_]['track_counter'] += 1
+                label_counter_dict[label_]['track_id'] = id_
+        track_counter = [label_counter_dict[label]['track_counter'] for id_ in label_counter_dict[label].values() if id_ == track_id][0]
+        
+        # Get the color for the label
+        all_labels_submaps, indices_max_diff_labels, indices_max_diff_subcolors = self.define_colors()
+        obj_color =  all_labels_submaps[indices_max_diff_labels[int(original_class_id)]]\
+                                          [indices_max_diff_subcolors[track_counter]]
+                                          
+        napari_color = DirectLabelColormap(color_dict={None: [0.,0.,0.,0.], 1: obj_color}, 
+                                           use_selection=True, 
+                                           selection=1,
+                                          )
+        return obj_color, napari_color
     
     #### CORE DATA EXTRACTION ##############################################################
     
-    def get_tracking_data(self):
+    def get_tracking_data(self,
+                          interpolate=True,
+                          interpolate_method: str = 'linear',
+                          interpolate_limit=None,
+                          sigma=0,
+                          ):
         """
+        
         Get the tracking data for all csvs in a dictionary
         of track_id -> tracking columns
         
@@ -280,6 +358,34 @@ class YOLO_results:
             Where data is a pandas dataframe with the tracking data.
             
         """
+        EXPECTED_CSV_COLUMNS = ["frame_idx",
+                                "track_id",
+                                "label",
+                                "confidence",
+                                "pos_x",
+                                "pos_y",
+                                "area",
+                                "eccentricity",
+                                "orientation",
+                                "solidity",
+        ]
+        POSITION_COLUMNS = ["frame_idx",
+                            "track_id",
+                            "pos_x",
+                            "pos_y",
+                           ]
+        FEATURE_COLUMNS = ["frame_idx",
+                           "confidence",
+                           "area",
+                           "eccentricity",
+                           "orientation",
+                           "solidity",
+        ]
+        INTEGER_COLUMNS = ["frame_idx",
+                           "track_id",
+        ]
+        
+        
         if self.csvs is None:
             raise ValueError("No CSV files found, cannot extract tracking data.")
         
@@ -287,12 +393,68 @@ class YOLO_results:
         for csv_file in self.csvs:
             try:
                 df = pd.read_csv(csv_file, skiprows=self.csv_header_lines)
+                assert set(EXPECTED_CSV_COLUMNS).issubset(df.columns), \
+                    f"CSV file {csv_file.name} does not contain all expected columns: {EXPECTED_CSV_COLUMNS}"
+                is_continuous = np.all(np.diff(df['frame_idx']) == 1)   
+                df_position = df[POSITION_COLUMNS]
+                df_features = df[FEATURE_COLUMNS]
+                # Check if the columns are in the right format
+                for col in POSITION_COLUMNS:
+                    if col in INTEGER_COLUMNS:
+                        df_position.loc[:, col] = df_position[col].astype(int)
+                    else:
+                        df_position.loc[:, col] = df_position[col].astype(float)
+                for col in FEATURE_COLUMNS:
+                    if col in INTEGER_COLUMNS:
+                        df_features.loc[:, col] = df_features[col].astype(int)
+                    else:
+                        df_features.loc[:, col] = df_features[col].astype(float)
+
                 track_id = df.iloc[0].track_id
                 label = df.iloc[0].label
+                
+                # Interpolate?
+                if interpolate and not is_continuous:
+                    assert self.num_frames is not None, \
+                        "Number of frames (self.num_frames) not set. Cannot interpolate."
+                    if self.verbose:
+                        print("Frames are not continuous ... interpolating")
+                    df_position_interp = pd.DataFrame({'frame_idx': range(0, self.num_frames)})
+                    df_features_interp = pd.DataFrame({'frame_idx': range(0, self.num_frames)})
+                    # Merge with existing data to identify missing frames
+                    df_position_interp =  df_features_interp.merge(df_position, on='frame_idx', how='left')
+                    df_features_interp =  df_features_interp.merge(df_features, on='frame_idx', how='left') 
+                    # Interpolate the position columns
+                    cols_to_interpolate = [col for col in POSITION_COLUMNS if col not in INTEGER_COLUMNS]
+                    df_position_interp[cols_to_interpolate] = df_position_interp[cols_to_interpolate].interpolate(method=interpolate_method, 
+                                                                                                                  limit=interpolate_limit, 
+                                                                                                                  limit_area=None, 
+                                                                                                                  )
+                    # After interpolation, get the valid frame indices from the tracking DataFrame
+                    valid_frames = df_position_interp.dropna()['frame_idx'].values
+                    # Use these valid frames to filter both DataFrames
+                    df_position_interp = df_position_interp[df_position_interp['frame_idx'].isin(valid_frames)].reset_index(drop=True)
+                    df_features_interp = df_features_interp[df_features_interp['frame_idx'].isin(valid_frames)].reset_index(drop=True)
+                    assert np.array_equal(df_position_interp['frame_idx'].to_numpy(), 
+                                          df_features_interp['frame_idx'].to_numpy()),\
+                                          "Frame mismatch between tracking and feature dataframes after interpolation."
+                    df_position = df_position_interp.copy()
+                    df_features = df_features_interp.copy()       
+                    df_position = df_position[['track_id', 'frame_idx', 'pos_y', 'pos_x' ]] # Just change column order here
+                    
+                # Smooth? 
+                if sigma > 0:
+                    if self.verbose:
+                        print("Smoothing position data with sigma = ", sigma)
+                    cols_to_smooth = [col for col in POSITION_COLUMNS if col not in INTEGER_COLUMNS]
+                    for col in cols_to_smooth:
+                        df_position[col] = gaussian_filter1d(df_position[col], sigma=sigma)
+                
                 if track_id not in tracking_data:
                     tracking_data[int(track_id)] = {
-                        'label': label,
-                        'data': df
+                        'label':    label,
+                        'data':     df_position,
+                        'features': df_features,
                     }
                 else:
                     raise ValueError(f"Duplicate track ID {track_id} found.")
@@ -302,7 +464,13 @@ class YOLO_results:
         return tracking_data
     
     
-    def get_tracking_for_label(self, label):
+    def get_tracking_for_label(self, 
+                               label,
+                               interpolate=True,
+                               interpolate_method: str = 'linear',
+                               interpolate_limit=None,
+                               sigma=0,
+                               ):
         """
         Get the tracking data for only one label.
         
@@ -321,13 +489,39 @@ class YOLO_results:
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
         track_id = self.get_track_id_for_label(label)
+        tracking_data = self.get_tracking_data(interpolate=interpolate,
+                                               interpolate_method=interpolate_method,
+                                               interpolate_limit=interpolate_limit,
+                                               sigma=sigma,
+                                              )
+        if track_id not in tracking_data:
+            raise ValueError(f"Track ID '{track_id}' not found in tracking data.")
+
+        return tracking_data[track_id]['data']
+    
+    def get_features_for_label(self, label):
+        """
+        Get the features for only one label.
+        
+        Parameters
+        ----------
+        label : str
+            The label to search for.
+            
+        Returns
+        -------
+        features : pandas.DataFrame
+            The features for the given label.
+        """
+        if self.track_id_label is None:
+            raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
+        track_id = self.get_track_id_for_label(label)
         tracking_data = self.get_tracking_data()
         if track_id not in tracking_data:
             raise ValueError(f"Track ID '{track_id}' not found in tracking data.")
         
-        # Find out which indices have data
-        frame_indices =  tracking_data[track_id]['data']['frame_idx'].values
-        return tracking_data[track_id]['data'], frame_indices
+        return tracking_data[track_id]['features']
+
     
     def get_mask_data(self):
         """
