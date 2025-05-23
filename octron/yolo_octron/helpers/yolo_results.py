@@ -354,8 +354,9 @@ class YOLO_results:
         Returns
         -------
         tracking_data : dict
-            Dictionary of track_id -> dict (label, data)
-            Where data is a pandas dataframe with the tracking data.
+            Dictionary of track_id -> dict (label, data, features)
+            Where data and features are pandas dataframe with the tracking data (xy positions)
+            and features data (confidence, area, eccentricity ...) respectively.
             
         """
         EXPECTED_CSV_COLUMNS = ["frame_idx",
@@ -384,8 +385,11 @@ class YOLO_results:
         INTEGER_COLUMNS = ["frame_idx",
                            "track_id",
         ]
-        
-        
+        if interpolate_limit is not None: 
+            if interpolate_limit <= 0:
+                interpolate_limit = None
+        if sigma < 0:
+            sigma = 0 
         if self.csvs is None:
             raise ValueError("No CSV files found, cannot extract tracking data.")
         
@@ -395,35 +399,39 @@ class YOLO_results:
                 df = pd.read_csv(csv_file, skiprows=self.csv_header_lines)
                 assert set(EXPECTED_CSV_COLUMNS).issubset(df.columns), \
                     f"CSV file {csv_file.name} does not contain all expected columns: {EXPECTED_CSV_COLUMNS}"
+                
+                track_id = int(df.iloc[0].track_id) # Get the scalar track_id for this file
+                label = df.iloc[0].label
+
                 is_continuous = np.all(np.diff(df['frame_idx']) == 1)   
-                df_position = df[POSITION_COLUMNS]
-                df_features = df[FEATURE_COLUMNS]
-                # Check if the columns are in the right format
+                df_position = df[POSITION_COLUMNS].copy() 
+                df_features = df[FEATURE_COLUMNS].copy() 
+                
+                # Initial type conversion
                 for col in POSITION_COLUMNS:
                     if col in INTEGER_COLUMNS:
-                        df_position.loc[:, col] = df_position[col].astype(int)
+                        df_position[col] = df_position[col].astype(int)
                     else:
-                        df_position.loc[:, col] = df_position[col].astype(float)
+                        df_position[col] = df_position[col].astype(float)
                 for col in FEATURE_COLUMNS:
                     if col in INTEGER_COLUMNS:
-                        df_features.loc[:, col] = df_features[col].astype(int)
+                        df_features[col] = df_features[col].astype(int)
                     else:
-                        df_features.loc[:, col] = df_features[col].astype(float)
-
-                track_id = df.iloc[0].track_id
-                label = df.iloc[0].label
+                        df_features[col] = df_features[col].astype(float)
                 
                 # Interpolate?
                 if interpolate and not is_continuous:
                     assert self.num_frames is not None, \
                         "Number of frames (self.num_frames) not set. Cannot interpolate."
                     if self.verbose:
-                        print("Frames are not continuous ... interpolating")
+                        print(f"Frames are not continuous for track_id {track_id} in {csv_file.name}... interpolating")
                     df_position_interp = pd.DataFrame({'frame_idx': range(0, self.num_frames)})
                     df_features_interp = pd.DataFrame({'frame_idx': range(0, self.num_frames)})
+                    
                     # Merge with existing data to identify missing frames
-                    df_position_interp =  df_features_interp.merge(df_position, on='frame_idx', how='left')
+                    df_position_interp =  df_position_interp.merge(df_position, on='frame_idx', how='left')
                     df_features_interp =  df_features_interp.merge(df_features, on='frame_idx', how='left') 
+                    
                     # Interpolate the position columns
                     cols_to_interpolate = [col for col in POSITION_COLUMNS if col not in INTEGER_COLUMNS]
                     df_position_interp[cols_to_interpolate] = df_position_interp[cols_to_interpolate].interpolate(method=interpolate_method, 
@@ -431,27 +439,35 @@ class YOLO_results:
                                                                                                                   limit_area=None, 
                                                                                                                   )
                     # After interpolation, get the valid frame indices from the tracking DataFrame
-                    valid_frames = df_position_interp.dropna()['frame_idx'].values
+                    valid_frames = df_position_interp.dropna(subset=['pos_x', 'pos_y'])['frame_idx'].values
+                    
                     # Use these valid frames to filter both DataFrames
                     df_position_interp = df_position_interp[df_position_interp['frame_idx'].isin(valid_frames)].reset_index(drop=True)
                     df_features_interp = df_features_interp[df_features_interp['frame_idx'].isin(valid_frames)].reset_index(drop=True)
                     assert np.array_equal(df_position_interp['frame_idx'].to_numpy(), 
                                           df_features_interp['frame_idx'].to_numpy()),\
                                           "Frame mismatch between tracking and feature dataframes after interpolation."
+                    
                     df_position = df_position_interp.copy()
-                    df_features = df_features_interp.copy()       
-                    df_position = df_position[['track_id', 'frame_idx', 'pos_y', 'pos_x' ]] # Just change column order here
+                    df_features = df_features_interp.copy()     
+                    df_position.loc[:, 'track_id'] = track_id
+                      
+                df_position = df_position[['track_id', 'frame_idx', 'pos_y', 'pos_x' ]] # Just change column order here
                     
                 # Smooth? 
                 if sigma > 0:
                     if self.verbose:
-                        print("Smoothing position data with sigma = ", sigma)
-                    cols_to_smooth = [col for col in POSITION_COLUMNS if col not in INTEGER_COLUMNS]
+                        print(f"Smoothing position data for track_id {track_id} with sigma={sigma}")
+                    cols_to_smooth = [col for col in ['pos_x', 'pos_y'] if col in df_position.columns]
                     for col in cols_to_smooth:
-                        df_position[col] = gaussian_filter1d(df_position[col], sigma=sigma)
+                        df_position.loc[:, col] = gaussian_filter1d(df_position[col].astype(float), sigma=sigma)
+                
+                for col in INTEGER_COLUMNS:
+                    if col in df_position.columns:
+                        df_position[col] = df_position[col].astype(int)
                 
                 if track_id not in tracking_data:
-                    tracking_data[int(track_id)] = {
+                    tracking_data[track_id] = {
                         'label':    label,
                         'data':     df_position,
                         'features': df_features,
