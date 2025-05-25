@@ -50,7 +50,7 @@ class YOLO_results:
         self.track_ids = None
         self.labels = None
         self.track_id_label = None
-        
+        self.frame_indices = {} 
         results_dir = Path(results_dir)
         assert results_dir.exists(), f"Path {results_dir.as_posix()} does not exist"
         self.results_dir = results_dir
@@ -630,6 +630,7 @@ class YOLO_results:
                         'data' : masks,
                         'frame_indices': frame_indices,
                     }
+                    self.frame_indices[track_id] = frame_indices
                 else:
                     if self.verbose:
                         print(f"Mask key '{mask_key}' not found in zarr archive.")  
@@ -676,6 +677,23 @@ class YOLO_results:
         specific_mask_data = all_mask_data[track_id_to_use]['data']
         frame_indices = all_mask_data[track_id_to_use]['frame_indices']
         return specific_mask_data, frame_indices
+
+    
+    def get_frame_indices(self):
+        """
+        Helper to just return the frame indices for all track IDs.
+        This is coupled to .get_mask_data() and is called from there, 
+        since frame indices can be different across track IDs.
+        
+        Returns
+        -------
+        frame_indices : dict
+            Dictionary of track_id -> frame indices
+
+        """
+        if not self.frame_indices:
+            _ = self.get_mask_data()
+        return self.frame_indices
     
     
     def get_masked_video_frames(self, label, frame_indices): 
