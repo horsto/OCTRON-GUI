@@ -360,9 +360,11 @@ class YOLO_results:
         Returns
         -------
         tracking_data : dict
-            Dictionary of track_id -> dict (label, data, features)
-            Where data and features are pandas dataframe with the tracking data (xy positions)
-            and features data (confidence, area, eccentricity ...) respectively.
+            Dictionary of track_id -> tracking data
+            tracking data is a dictionary with the keys:
+            - 'label': The label for the track ID
+            - 'data': The tracking data (pandas.DataFrame)
+            - 'features': The features (pandas.DataFrame), like area, eccentricity, etc.
             
         """
         EXPECTED_CSV_COLUMNS = ["frame_idx",
@@ -587,7 +589,10 @@ class YOLO_results:
         -------
         mask_data : dict
             Dictionary of track_id -> mask data
-            Where mask data is a numpy array with the mask data.
+            mask_data is a dictionary with the keys:
+            - 'label': The label for the track ID
+            - 'data': The mask data (zarr.Array)
+            - 'frame_indices': The frame indices for which data exist in this mask data array.
             
         """
         if self.zarr_root is None:
@@ -614,9 +619,16 @@ class YOLO_results:
                     if self.width is not None:
                         assert width == self.width, \
                             f"Width in mask data ({width}) does not match width in video ({self.width})."
+                    # Find out which indices have data
+                    frame_indices = np.where(
+                        (masks[:,0,0] != -1) # -1 indicates no data for the frame
+                    )[0]
+                    if len(frame_indices) == 0 and self.verbose: 
+                        print(f"Warning: No valid frames found for track ID '{track_id}' (label '{label}') in mask data.")
                     mask_data[track_id] = {
                         'label': label,
                         'data' : masks,
+                        'frame_indices': frame_indices,
                     }
                 else:
                     if self.verbose:
@@ -643,6 +655,7 @@ class YOLO_results:
             The mask data for the (first) track ID associated with the given label.
         frame_indices : numpy.ndarray
             The frame indices for which data exist in this mask data array.
+
         """
         if self.track_id_label is None:
             raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
@@ -661,12 +674,7 @@ class YOLO_results:
             raise ValueError(f"Track ID '{track_id_to_use}' (for label '{label}') not found in mask data.")
         
         specific_mask_data = all_mask_data[track_id_to_use]['data']
-        # Find out which indices have data
-        frame_indices = np.where(
-            (specific_mask_data[:,0,0] != -1) # Assuming -1 indicates no data for the frame
-        )[0]
-        if len(frame_indices) == 0 and self.verbose: # Changed to warning, not error
-            print(f"Warning: No valid frames found for track ID '{track_id_to_use}' (label '{label}') in mask data.")
+        frame_indices = all_mask_data[track_id_to_use]['frame_indices']
         return specific_mask_data, frame_indices
     
     
