@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 import yaml
+import json # Added import
 from tqdm import tqdm
 import numpy as np
 from natsort import natsorted
@@ -21,8 +22,7 @@ import zarr
 from skimage import measure
 
 import napari
-from napari.utils import DirectLabelColormap
-
+from octron import __version__ as octron_version
 from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
                                                  watershed_mask,
@@ -42,7 +42,8 @@ from octron.yolo_octron.helpers.training import (
 )
 
 from .helpers.yolo_results import YOLO_results
-                      
+
+                     
 
 class YOLO_octron:
     """
@@ -1332,6 +1333,13 @@ class YOLO_octron:
                 shutil.rmtree(save_dir)
             elif save_dir.exists() and not overwrite:
                 print(f"Prediction directory already exists at {save_dir}")
+                yield {
+                    'stage': 'skipped_video',
+                    'video_name': video_name,
+                    'video_index': video_index,
+                    'total_videos': total_videos,
+                    'save_dir': save_dir,
+                }
                 continue
             save_dir.mkdir(parents=True, exist_ok=True)
             
@@ -1567,10 +1575,63 @@ class YOLO_octron:
                     df_to_save.to_csv(f)
                 print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
             
+            # Save a json file with all metadata / parameters used for prediction 
+            json_meta_path = save_dir / 'prediction_metadata.json'
+            
+            # Prepare model_path for metadata: try to make it relative if project_path is set
+            meta_model_path_str = model_path.as_posix()
+            if self.project_path:
+                try:
+                    meta_model_path_str = Path(os.path.relpath(model_path, self.project_path)).as_posix()
+                except ValueError: # Happens if model_path is not under project_path
+                    pass 
+            
+            meta_tracker_yaml_path_str = tracker_yaml_path.as_posix()
+            if self.project_path:
+                try:
+                    meta_tracker_yaml_path_str = Path(os.path.relpath(tracker_yaml_path, self.project_path)).as_posix()
+                except ValueError:
+                    pass
+
+            metadata_to_save = {
+                "prediction_timestamp": datetime.now().isoformat(),
+                "octron_version": octron_version,
+                "video_info": {
+                    "original_video_name": video_name,
+                    "original_video_path": video_dict['video_file_path'],
+                    "num_frames_original": video_dict['num_frames'],
+                    "num_frames_analyzed": video_dict['num_frames_analyzed'],
+                    "height": video_dict['height'],
+                    "width": video_dict['width'],
+                    "fps_original": video_dict.get('fps', 'unknown'),
+                },
+                "prediction_parameters": {
+                    "model_path": meta_model_path_str,
+                    "model_imgsz": imgsz,
+                    "model_retina_masks": retina_masks,
+                    "device": device,
+                    "tracker_name": tracker_name,
+                    "tracker_config_path": meta_tracker_yaml_path_str,
+                    "skip_frames": skip_frames,
+                    "one_object_per_label": one_object_per_label,
+                    "iou_thresh": iou_thresh,
+                    "conf_thresh": conf_thresh,
+                    "polygon_sigma": polygon_sigma,
+                    "overwrite_existing_predictions": overwrite,
+                },
+                #"original_model_training_args": model_args if model_args is not None else "Not found/applicable"
+            }
+            
+            with open(json_meta_path, 'w') as f:
+                json.dump(metadata_to_save, f, indent=4)
+            print(f"Saved prediction metadata to {json_meta_path.as_posix()}")
+            
             yield {
                     'stage': 'video_complete',
                     'save_dir': save_dir,
                 }
+            
+            
             
         # ALL COMPLETE    
         yield {

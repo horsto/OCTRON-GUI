@@ -20,6 +20,7 @@ sys.path.append(cur_path.as_posix())
 
 from importlib.metadata import version
 __version__ = version("octron")
+octron_version = __version__
 
 # Napari plugin QT components
 from qtpy.QtCore import Qt
@@ -167,7 +168,7 @@ class octron_widget(QWidget):
         self.gui_callback_functions()
         # Connect layer specific callbacks
         self.octron_sam2_callbacks = sam2_octron_callbacks(self)
-        print(f'OCTRON GUI v{__version__} initialized')
+        print(f'OCTRON GUI v{octron_version} initialized')
 
     ###################################################################################################
     
