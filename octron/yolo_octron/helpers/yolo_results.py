@@ -75,6 +75,8 @@ class YOLO_results:
                 self.height = video_dict['height']
                 self.width = video_dict['width']
                 self.num_frames = video_dict['num_frames']
+                # If height, width, num_frames are not set, there is still a chance
+                # to recover that info from the zarr array ...
                 break
         if video is None and self.verbose:
             print(f"No video found for '{results_dir.name}'")
@@ -117,6 +119,16 @@ class YOLO_results:
             if self.verbose:
                 print("Existing keys in zarr archive:", natsorted(root.array_keys()))
             self.zarr_root = root
+            # Check if num_frames, height, width are set, otherwise load one example 
+            # array from zarr to extract these dimensions.
+            if (self.num_frames is None) or (self.height is None) or (self.width is None):
+                example_array = next(iter(self.zarr_root.array_values()), None)
+                assert example_array is not None, "No arrays found in zarr root."
+                self.num_frames = example_array.shape[0] if len(example_array.shape) > 0 else None
+                self.height = example_array.shape[1] if len(example_array.shape) > 1 else None
+                self.width = example_array.shape[2] if len(example_array.shape) > 2 else None   
+                if self.verbose:
+                    print(f"Extracted video dimensions from zarr: {self.num_frames} frames, {self.width}x{self.height}")
         else:
             raise ValueError("No zarr file found. Please run find_zarr() first.")   
         
