@@ -4,7 +4,6 @@ import zarr
 import numpy as np
 import pandas as pd
 import warnings
-from typing import Literal # Added import
 # Plugins
 from napari_pyav._reader import FastVideoReader
 from napari.utils import DirectLabelColormap
