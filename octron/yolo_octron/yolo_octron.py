@@ -838,7 +838,7 @@ class YOLO_octron:
                     mode='segment',
                     device=device,
                     optimizer='auto',
-                    rect=False,
+                    rect=True,
                     cos_lr=True,
                     mask_ratio=2,
                     overlap_mask=True,
@@ -853,7 +853,7 @@ class YOLO_octron:
                     save=True,
                     save_period=save_period, 
                     exist_ok=True,
-                    nms=False, # non maximum supression (might help ... )
+                    nms=False, 
                     # Augmentation
                     hsv_v=.25,
                     hsv_s=0.25,
@@ -1386,7 +1386,6 @@ class YOLO_octron:
                     'frame_time': frame_time,
                 }
                 frame_start = time.time()
-                
                 # Run tracking on this frame
                 results = model.track(
                     source=frame, 
@@ -1404,7 +1403,6 @@ class YOLO_octron:
                     iou=iou_thresh,
                     device=device, 
                     retina_masks=retina_masks, # original image resolution, not inference resolution?
-                    show_boxes=False,
                     save_txt=False,
                     save_conf=False,
                 )
@@ -1415,7 +1413,7 @@ class YOLO_octron:
                 
                 # Then process the results ...    
                 try:
-                    masks_polys = results[0].masks.xy  
+                    masks_polys = results[0].masks.xyn 
                     track_ids = results[0].boxes.id.int().cpu().tolist()
                 except AttributeError:
                     # Empty prediction
@@ -1495,11 +1493,14 @@ class YOLO_octron:
                             conf = (conf + existing_conf) / 2
                         
                     # Continue to create masks and extract properties
-                    dummy_mask = np.zeros((video_dict['height'], video_dict['width']))    
-                    mask = polygon_to_mask(dummy_mask.astype('int8'), 
+                    dummy_mask = np.zeros((video_dict['height'], video_dict['width']), dtype=np.uint8)  
+                    opening_radius = 2 # Fix this for now
+                    # Resize normalized polygon coordinates
+                    mask_poly = np.array(mask_poly) * np.array([video_dict['width'], video_dict['height']])
+                    mask = polygon_to_mask(dummy_mask, 
                                            mask_poly, 
                                            smooth_sigma=polygon_sigma,
-                                           opening_radius=2,
+                                           opening_radius=opening_radius,
                                            model_imgsz=imgsz,
                                            )
                     if iou_thresh < 0.01:
