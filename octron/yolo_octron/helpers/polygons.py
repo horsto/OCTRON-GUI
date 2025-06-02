@@ -306,12 +306,11 @@ def polygon_to_mask(empty_mask,
         from scipy.ndimage import gaussian_filter1d
         polygons = gaussian_filter1d(polygons, axis=0, sigma=smooth_sigma)
     
-    # draw with AA 
     mask = cv2.fillPoly(
         empty_mask.copy(),
         [np.round(polygons).astype(np.int32)],
         color=(1,),
-        lineType=cv2.LINE_4,
+        lineType=cv2.LINE_AA,
     )
 
     # Check if opening should be applied
