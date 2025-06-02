@@ -1496,7 +1496,7 @@ class YOLO_octron:
                     dummy_mask = np.zeros((video_dict['height'], video_dict['width']), dtype=np.uint8)  
                     opening_radius = 2 # Fix this for now
                     # Resize normalized polygon coordinates
-                    mask_poly = np.array(mask_poly) * np.array([video_dict['width'], video_dict['height']*.99])
+                    mask_poly = np.array(mask_poly) * np.array([video_dict['width'], video_dict['height']])
                     mask = polygon_to_mask(dummy_mask, 
                                            mask_poly, 
                                            smooth_sigma=polygon_sigma,
