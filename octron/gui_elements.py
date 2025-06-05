@@ -263,7 +263,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.project_tab, icon, u"Manage project")
         self.octron.annotate_tab = QWidget()
         self.octron.annotate_tab.setObjectName(u"annotate_tab")
-        self.octron.annotate_tab.setGeometry(QRect(0, 0, 405, 414))
+        self.octron.annotate_tab.setGeometry(QRect(0, 0, 98, 28))
         sizePolicy1.setHeightForWidth(self.octron.annotate_tab.sizePolicy().hasHeightForWidth())
         self.octron.annotate_tab.setSizePolicy(sizePolicy1)
         self.octron.annotate_tab.setMaximumSize(QSize(405, 700))
@@ -968,25 +968,25 @@ class octron_gui_elements(QWidget):
         self.octron.gridLayout_3.setObjectName(u"gridLayout_3")
         self.octron.gridLayout_3.setVerticalSpacing(0)
         self.octron.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.octron.prediction_poly_sigma_label = QLabel(self.octron.layoutWidget9)
-        self.octron.prediction_poly_sigma_label.setObjectName(u"prediction_poly_sigma_label")
-        sizePolicy5.setHeightForWidth(self.octron.prediction_poly_sigma_label.sizePolicy().hasHeightForWidth())
-        self.octron.prediction_poly_sigma_label.setSizePolicy(sizePolicy5)
-        self.octron.prediction_poly_sigma_label.setMinimumSize(QSize(75, 0))
-        self.octron.prediction_poly_sigma_label.setMaximumSize(QSize(40, 25))
+        self.octron.prediction_mask_opening_label = QLabel(self.octron.layoutWidget9)
+        self.octron.prediction_mask_opening_label.setObjectName(u"prediction_mask_opening_label")
+        sizePolicy5.setHeightForWidth(self.octron.prediction_mask_opening_label.sizePolicy().hasHeightForWidth())
+        self.octron.prediction_mask_opening_label.setSizePolicy(sizePolicy5)
+        self.octron.prediction_mask_opening_label.setMinimumSize(QSize(75, 0))
+        self.octron.prediction_mask_opening_label.setMaximumSize(QSize(40, 25))
 
-        self.octron.gridLayout_3.addWidget(self.octron.prediction_poly_sigma_label, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft)
+        self.octron.gridLayout_3.addWidget(self.octron.prediction_mask_opening_label, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
-        self.octron.predict_polygo_sigma_spinbox = QDoubleSpinBox(self.octron.layoutWidget9)
-        self.octron.predict_polygo_sigma_spinbox.setObjectName(u"predict_polygo_sigma_spinbox")
-        self.octron.predict_polygo_sigma_spinbox.setMinimumSize(QSize(70, 25))
-        self.octron.predict_polygo_sigma_spinbox.setMaximumSize(QSize(70, 25))
-        self.octron.predict_polygo_sigma_spinbox.setDecimals(1)
-        self.octron.predict_polygo_sigma_spinbox.setMaximum(5.000000000000000)
-        self.octron.predict_polygo_sigma_spinbox.setSingleStep(0.250000000000000)
-        self.octron.predict_polygo_sigma_spinbox.setValue(0.000000000000000)
+        self.octron.predict_mask_opening_spinbox = QDoubleSpinBox(self.octron.layoutWidget9)
+        self.octron.predict_mask_opening_spinbox.setObjectName(u"predict_mask_opening_spinbox")
+        self.octron.predict_mask_opening_spinbox.setMinimumSize(QSize(70, 25))
+        self.octron.predict_mask_opening_spinbox.setMaximumSize(QSize(70, 25))
+        self.octron.predict_mask_opening_spinbox.setDecimals(1)
+        self.octron.predict_mask_opening_spinbox.setMaximum(5.000000000000000)
+        self.octron.predict_mask_opening_spinbox.setSingleStep(0.250000000000000)
+        self.octron.predict_mask_opening_spinbox.setValue(2.000000000000000)
 
-        self.octron.gridLayout_3.addWidget(self.octron.predict_polygo_sigma_spinbox, 0, 1, 1, 1)
+        self.octron.gridLayout_3.addWidget(self.octron.predict_mask_opening_spinbox, 0, 1, 1, 1)
 
         self.octron.prediction_iou_label = QLabel(self.octron.layoutWidget9)
         self.octron.prediction_iou_label.setObjectName(u"prediction_iou_label")
@@ -1272,9 +1272,10 @@ class octron_gui_elements(QWidget):
 #endif // QT_CONFIG(tooltip)
         self.octron.overwrite_prediction_checkBox.setText(QCoreApplication.translate("self", u"Overwrite", None))
 #if QT_CONFIG(tooltip)
-        self.octron.prediction_poly_sigma_label.setToolTip(QCoreApplication.translate("self", u"Gaussian smoothing of polygons. Keep this low. 0=no smoothing.", None))
+        self.octron.prediction_mask_opening_label.setToolTip(QCoreApplication.translate("self", u"Morphological opening of predicted masks.\n"
+"This gets rid of some noise. 2 is a good value to start with.", None))
 #endif // QT_CONFIG(tooltip)
-        self.octron.prediction_poly_sigma_label.setText(QCoreApplication.translate("self", u"Smoothing", None))
+        self.octron.prediction_mask_opening_label.setText(QCoreApplication.translate("self", u"Opening", None))
 #if QT_CONFIG(tooltip)
         self.octron.prediction_iou_label.setToolTip(QCoreApplication.translate("self", u"Intersection over union. This threshold determines how much overlap between bounding boxes\n"
 "is allowed before they are considered to be detecting the same object.\n"
@@ -1295,6 +1296,4 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.setItemToolTip(self.octron.toolBox.indexOf(self.octron.predict_tab), QCoreApplication.translate("self", u"Use trained models to run predictions on new videos", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
-
-
 

@@ -306,12 +306,11 @@ def polygon_to_mask(empty_mask,
         from scipy.ndimage import gaussian_filter1d
         polygons = gaussian_filter1d(polygons, axis=0, sigma=smooth_sigma)
     
-    # draw with AA 
     mask = cv2.fillPoly(
         empty_mask.copy(),
         [np.round(polygons).astype(np.int32)],
         color=(1,),
-        lineType=cv2.LINE_4,
+        lineType=cv2.LINE_AA,
     )
 
     # Check if opening should be applied
@@ -339,4 +338,27 @@ def polygon_to_mask(empty_mask,
     # This is because the zarr array is created as int8 to use -1 as a placeholder
     # ... and threshold to a binary mask
     mask = mask.astype('int8')
+    return mask
+
+
+def postprocess_mask(mask, opening_radius):
+    """
+    Postprocess mask by applying binary opening with a disk footprint.
+    
+    Parameters
+    ----------
+    opening_radius : int : Radius for binary opening
+    
+    Returns
+    -------
+    mask : np.array : Postprocessed mask with dtype uint8
+    
+    """
+    
+    if opening_radius > 0:
+        disk_el = disk(radius=opening_radius,
+                        strict_radius=False,
+                        decomposition=None,
+                        )
+        mask = binary_opening(mask, footprint=disk_el).astype('int8')
     return mask
