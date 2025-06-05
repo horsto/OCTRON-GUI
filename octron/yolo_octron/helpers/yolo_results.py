@@ -457,6 +457,12 @@ class YOLO_results:
                                                                                                                   limit=interpolate_limit, 
                                                                                                                   limit_area=None, 
                                                                                                                   )
+                    # Interpolate the feature columns
+                    cols_to_interpolate = [col for col in FEATURE_COLUMNS if col not in INTEGER_COLUMNS]
+                    df_features_interp[cols_to_interpolate] = df_features_interp[cols_to_interpolate].interpolate(method=interpolate_method,
+                                                                                                                  limit=interpolate_limit, 
+                                                                                                                  limit_area=None, 
+                                                                                                                  )
                     # After interpolation, get the valid frame indices from the tracking DataFrame
                     valid_frames = df_position_interp.dropna(subset=['pos_x', 'pos_y'])['frame_idx'].values
                     
