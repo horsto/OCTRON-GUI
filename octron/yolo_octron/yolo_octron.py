@@ -27,7 +27,7 @@ from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
                                                  watershed_mask,
                                                  get_polygons,
-                                                 polygon_to_mask,
+                                                 postprocess_mask,
 )
 
 
@@ -838,7 +838,7 @@ class YOLO_octron:
                     mode='segment',
                     device=device,
                     optimizer='auto',
-                    rect=True,
+                    rect=False,
                     cos_lr=True,
                     mask_ratio=2,
                     overlap_mask=True,
@@ -1225,7 +1225,7 @@ class YOLO_octron:
                       one_object_per_label=False,
                       iou_thresh=.9,
                       conf_thresh=.8,
-                      polygon_sigma=1.,
+                      opening_radius=2,
                       overwrite=True
                       ):
         """
@@ -1252,8 +1252,8 @@ class YOLO_octron:
             IOU threshold for detection
         conf_thresh : float
             Confidence threshold for detection
-        polygon_sigma : float
-            Sigma value for polygon smoothing
+        opening_radius : int
+            Radius for morphological opening operation on masks to remove noise.
         overwrite : bool
             Whether to overwrite existing prediction results
             
@@ -1395,6 +1395,7 @@ class YOLO_octron:
                     project=save_dir.parent.as_posix(),
                     name=save_dir.name,
                     show=False,
+                    rect=False,
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
@@ -1402,7 +1403,7 @@ class YOLO_octron:
                     conf=conf_thresh,
                     iou=iou_thresh,
                     device=device, 
-                    retina_masks=retina_masks, # original image resolution, not inference resolution?
+                    retina_masks=retina_masks, # original image resolution, not inference resolution
                     save_txt=False,
                     save_conf=False,
                 )
@@ -1413,18 +1414,18 @@ class YOLO_octron:
                 
                 # Then process the results ...    
                 try:
-                    masks_polys = results[0].masks.xyn 
                     track_ids = results[0].boxes.id.int().cpu().tolist()
+                    masks = results[0].masks.data.cpu().numpy()
                 except AttributeError:
                     # Empty prediction
                     continue
                 
                 # Extract tracks 
-                for label, track_id, conf, mask_poly in zip(label_names, 
-                                                            track_ids,
-                                                            confidences,
-                                                            masks_polys, 
-                                                            ):
+                for label, track_id, conf, mask in zip(label_names, 
+                                                        track_ids,
+                                                        confidences,
+                                                        masks, 
+                                                        ):
                     
                     if one_object_per_label or iou_thresh < 0.01:
                         # ! Use 'label' as keys in track_id_label_dict
@@ -1491,18 +1492,10 @@ class YOLO_octron:
                         else:
                             # Average the confidence values
                             conf = (conf + existing_conf) / 2
-                        
-                    # Continue to create masks and extract properties
-                    dummy_mask = np.zeros((video_dict['height'], video_dict['width']), dtype=np.uint8)  
-                    opening_radius = 2 # Fix this for now
-                    # Resize normalized polygon coordinates
-                    mask_poly = np.array(mask_poly) * np.array([video_dict['width'], video_dict['height']])
-                    mask = polygon_to_mask(dummy_mask, 
-                                           mask_poly, 
-                                           smooth_sigma=polygon_sigma,
-                                           opening_radius=opening_radius,
-                                           model_imgsz=imgsz,
-                                           )
+                    
+                    # Work on mask a bit - perform morphological opening
+                    mask = postprocess_mask(mask, opening_radius=opening_radius)
+                    
                     if iou_thresh < 0.01:
                         # Fuse this masks with prior masks already stored in the zarr
                         # for this frame / label
@@ -1617,7 +1610,7 @@ class YOLO_octron:
                     "one_object_per_label": one_object_per_label,
                     "iou_thresh": iou_thresh,
                     "conf_thresh": conf_thresh,
-                    "polygon_sigma": polygon_sigma,
+                    "opening_radius": opening_radius,
                     "overwrite_existing_predictions": overwrite,
                 },
                 #"original_model_training_args": model_args if model_args is not None else "Not found/applicable"

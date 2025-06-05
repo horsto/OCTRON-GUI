@@ -339,3 +339,26 @@ def polygon_to_mask(empty_mask,
     # ... and threshold to a binary mask
     mask = mask.astype('int8')
     return mask
+
+
+def postprocess_mask(mask, opening_radius):
+    """
+    Postprocess mask by applying binary opening with a disk footprint.
+    
+    Parameters
+    ----------
+    opening_radius : int : Radius for binary opening
+    
+    Returns
+    -------
+    mask : np.array : Postprocessed mask with dtype uint8
+    
+    """
+    
+    if opening_radius > 0:
+        disk_el = disk(radius=opening_radius,
+                        strict_radius=False,
+                        decomposition=None,
+                        )
+        mask = binary_opening(mask, footprint=disk_el).astype('int8')
+    return mask
