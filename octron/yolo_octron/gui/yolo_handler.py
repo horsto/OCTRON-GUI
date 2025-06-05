@@ -6,7 +6,6 @@ from napari.qt import create_worker
 from napari.utils.notifications import show_info, show_warning, show_error
 
 from pathlib import Path           
-import numpy as np                          
 from octron.sam2_octron.helpers.video_loader import probe_video  
 from napari_pyav._reader import FastVideoReader              
 from qtpy.QtWidgets import QDialog                            
@@ -582,7 +581,7 @@ class YoloHandler(QObject):
         self.yolo_tracker_name = self.w.yolomodel_tracker_list.currentText()                              
         # Check status of "view results" checkbox
         self.view_prediction_results = self.w.open_when_finish_checkBox.isChecked()   
-        self.mask_opening = int(np.round(self.w.predict_mask_opening_spinbox.value()))
+        self.mask_opening = int(round(self.w.predict_mask_opening_spinbox.value()))
         self.conf_thresh = float(self.w.predict_conf_thresh_spinbox.value())
         self.iou_thresh = float(self.w.predict_iou_thresh_spinbox.value())
         self.overwrite_predictions = self.w.overwrite_prediction_checkBox.isChecked()    
