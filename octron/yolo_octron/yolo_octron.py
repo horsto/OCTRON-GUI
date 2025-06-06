@@ -19,7 +19,7 @@ from tqdm import tqdm
 import numpy as np
 from natsort import natsorted
 import zarr 
-from skimage import measure
+from skimage import measure, color
 
 import napari
 from octron import __version__ as octron_version
@@ -1273,6 +1273,50 @@ class YOLO_octron:
             - overall_progress: Overall progress as percentage (0-100)
         """
 
+        def _get_masked_lab_means(mask, l, a, b): 
+            """
+            Get the mean values of the L, A, B channels for a given mask.
+            
+            Parameters
+            ----------
+            mask : np.ndarray
+                Binary mask where the object is present.
+            l, a, b : np.ndarray
+                CIE Lab channels of the image.
+                
+            Returns
+            -------
+            lab_dict : dict
+                Dictionary containing the mean values of the L, A, B channels
+                for the entire frame and for the masked region.
+            """
+            l, a, b = l.flatten(), a.flatten(), b.flatten()
+            lab_dict = {
+                'frame_l_mean' : np.mean(l),
+                'frame_a_mean' : np.mean(a),
+                'frame_b_mean' : np.mean(b),
+                'mask_l_mean'  : np.nan,
+                'mask_a_mean'  : np.nan,
+                'mask_b_mean'  : np.nan,
+            }
+            
+            mask = mask.astype(bool)
+            if not mask.any():
+                return lab_dict
+            
+            masked_l = l[mask.flatten()]
+            masked_a = a[mask.flatten()]
+            masked_b = b[mask.flatten()]
+            
+            if masked_l.size == 0:
+                return lab_dict
+            
+            lab_dict['mask_l_mean'] = np.mean(masked_l)
+            lab_dict['mask_a_mean'] = np.mean(masked_a)
+            lab_dict['mask_b_mean'] = np.mean(masked_b)
+            
+            return lab_dict
+        
         available_trackers = ['bytetrack','botsort']
         tracker_name = tracker_name.strip().lower()
         assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
@@ -1364,6 +1408,17 @@ class YOLO_octron:
             for frame_no, frame_idx in enumerate(video_dict['frame_iterator'], start=0):
                 try:
                     frame = video[frame_idx]
+                    # Process frame in CIE Lab colorspace
+                    # We want some stats from the masked origina frame - it's a good place 
+                    # to do that because we are extracting the frame anyway! 
+                    frame_lab = color.rgb2lab(frame, 
+                                            illuminant='D65', 
+                                            observer='2'
+                                            )
+                    l = frame_lab[:,:,0].astype(np.uint8)
+                    a = frame_lab[:,:,1].astype(np.int8)
+                    b = frame_lab[:,:,2].astype(np.int8)
+
                 except StopIteration:
                     print(f"Could not read frame {frame_idx} from video {video_name}")
                     continue
@@ -1495,7 +1550,6 @@ class YOLO_octron:
                     
                     # Work on mask a bit - perform morphological opening
                     mask = postprocess_mask(mask, opening_radius=opening_radius)
-                    
                     if iou_thresh < 0.01:
                         # Fuse this masks with prior masks already stored in the zarr
                         # for this frame / label
@@ -1504,6 +1558,9 @@ class YOLO_octron:
                         mask = np.logical_or(previous_mask, mask)
                         mask = mask.astype('int8')
                     
+                    # Use the mask together with original video frame to get l,a,b means 
+                    lab_dict = _get_masked_lab_means(mask, l, a, b)
+                    # Store mask 
                     mask_store[frame_idx,:,:] = mask
                         
                     # Get region properties and save them to the dataframe
@@ -1537,6 +1594,13 @@ class YOLO_octron:
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence'] = conf
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'solidity'] = solidity_sum / num_regions
+                    # Add CIE Lab means to the DataFrame
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'mask_l_mean'] = lab_dict['mask_l_mean']
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'mask_a_mean'] = lab_dict['mask_a_mean']
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'mask_b_mean'] = lab_dict['mask_b_mean']
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'frame_l_mean'] = lab_dict['frame_l_mean']
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'frame_a_mean'] = lab_dict['frame_a_mean']
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'frame_b_mean'] = lab_dict['frame_b_mean']
 
                 # A FRAME IS COMPLETE
                 
@@ -1560,13 +1624,13 @@ class YOLO_octron:
                     f"video_height: {tr_df.attrs.get('video_height', '')}",
                     f"video_width: {tr_df.attrs.get('video_width', '')}",
                     f"created_at: {tr_df.attrs.get('created_at', str(datetime.now()))}",
-                    ""  # Empty line to separate header from data
+                    "", #Empty line for separation
                 ]
                 
                 # Write the header and then the data
                 with open(csv_path, 'w') as f:
                     f.write('\n'.join(header))
-                    df_to_save.to_csv(f)
+                    df_to_save.to_csv(f, na_rep='NaN')
                 print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
             
             # Save a json file with all metadata / parameters used for prediction 
@@ -1626,7 +1690,6 @@ class YOLO_octron:
                 }
             
             
-            
         # ALL COMPLETE    
         yield {
             'stage': 'complete',
@@ -1655,7 +1718,20 @@ class YOLO_octron:
         import pandas as pd
         assert 'num_frames_analyzed' in video_dict, "Video metadata must include 'num_frames_analyzed'"
         # Create a flat column structure
-        columns = ['confidence', 'pos_x', 'pos_y', 'area', 'eccentricity', 'orientation','solidity']
+        columns = ['confidence', 
+                   'pos_x', 
+                   'pos_y', 
+                   'area', 
+                   'eccentricity', 
+                   'orientation',
+                   'solidity',
+                   'mask_l_mean',
+                   'mask_a_mean',
+                   'mask_b_mean',
+                   'frame_l_mean',
+                   'frame_a_mean',
+                   'frame_b_mean',
+                   ]
         
         # Initialize the DataFrame with NaN values
         df = pd.DataFrame(
@@ -1667,7 +1743,6 @@ class YOLO_octron:
             columns=columns,
 
         )
-        
         # Add metadata as DataFrame attributes
         df.attrs = {
             'video_hash': video_dict.get('hash', ''), 
