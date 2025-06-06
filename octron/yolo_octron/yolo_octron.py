@@ -838,7 +838,7 @@ class YOLO_octron:
                     mode='segment',
                     device=device,
                     optimizer='auto',
-                    rect=False,
+                    rect=True,
                     cos_lr=True,
                     mask_ratio=2,
                     overlap_mask=True,
@@ -1365,11 +1365,13 @@ class YOLO_octron:
             print(f'\nProcessing video {video_index+1}/{total_videos}: {video_name}')
             video_path = Path(video_dict['video_file_path'])
             
-            if max(video_dict['height'], video_dict['width']) < imgsz:
-                print(f"⚠ Video resolution is smaller than the model image size ({imgsz}). Setting retina_masks to False.")
-                retina_masks = False
-            else:
-                retina_masks = True
+            # DEPRECATED
+            # if max(video_dict['height'], video_dict['width']) < imgsz:
+            #     print(f"⚠ Video resolution is smaller than the model image size ({imgsz}). Setting retina_masks to False.")
+            #     retina_masks = False
+            # else:
+            #     retina_masks = True
+            retina_masks = True # Always set to True for now 
             
             # Set up prediction directory structure
             save_dir = video_path.parent / 'predictions' / f"{video_path.stem}_{tracker_name}"
@@ -1411,6 +1413,10 @@ class YOLO_octron:
                     # Process frame in CIE Lab colorspace
                     # We want some stats from the masked origina frame - it's a good place 
                     # to do that because we are extracting the frame anyway! 
+                    if len(frame.shape) == 2:
+                        # Convert grayscale images to rgb - which effectively just 
+                        # triples the same image across all three channels 
+                        frame = color.gray2rgb(frame)
                     frame_lab = color.rgb2lab(frame, 
                                             illuminant='D65', 
                                             observer='2'
@@ -1450,7 +1456,7 @@ class YOLO_octron:
                     project=save_dir.parent.as_posix(),
                     name=save_dir.name,
                     show=False,
-                    rect=False,
+                    rect=True,
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
@@ -1562,7 +1568,6 @@ class YOLO_octron:
                     lab_dict = _get_masked_lab_means(mask, l, a, b)
                     # Store mask 
                     mask_store[frame_idx,:,:] = mask
-                        
                     # Get region properties and save them to the dataframe
                     _, regions_props = find_objects_in_mask(mask, min_area=0)
                     # Instead of asserting single region, handle multiple regions
