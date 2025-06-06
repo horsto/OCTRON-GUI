@@ -381,19 +381,9 @@ class YOLO_results:
         EXPECTED_CSV_COLUMNS = ["frame_idx",
                                 "track_id",
                                 "label",
-                                "confidence",
+                                "confidence", # Including this as minimum
                                 "pos_x",
                                 "pos_y",
-                                "area",
-                                "eccentricity",
-                                "orientation",
-                                "solidity",
-                                "mask_l_mean",
-                                "mask_a_mean",
-                                "mask_b_mean",
-                                "frame_l_mean",
-                                "frame_a_mean",
-                                "frame_b_mean",
         ]
         POSITION_COLUMNS = ["frame_idx",
                             "track_id",
@@ -430,6 +420,10 @@ class YOLO_results:
                 df = pd.read_csv(csv_file, skiprows=self.csv_header_lines)
                 assert set(EXPECTED_CSV_COLUMNS).issubset(df.columns), \
                     f"CSV file {csv_file.name} does not contain all expected columns: {EXPECTED_CSV_COLUMNS}"
+                
+                # Prune FEATURE_COLUMNS based on what is actually present in the CSV
+                # This is to guard against older formats or changes in the CSV structure
+                FEATURE_COLUMNS = [col for col in FEATURE_COLUMNS if col in df.columns]
                 
                 track_id = int(df.iloc[0].track_id) # Get the scalar track_id for this file
                 label = df.iloc[0].label
