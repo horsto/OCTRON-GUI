@@ -72,6 +72,7 @@ octron = "octron:napari.yaml"
 octron-gui = "octron.main:octron_gui"
 octron-gif = "octron.tools.mp4_to_gif:main"
 octron-post-install = "octron.post_install:main"
+octron-test-gpu = "octron.test_gpu:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
