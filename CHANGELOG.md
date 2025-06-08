@@ -10,6 +10,7 @@
 - Feature columns (eccentricity, area, ...) are now also interpolated with `interpolate=True` alongside position data
 - During prediction frame and mask CIE LAB average values are extracted and saved in the .csv output. The experimenter thereby has access to color and brightness information for every frame and extracted mask after prediction completed. These values are new additions to the features columns, alongside eccentricity, area, etc. 
 - Major update of ultralytics (8.3.152) that gets rid of an offest of mask vs. frame data introduced when the masks are scaled back to the original image size after prediction. See [PR 20957](https://github.com/ultralytics/ultralytics/pull/20957). 
+- Created wheels for quick installation of py-av, sam2, and sam2-hq
 
 ## vers. 0.0.3
 - Date: 2025-05-25
