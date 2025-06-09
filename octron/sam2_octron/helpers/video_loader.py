@@ -51,7 +51,7 @@ def probe_video(file_path, verbose=True):
     container.close()
     
     video_dict = {'codec': codec,
-                  'video_name': Path(file_path).name,   
+                  'video_name': Path(file_path).name.strip(),   
                   'video_file_path': file_path,
                   'height': height,
                   'width': width,
