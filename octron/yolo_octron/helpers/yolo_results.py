@@ -8,6 +8,8 @@ import warnings
 from napari_pyav._reader import FastVideoReader
 from napari.utils import DirectLabelColormap
 from scipy.ndimage import gaussian_filter1d
+from skimage.morphology import remove_small_holes, binary_closing, disk
+from tqdm import tqdm
 
 class YOLO_results:
     def __init__(self, results_dir, verbose=True, **kwargs):
@@ -603,11 +605,17 @@ class YOLO_results:
         return all_tracking_data[track_id_to_use]['features']
 
     
-    def get_mask_data(self):
+    def get_mask_data(self, close_holes=False):
         """
         Get the mask data for all track IDs in a dictionary
         of track_id -> mask data
         
+        Parameters
+        ----------
+        close_holes : bool, optional
+            If True, close small holes in the masks using skimage.morphology.remove_small_holes.
+            Default is False.
+            
         Returns
         -------
         mask_data : dict
@@ -630,6 +638,7 @@ class YOLO_results:
                 mask_key = f"{track_id}_masks"
                 if mask_key in self.zarr_root.array_keys():
                     masks = self.zarr_root[mask_key]
+                    
                     num_frames = masks.shape[0]
                     height = masks.shape[1]
                     width = masks.shape[2]
@@ -648,6 +657,15 @@ class YOLO_results:
                     )[0]
                     if len(frame_indices) == 0 and self.verbose: 
                         print(f"Warning: No valid frames found for track ID '{track_id}' (label '{label}') in mask data.")
+                    if len(frame_indices) and close_holes: 
+                        for f in tqdm(frame_indices, desc=f'Closing holes for id {track_id}', total=len(frame_indices)): 
+                            m = masks[f,:,:]
+                            d = m.sum()
+                            if d > 0:
+                                m = binary_closing(m.astype(bool), disk(5)) # THIS IS EXPENSIVE! WHY!
+                                m = remove_small_holes(m, area_threshold=d, connectivity=1)
+                                masks[f,:,:] = m
+                    # Store the mask data
                     mask_data[track_id] = {
                         'label': label,
                         'data' : masks,
@@ -662,7 +680,7 @@ class YOLO_results:
                     print(f"Could not read mask data for track ID {track_id}: {e}")
         return mask_data
     
-    def get_masks_for_label(self, label):
+    def get_masks_for_label(self, label, close_holes=False):
         """
         Get the mask data for a given label.
         If the label maps to multiple track IDs, a warning is issued (if verbose=True)
@@ -672,6 +690,9 @@ class YOLO_results:
         ----------
         label : str
             The label to search for.
+        close_holes : bool, optional
+            If True, close small holes in the masks using skimage.morphology.remove_small_holes.
+            Default is False.
             
         Returns
         -------
@@ -693,7 +714,7 @@ class YOLO_results:
             print(f"Warning: Label '{label}' maps to multiple track IDs: {list_of_track_ids}. "
                   f"Using masks for the first track ID: {track_id_to_use}.")
             
-        all_mask_data = self.get_mask_data()
+        all_mask_data = self.get_mask_data(close_holes=close_holes)
         if track_id_to_use not in all_mask_data:
             raise ValueError(f"Track ID '{track_id_to_use}' (for label '{label}') not found in mask data.")
         
