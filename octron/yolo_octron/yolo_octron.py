@@ -13,6 +13,7 @@ import importlib.util
 import shutil
 from pathlib import Path
 from datetime import datetime
+from PIL import Image
 import yaml
 import json # Added import
 from tqdm import tqdm
@@ -751,7 +752,7 @@ class YOLO_octron:
         device : str
             Device to use ('cpu', 'cuda', 'mps')
         imagesz : int
-            Input image size
+            Model image size
         epochs : int
             Number of epochs to train for
         save_period : int
@@ -806,6 +807,23 @@ class YOLO_octron:
                 'finish_time': finish_time,
             })
         
+        def _find_train_image_size(data_path): 
+            """
+            Helper to find whether rectangular or square training images are used.
+            This determines rect parameter in YOLO training.
+            """
+            data_path = Path(data_path)
+            assert data_path.exists(), f"Data path {data_path} does not exist."
+            # Find png files and load one to determine image size
+            png_files = list(data_path.glob('**/*.png'))
+            if len(png_files) == 0:
+                raise FileNotFoundError(f"No .png files found in {data_path.as_posix()}")
+            # Load the first image to determine size
+            first_image = Image.open(png_files[0])
+            width, height = first_image.size
+            first_image.close()
+            return height, width, width==height
+        
         # Add our callback that will put progress info into the queue
         self.model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
         
@@ -819,7 +837,9 @@ class YOLO_octron:
             print("⚠ MPS is not yet fully supported in PyTorch. Use at your own risk.")
         
         assert imagesz % 32 == 0, 'YOLO image size must be a multiple of 32'
-
+        # Find training image size to see if rect should be True or False 
+        _,_, square = _find_train_image_size(self.data_path)
+        
         # Start training in a separate thread
         training_complete = threading.Event()
         training_error = None
@@ -831,6 +851,9 @@ class YOLO_octron:
             try:
                 # Start training
                 print(f"Starting training for {epochs} epochs...")
+                print(f"Setting rect={not square} based on training image size")
+                print(f"Using device: {device}")
+                print("################################################################")
                 self.model.train(
                     data=self.config_path.as_posix(), 
                     name='training',
@@ -838,7 +861,7 @@ class YOLO_octron:
                     mode='segment',
                     device=device,
                     optimizer='auto',
-                    rect=True,
+                    rect=not square, # if square training images then rect=False 
                     cos_lr=True,
                     mask_ratio=2,
                     overlap_mask=True,
@@ -848,8 +871,8 @@ class YOLO_octron:
                     resume=False,
                     patience=50,
                     plots=True,
-                    batch=-1,
-                    cache='disk',
+                    batch=-1, # auto
+                    cache='disk', # for fast access
                     save=True,
                     save_period=save_period, 
                     exist_ok=True,
@@ -1328,10 +1351,12 @@ class YOLO_octron:
         if model_args is not None:
             print('Model args loaded from', model_path.parent.parent.as_posix())
             imgsz = model_args['imgsz']
-            print(f'Image size: {imgsz}')
+            rect = model_args.get('rect', True)
+            print(f'Image size: {imgsz}, rect={rect}')
         else:
-            print('No model args found, using default image size of 640')
+            print('No model args found, using default image size of 640 and rect=True')
             imgsz = 640
+            rect = True
         
         skip_frames = int(max(0, skip_frames))
         
@@ -1456,7 +1481,7 @@ class YOLO_octron:
                     project=save_dir.parent.as_posix(),
                     name=save_dir.name,
                     show=False,
-                    rect=True,
+                    rect=rect,
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
@@ -1655,7 +1680,32 @@ class YOLO_octron:
                     meta_tracker_yaml_path_str = Path(os.path.relpath(tracker_yaml_path, self.project_path)).as_posix()
                 except ValueError:
                     pass
-
+                    
+            # Before saving metadata, get rid of some unnecessary fields
+            if model_args is not None:
+                for key in [
+                    'project_path',
+                    'name',
+                    'mode',
+                    'project',
+                    'model',
+                    'data',
+                    'disk',
+                    'show',
+                    'save_frames',
+                    'save_txt',
+                    'save_conf',
+                    'save_crop',
+                    'show_labels',
+                    'show_conf',
+                    'show_boxes',
+                    'line_width',
+                    'workers',
+                    'cache',
+                    'save_dir',
+                ]:
+                    model_args.pop(key, None)                
+            
             metadata_to_save = {
                 "prediction_timestamp": datetime.now().isoformat(),
                 "octron_version": octron_version,
@@ -1682,7 +1732,7 @@ class YOLO_octron:
                     "opening_radius": opening_radius,
                     "overwrite_existing_predictions": overwrite,
                 },
-                #"original_model_training_args": model_args if model_args is not None else "Not found/applicable"
+                "original_model_training_args": model_args if model_args is not None else "Model args not found",
             }
             
             with open(json_meta_path, 'w') as f:
