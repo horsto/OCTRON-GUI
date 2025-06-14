@@ -286,9 +286,9 @@ class YOLO_octron:
         """ 
         
         # Some constants 
-        MIN_SIZE_RATIO_OBJECT_FRAME = 0.00005 # Minimum size ratio of an object to the whole image
-                                              # 0.00005: for a 1024x1024 image, this is ~ 52 pixels
-        MIN_SIZE_RATIO_OBJECT_MAX = 0.1 # Minimum size ratio of an object to the largest object in the frame
+        MIN_SIZE_RATIO_OBJECT_FRAME = 0.00001 # Minimum size ratio of an object to the whole image
+                                              # 0.00001: for a 1024x1024 image, this is ~ 11 pixels
+        MIN_SIZE_RATIO_OBJECT_MAX = 0.01 # Minimum size ratio of an object to the largest object in the frame
         
         if self.label_dict is None:
             raise ValueError("No labels found. Please run prepare_labels() first.")
@@ -386,7 +386,7 @@ class YOLO_octron:
                             # Filter out small objects by setting them to 0
                             # and those that are smaller than a certain size ratio 
                             # smaller than the max object size
-                            max_area = max(props['area'])
+                            max_area = np.percentile(props['area'], 99.)
                             for i, area in enumerate(props['area']):
                                 if area < min_area:
                                     mask_labeled[mask_labeled == props['label'][i]] = 0          
