@@ -1080,6 +1080,18 @@ class octron_widget(QWidget):
         It is also utilized to re-create layers from the object organizer when the user 
         double clicks on a table row (recreate=True). 
         
+        Returns
+        -------
+        annotation_layer : napari.layers.Shapes or napari.layers.Points
+            The created annotation layer, either a Shapes or Points layer.
+            If the layer already exists, it will return the existing layer.
+            If the layer could not be created, it will return None.
+        prediction_layer : napari.layers.Labels
+            The created prediction layer (mask layer).
+            If the layer already exists, it will return the existing layer.
+            If the layer could not be created, it will return None.
+        organizer_entry : Obj
+            The object entry in the object organizer that corresponds to the created layers.
         
         """
         # Check if a video layer is loaded
@@ -1091,18 +1103,25 @@ class octron_widget(QWidget):
             return
 
         if not recreate:
-            # Sanity check for dropdown 
-            # ... exclude the first entries (Choose, Add, Remove)
-            label_idx_ = self.label_list_combobox.currentIndex()
-            layer_idx_ = self.layer_type_combobox.currentIndex()     
-            if layer_idx_ == 0 or label_idx_ <= 2:
-                show_warning("Please select a layer type and a label.")
-                return
-            # Get the selected label and layer type from dropdowns
-            label = self.label_list_combobox.currentText().strip()
-            label_suffix = self.label_suffix_lineedit.text()
-            label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified    
-            layer_type = self.layer_type_combobox.currentText().strip()
+            # Check if parameters were provided 
+            if not label or not layer_type:
+                # Sanity check for dropdown 
+                # ... exclude the first entries (Choose, Add, Remove)
+                label_idx_ = self.label_list_combobox.currentIndex()
+                layer_idx_ = self.layer_type_combobox.currentIndex()     
+                if layer_idx_ == 0 or label_idx_ <= 2:
+                    show_warning("Please select a layer type and a label.")
+                    return
+                # Get the selected label and layer type from dropdowns
+                label = self.label_list_combobox.currentText().strip()
+                label_suffix = self.label_suffix_lineedit.text()
+                label_suffix = label_suffix.strip().lower() # Make sure things are somehow unified    
+                layer_type = self.layer_type_combobox.currentText().strip()
+            else:
+                # If parameters were provided, use them directly
+                label = label.strip()
+                label_suffix = label_suffix.strip().lower() if label_suffix else ""
+                layer_type = layer_type.strip()
         
         # Check if the object organizer already has an entry for this label and suffix 
         organizer_entry = self.object_organizer.get_entry_by_label_suffix(label, label_suffix)
@@ -1171,7 +1190,7 @@ class octron_widget(QWidget):
             organizer_entry.prediction_layer = prediction_layer
 
         ######### Create a new annotation layer ###############################################################
-        
+        annotation_layer = None
         if layer_type == 'Shapes':
             annotation_layer_name = f"{layer_name} shapes"
             # Create a shape layer
@@ -1214,7 +1233,7 @@ class octron_widget(QWidget):
         self.label_list_combobox.setCurrentIndex(0)
         self.layer_type_combobox.setCurrentIndex(0)
 
-        return
+        return annotation_layer, prediction_layer, organizer_entry
     
 
     def create_annotation_projections(self):
