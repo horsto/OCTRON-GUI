@@ -227,21 +227,34 @@ class octron_widget(QWidget):
 
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     
-    def load_sam2model(self):
+    def load_sam2model(self, 
+                       model_name
+                       ):
         """
         Load the selected SAM2 model and enable the batch prediction button, 
         setting the progress bar to the chunk size and the button text to predict next chunk size
         
+        Parameters
+        ----------
+        model_name : str
+            The name of the SAM2 model to load. If None, the currently selected model in the dropdown list is used.
+            If no model is selected, the function returns without doing anything.
+        
         """
-        index = self.sam2model_list.currentIndex()
-        if index == 0:
-            return
-    
-        model_name = self.sam2model_list.currentText()
+        if model_name is None: 
+            index = self.sam2model_list.currentIndex()
+            if index == 0:
+                return
+        
+            model_name = self.sam2model_list.currentText()
+        
         # Reverse lookup model_id
+        model_found = False
         for model_id, model in self.sam2models_dict.items():
             if model['name'] == model_name:
+                model_found = True
                 break
+        assert model_found, f"Model '{model_name}' not found in SAM2 models dictionary."
         
         print(f"Loading SAM2 model {model_id}")
         model = self.sam2models_dict[model_id]
@@ -544,6 +557,40 @@ class octron_widget(QWidget):
         self.label_list_combobox.setCurrentIndex(0)    
         return
     
+    def set_project_folder(self, folder):
+        """
+        Set (new) OCTRON project folder. 
+        Makes sure existing video layers (and thereby all other layers)
+        are removed from the viewer.
+        Enables the video drop area and the project folder path label.
+        Refreshes the label table list and the YOLO model list.
+                
+        Parameters
+        ----------
+        folder : str or Path
+            The path to the project folder. 
+            This should be an existing folder that contains the OCTRON project data.
+    
+        """
+        
+        folder = Path(folder)
+        assert folder.exists(), f"Project folder {folder} does not exist."
+        
+        # Remove the current video layer
+        # This triggers a bunch of things -> check function "on_layer_removed()"
+        if self.video_layer is not None:
+            self._viewer.layers.remove(self.video_layer)
+            
+        # Reset variables for a clean start
+        self.object_organizer = ObjectOrganizer()
+        self.project_folder_path_label.setEnabled(False)
+        self.project_folder_path_label.setText(f'→{folder.as_posix()}')
+        
+        self.project_path = folder
+        self.project_video_drop_groupbox.setEnabled(True)
+        self.refresh_label_table_list(delete_old=True)
+        self.yolo_handler.refresh_trained_model_list()
+        return
 
     def open_project_folder_dialog(self):
         """
@@ -558,26 +605,10 @@ class octron_widget(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Select Base Folder", str(Path.home()))
         if folder:
             print(f"Project base folder selected: {folder}")
-            
-            # Remove the current video layer
-            # This triggers a bunch of things -> check function for details
-            if self.video_layer is not None:
-                self._viewer.layers.remove(self.video_layer)
-            # Reset variables for a clean start
-            self.object_organizer = ObjectOrganizer()
-            
-            folder = Path(folder)
-            self.project_folder_path_label.setEnabled(False)
-            self.project_folder_path_label.setText(f'→{folder.as_posix()}')
-            
-            self.project_path = folder
-            self.project_video_drop_groupbox.setEnabled(True)
-            self.refresh_label_table_list(delete_old=True)
-            self.yolo_handler.refresh_trained_model_list()
+            self.set_project_folder(folder)            
         else:
             print("No folder selected.")
         return 
-    
 
     def remove_all_layers(self, spare=[]):
         """
