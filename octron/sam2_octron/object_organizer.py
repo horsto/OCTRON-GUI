@@ -79,7 +79,7 @@ class ObjectOrganizer(BaseModel):
     next_label_id: int = 0
     
     # Color dictionary for all labels
-    n_labels_max: int = 10 # MAXIMUM ALLOWED NUMBER OF LABELS 
+    n_labels_max: int = 10 # max number of distinct label colors
     n_subcolors: int  = 50
 
 
@@ -203,11 +203,13 @@ class ObjectOrganizer(BaseModel):
 
         # Find out which color to assign (if necessary)
         if entry.color is None:
-            n_subcolors = len(self.get_suffixes_by_label(entry.label)) # These colors must exist
+            n_subcolors = len(self.get_suffixes_by_label(entry.label)) # These colors already exist ... 
             label_colors, indices_max_diff_labels, indices_max_diff_subcolors = self.all_colors()
-            if entry.label_id >= len(indices_max_diff_labels):
-                raise ValueError(f"Label_id {entry.label_id} exceeds the maximum number of labels.")
-            this_color = label_colors[indices_max_diff_labels[entry.label_id]][indices_max_diff_subcolors[n_subcolors]]
+
+            colors_index = indices_max_diff_labels[entry.label_id % self.n_labels_max]
+            subcolors_index = indices_max_diff_subcolors[n_subcolors % self.n_subcolors]
+            
+            this_color = label_colors[colors_index][subcolors_index]
             entry.color = this_color
             
         self.entries[id_] = entry

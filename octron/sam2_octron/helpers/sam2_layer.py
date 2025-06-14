@@ -237,7 +237,7 @@ def add_annotation_projection(
         prediction_layer_data = entry.prediction_layer.data # Mask data
         annotation_layer = entry.annotation_layer
         # Get color and make map 
-        colors = label_colors[indices_max_diff_labels[entry.label_id]]
+        colors = label_colors[indices_max_diff_labels[entry.label_id % object_organizer.n_labels_max]]
         colors.insert(0, [0.,0.,0.,0.]) # Add transparent color for background
         cm = Colormap(colors, name=label, display_name=label)
         # Filter by prediction indices. The fill value is -1, so we can filter by >= 0
