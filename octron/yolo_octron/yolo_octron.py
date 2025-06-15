@@ -1485,6 +1485,7 @@ class YOLO_octron:
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
+                    max_det=2000, # Increasing this for dense scenes
                     stream_buffer=True,
                     conf=conf_thresh,
                     iou=iou_thresh,
