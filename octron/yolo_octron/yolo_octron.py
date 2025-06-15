@@ -877,6 +877,7 @@ class YOLO_octron:
                     save_period=save_period, 
                     exist_ok=True,
                     nms=False, 
+                    max_det=2000, # Increasing this for dense scenes - I think it might affect val too
                     # Augmentation
                     hsv_v=.25,
                     hsv_s=0.25,
