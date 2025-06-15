@@ -228,7 +228,7 @@ class octron_widget(QWidget):
     ###### SAM2 SPECIFIC CALLBACKS ####################################################################
     
     def load_sam2model(self, 
-                       model_name
+                       model_name='',
                        ):
         """
         Load the selected SAM2 model and enable the batch prediction button, 
@@ -241,13 +241,12 @@ class octron_widget(QWidget):
             If no model is selected, the function returns without doing anything.
         
         """
-        if model_name is None: 
+        if not model_name:
+            # Assuming this is retrievable from current GUI ...             
             index = self.sam2model_list.currentIndex()
             if index == 0:
                 return
-        
             model_name = self.sam2model_list.currentText()
-        
         # Reverse lookup model_id
         model_found = False
         for model_id, model in self.sam2models_dict.items():
