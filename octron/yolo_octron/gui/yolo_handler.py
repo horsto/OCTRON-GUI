@@ -368,7 +368,11 @@ class YoloHandler(QObject):
         if index_imagesize_list == 0:
             show_warning("Please select an image size")
             return 
-        self.image_size_yolo = int(self.w.yoloimagesize_list.currentText())                                     
+        self.image_size_yolo = int(self.w.yoloimagesize_list.currentText())   
+        if self.image_size_yolo % 32 != 0:
+            show_warning(f'Training image size must be divisible by 32')
+            return
+                                          
         # Check status of "Launch Tensorboard" checkbox
         self.launch_tensorbrd = False #self.w.launch_tensorboard_checkBox.isChecked()   
         # TODO: Implement these options

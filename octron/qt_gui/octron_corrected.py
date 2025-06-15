@@ -81,7 +81,7 @@ class Ui_octron_widgetui(object):
         sizePolicy2.setHeightForWidth(self.octron.folder_sect_groupbox.sizePolicy().hasHeightForWidth())
         self.octron.folder_sect_groupbox.setSizePolicy(sizePolicy2)
         self.octron.folder_sect_groupbox.setMinimumSize(QSize(400, 80))
-        self.octron.folder_sect_groupbox.setMaximumSize(QSize(400, 80))
+        self.octron.folder_sect_groupbox.setMaximumSize(QSize(400, 90))
         self.octron.horizontalLayout_11 = QHBoxLayout(self.octron.folder_sect_groupbox)
         self.octron.horizontalLayout_11.setSpacing(20)
         self.octron.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
@@ -96,13 +96,13 @@ class Ui_octron_widgetui(object):
         self.octron.project_folder_path_label = QLabel(self.octron.folder_sect_groupbox)
         self.octron.project_folder_path_label.setObjectName(u"project_folder_path_label")
         self.octron.project_folder_path_label.setEnabled(False)
-        self.octron.project_folder_path_label.setMinimumSize(QSize(250, 40))
-        self.octron.project_folder_path_label.setMaximumSize(QSize(250, 40))
+        self.octron.project_folder_path_label.setMinimumSize(QSize(250, 50))
+        self.octron.project_folder_path_label.setMaximumSize(QSize(250, 50))
         self.octron.project_folder_path_label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
         self.octron.project_folder_path_label.setWordWrap(True)
         self.octron.project_folder_path_label.setMargin(0)
 
-        self.octron.horizontalLayout_11.addWidget(self.octron.project_folder_path_label, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.octron.horizontalLayout_11.addWidget(self.octron.project_folder_path_label)
 
 
         self.octron.project_vertical_layout.addWidget(self.octron.folder_sect_groupbox, 0, Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
@@ -170,7 +170,7 @@ class Ui_octron_widgetui(object):
         self.octron.toolBox.addItem(self.octron.project_tab, icon, u"Manage project")
         self.octron.annotate_tab = QWidget()
         self.octron.annotate_tab.setObjectName(u"annotate_tab")
-        self.octron.annotate_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.octron.annotate_tab.setGeometry(QRect(0, 0, 405, 414))
         sizePolicy1.setHeightForWidth(self.octron.annotate_tab.sizePolicy().hasHeightForWidth())
         self.octron.annotate_tab.setSizePolicy(sizePolicy1)
         self.octron.annotate_tab.setMaximumSize(QSize(405, 700))
@@ -264,7 +264,8 @@ class Ui_octron_widgetui(object):
         self.octron.label_list_combobox.setMinimumSize(QSize(110, 25))
         self.octron.label_list_combobox.setMaximumSize(QSize(110, 25))
         self.octron.label_list_combobox.setEditable(False)
-        self.octron.label_list_combobox.setMaxCount(15)
+        self.octron.label_list_combobox.setMaxVisibleItems(30)
+        self.octron.label_list_combobox.setMaxCount(30)
         self.octron.label_list_combobox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.octron.label_list_combobox.setIconSize(QSize(14, 14))
         self.octron.label_list_combobox.setFrame(False)
@@ -660,6 +661,7 @@ class Ui_octron_widgetui(object):
         self.octron.yoloimagesize_list.setObjectName(u"yoloimagesize_list")
         self.octron.yoloimagesize_list.setMinimumSize(QSize(100, 25))
         self.octron.yoloimagesize_list.setMaximumSize(QSize(100, 25))
+        self.octron.yoloimagesize_list.setEditable(True)
 
         self.octron.model_choose_horizontalLayout.addWidget(self.octron.yoloimagesize_list, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 

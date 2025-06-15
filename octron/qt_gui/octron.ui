@@ -189,7 +189,7 @@
            <property name="maximumSize">
             <size>
              <width>400</width>
-             <height>80</height>
+             <height>90</height>
             </size>
            </property>
            <property name="title">
@@ -230,7 +230,7 @@
               </property>
              </widget>
             </item>
-            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+            <item>
              <widget class="QLabel" name="project_folder_path_label">
               <property name="enabled">
                <bool>false</bool>
@@ -238,13 +238,13 @@
               <property name="minimumSize">
                <size>
                 <width>250</width>
-                <height>40</height>
+                <height>50</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>250</width>
-                <height>40</height>
+                <height>50</height>
                </size>
               </property>
               <property name="text">
@@ -445,8 +445,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>98</width>
-         <height>28</height>
+         <width>405</width>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -751,8 +751,11 @@ and octo and suffix 2 for the second octo </string>
               <property name="currentText">
                <string>Label ... </string>
               </property>
+              <property name="maxVisibleItems">
+               <number>30</number>
+              </property>
               <property name="maxCount">
-               <number>15</number>
+               <number>30</number>
               </property>
               <property name="sizeAdjustPolicy">
                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
@@ -1886,6 +1889,9 @@ Recommended are at least ~50.</string>
                </property>
                <property name="toolTip">
                 <string>Image size used for training within YOLO</string>
+               </property>
+               <property name="editable">
+                <bool>true</bool>
                </property>
                <item>
                 <property name="text">
