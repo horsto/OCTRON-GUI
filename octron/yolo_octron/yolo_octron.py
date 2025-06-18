@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from PIL import Image
 import yaml
-import json # Added import
+import json 
 from tqdm import tqdm
 import numpy as np
 from natsort import natsorted
@@ -29,6 +29,7 @@ from octron.yolo_octron.helpers.polygons import (find_objects_in_mask,
                                                  watershed_mask,
                                                  get_polygons,
                                                  postprocess_mask,
+                                                 polygon_to_mask, # Only used for visualization
 )
 
 
@@ -405,7 +406,21 @@ class YOLO_octron:
                                     mask_current_array = np.zeros_like(mask_current_array)
                                     mask_current_array[mask_labeled == l] = 1
                                     mask_polys.append(get_polygons(mask_current_array))
-
+                                    # # visualize 
+                                    # from matplotlib import pyplot as plt
+                                    # figure = plt.figure(figsize=(10,5))
+                                    # p = get_polygons(mask_current_array)
+                                    # print(f'Found {len(p)} polys')
+                                    # ax = figure.add_subplot(111)
+                                    # poly_mask = polygon_to_mask(np.zeros_like(mask_current_array), 
+                                    #                             p, 
+                                    #                             smooth_sigma=0., 
+                                    #                             opening_radius=0,
+                                    #                             model_imgsz=1920
+                                    #                             )
+                                    # ax.imshow(poly_mask)
+                                    # plt.show()
+                                    
                             
                     polys[f] = mask_polys
                     # Yield, to update the progress bar
