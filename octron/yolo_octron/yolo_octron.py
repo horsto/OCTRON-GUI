@@ -829,9 +829,9 @@ class YOLO_octron:
             Returns 
             -------
             height : float
-                Average height of up to 50 randomly sampled images
+                Average height of up to 3 randomly sampled images
             width : float
-                Average width of up to 50 randomly sampled images
+                Average width of up to 3 randomly sampled images
             rect : bool
                 True if all sampled images are rectangular, False otherwise.            
             """
@@ -841,8 +841,8 @@ class YOLO_octron:
             png_files = list(data_path.glob('**/*.png'))
             if len(png_files) == 0:
                 raise FileNotFoundError(f"No .png files found in {data_path.as_posix()}")
-            # Pick up to 50 random images to determine size
-            num_images = min(50, len(png_files))
+            # Pick up to 3 random images to determine size
+            num_images = min(3, len(png_files))
             sample_files = random.sample(png_files, num_images)
             rect_decisions = []
             heights = []
