@@ -959,7 +959,6 @@ class YOLO_octron:
                     progress_queue.task_done()
                 except queue.Empty:
                     # No progress info available yet, continue waiting
-                    time.sleep(0.1)
                     pass
                     
             # If there was an error in the training thread, raise it
