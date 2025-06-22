@@ -194,15 +194,11 @@ class YOLO_octron:
         try:
             self.training_path.mkdir(exist_ok=False)
         except FileExistsError:
-            # Check if training data folder is empty
-            if len(list(self.training_path.glob('*'))) > 0:
-                if not clean_training_dir:
-                    return
-                else:
-                    shutil.rmtree(self.training_path)
-                    self.training_path.mkdir()
-                    print(f'Created fresh training directory "{self.training_path.as_posix()}"')       
-        return
+            if clean_training_dir:
+                shutil.rmtree(self.training_path)
+                self.training_path.mkdir()
+                print(f'Created fresh training directory "{self.training_path.as_posix()}"')     
+
                     
                     
     ##### TRAINING DATA PREPARATION ###########################################################################    
