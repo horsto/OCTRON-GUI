@@ -823,15 +823,15 @@ class YOLO_octron:
             """
             Helper to find whether rectangular or square training images are used.
             This determines rect parameter in YOLO training.
-            
+
             Returns 
             -------
-            height : float
-                Average height of up to 20 randomly sampled images
-            width : float
-                Average width of up to 20 randomly sampled images
+            height : int
+                Height of a randomly sampled image
+            width : int
+                Width of a randomly sampled image
             rect : bool
-                True if all sampled images are rectangular, False otherwise.            
+                True if image is rectangular (width < height), False otherwise.
             """
             data_path = Path(data_path)
             assert data_path.exists(), f"Data path {data_path} does not exist."
@@ -839,32 +839,25 @@ class YOLO_octron:
             png_files = list(data_path.glob('**/*.png'))
             if len(png_files) == 0:
                 raise FileNotFoundError(f"No .png files found in {data_path.as_posix()}")
-            # Pick up to 20 random images to determine size
-            num_images = min(20, len(png_files))
-            sample_files = random.sample(png_files, num_images)
-            rect_decisions = []
-            heights = []
-            widths = [] 
-            for sample_img in sample_files:
-                img = Image.open(sample_img)
-                width, height = img.size # This is apparently correct, width goes first ... 
-                img.close()
-                if height > width:
-                    rect_decisions.append(False)
-                    # Decide for square (!) rect = False
-                    # This is because of a bug in the dataloader of ultralyics that 
-                    # does not permit rectangular (non-square) images with height > width
-                    # TODO: Re-evaluate this with updates of ultralytics. Current version: 8.3.152
-                if width < height: 
-                    rect_decisions.append(True)
-                else: 
-                    rect_decisions.append(False) # Square image 
-                heights.append(height)
-                widths.append(widths)      
-            if all(rect_decisions):
-                return np.mean(heights), np.mean(widths), True
-            else:
-                return np.mean(heights), np.mean(widths), False
+            # Pick a random image 
+            # CAVE that image might not be representative of the whole training 
+            # population of images. But we cannot afford to wait for too long here.
+            sample_img = random.choice(png_files) 
+            img = Image.open(sample_img)
+            width, height = img.size
+            img.close()  
+            if height > width:
+                rect = False
+                # Decide for square (!) in that case (rect = False):
+                # This is because of a bug in the dataloader of ultralyics that 
+                # does not permit rectangular (non-square) images with height > width
+                # TODO: Re-evaluate this with updates of ultralytics. Current version: 8.3.152
+            if width < height: 
+                rect = True
+            else: 
+                rect = False # Square image 
+            return height, width, rect
+
 
         # Add our callback that will put progress info into the queue
         self.model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
