@@ -852,7 +852,8 @@ class YOLO_octron:
                 # This is because of a bug in the dataloader of ultralyics that 
                 # does not permit rectangular (non-square) images with height > width
                 # TODO: Re-evaluate this with updates of ultralytics. Current version: 8.3.152
-            if width < height: 
+            if height < width: 
+                # The "true" accepted rect condition
                 rect = True
             else: 
                 rect = False # Square image 
