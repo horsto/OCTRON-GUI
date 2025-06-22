@@ -829,9 +829,9 @@ class YOLO_octron:
             Returns 
             -------
             height : float
-                Average height of up to 3 randomly sampled images
+                Average height of one randomly sampled images
             width : float
-                Average width of up to 3 randomly sampled images
+                Average width of one randomly sampled images
             rect : bool
                 True if all sampled images are rectangular, False otherwise.            
             """
@@ -841,33 +841,21 @@ class YOLO_octron:
             png_files = list(data_path.glob('**/*.png'))
             if len(png_files) == 0:
                 raise FileNotFoundError(f"No .png files found in {data_path.as_posix()}")
-            # Pick up to 3 random images to determine size
-            num_images = min(3, len(png_files))
-            sample_files = random.sample(png_files, num_images)
-            rect_decisions = []
-            heights = []
-            widths = [] 
-            for sample_img in sample_files:
-                img = Image.open(sample_img)
-                width, height = img.size # This order of output is correct! 
-                img.close()
-                if height > width:
-                    rect_decisions.append(False)
-                    # Decide for square (!) rect = False
-                    # This is because of a bug in the dataloader of ultralyics that 
-                    # does not permit rectangular (non-square) images with height > width
-                    # TODO: Re-evaluate this with updates of ultralytics. Current version: 8.3.158
-                if height < width: 
-                    rect_decisions.append(True)
-                else: 
-                    rect_decisions.append(False) # Square image
-                heights.append(height)
-                widths.append(widths)
-                
-            if all(rect_decisions):
-                return np.mean(heights), np.mean(widths), True
-            else:
-                return np.mean(heights), np.mean(widths), False
+            sample_img = random.choice(png_files)
+            img = Image.open(sample_img)
+            width, height = img.size # This order of output is correct! 
+            img.close()
+            if height > width:
+                rect = False
+                # Decide for square (!) rect = False
+                # This is because of a bug in the dataloader of ultralyics that 
+                # does not permit rectangular (non-square) images with height > width
+                # TODO: Re-evaluate this with updates of ultralytics. Current version: 8.3.158
+            if height < width: 
+                rect = True
+            else: 
+                rect = False
+            return height, width, rect
 
         # Add our callback that will put progress info into the queue
         self.model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
@@ -891,10 +879,10 @@ class YOLO_octron:
             # overlap_mask - https://github.com/ultralytics/ultralytics/issues/3213#issuecomment-2799841153
             nonlocal training_error
             try:
-                avg_h, avg_w, rect = _find_train_image_size(self.data_path)
+                img_height, img_width, rect = _find_train_image_size(self.data_path)
                 # Start training
                 print(f"Starting training for {epochs} epochs...")
-                print(f"Setting rect={rect} based on training image size of {avg_w}x{avg_h} (wxh)")
+                print(f"Setting rect={rect} based on training image size of {img_width}x{img_height} (wxh)")
                 print(f"Using device: {device}")
                 print("################################################################")
                 self.model.train(
