@@ -848,6 +848,7 @@ class YOLO_octron:
             for sample_img in sample_files:
                 img = Image.open(sample_img)
                 width, height = img.size # This is apparently correct, width goes first ... 
+                img.close()
                 if height > width:
                     rect_decisions.append(False)
                     # Decide for square (!) rect = False
@@ -857,17 +858,14 @@ class YOLO_octron:
                 if width < height: 
                     rect_decisions.append(True)
                 else: 
-                    rect_decisions.append(False) # Square image
-                img.close()
+                    rect_decisions.append(False) # Square image 
                 heights.append(height)
-                widths.append(widths)
-                
+                widths.append(widths)      
             if all(rect_decisions):
                 return np.mean(heights), np.mean(widths), True
             else:
                 return np.mean(heights), np.mean(widths), False
 
-        
         # Add our callback that will put progress info into the queue
         self.model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
         
