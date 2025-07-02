@@ -37,7 +37,7 @@ dependencies = [
     "scipy>=1.15.1",
     "pandas>=2.2.3",
     "scikit-image>=0.25.0",
-    "zarr>=3.0.4",
+    "zarr>=3.0.9",
     "kornia>=0.8.0",
     "cmasher>=1.9.2",
     "imantics",
