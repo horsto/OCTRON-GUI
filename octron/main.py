@@ -663,7 +663,7 @@ class octron_widget(QWidget):
         else:
             print(f"❌ Removed layer {self.layer_to_remove.name}")
             # What else do you need to remove? 
-            # Two cases:
+            # Three cases:
             # 1. The layer is a mask layer
             # 2. The layer is an annotation layer
             # 3. The layer is a video layer 

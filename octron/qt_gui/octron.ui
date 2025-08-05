@@ -2494,7 +2494,7 @@ Recommended are at least ~50.</string>
              <item row="2" column="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
               <widget class="QCheckBox" name="overwrite_prediction_checkBox">
                <property name="enabled">
-                <bool>false</bool>
+                <bool>true</bool>
                </property>
                <property name="minimumSize">
                 <size>
@@ -2515,7 +2515,7 @@ Recommended are at least ~50.</string>
                 <string>Overwrite</string>
                </property>
                <property name="checked">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
               </widget>
              </item>

@@ -956,10 +956,10 @@ class octron_gui_elements(QWidget):
 
         self.octron.overwrite_prediction_checkBox = QCheckBox(self.octron.layoutWidget8)
         self.octron.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
-        self.octron.overwrite_prediction_checkBox.setEnabled(False)
+        self.octron.overwrite_prediction_checkBox.setEnabled(True)
         self.octron.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
         self.octron.overwrite_prediction_checkBox.setMaximumSize(QSize(100, 25))
-        self.octron.overwrite_prediction_checkBox.setChecked(True)
+        self.octron.overwrite_prediction_checkBox.setChecked(False)
 
         self.octron.gridLayout_2.addWidget(self.octron.overwrite_prediction_checkBox, 2, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
