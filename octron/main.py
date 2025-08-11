@@ -426,8 +426,11 @@ class octron_widget(QWidget):
             self.existing_data_table.setModel(self.label_table_model)
             
             # Configure the table appearance
-            self.existing_data_table.horizontalHeader().setStretchLastSection(False)
-            self.existing_data_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+            # Prevent resizing of table columns by disabling interactive resizing
+            header = self.existing_data_table.horizontalHeader()
+            header.setSectionResizeMode(QHeaderView.Fixed)
+            header.setSectionsMovable(False)
+            header.setStretchLastSection(True)
             # Connect double-click event on table rows 
             self.existing_data_table.doubleClicked.connect(self.on_label_table_double_clicked)
         
