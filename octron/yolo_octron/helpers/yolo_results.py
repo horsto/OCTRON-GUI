@@ -58,7 +58,12 @@ class YOLO_results:
         self.find_video()
         self.find_csv()
         self.find_zarr_root()
-        _,  _, _ = self.get_track_ids_labels(csv_header_lines=self.csv_header_lines)
+        # Track IDs and labels will be loaded when first needed
+        
+    def _ensure_track_ids_loaded(self):
+        """Ensure track IDs and labels are loaded (lazy loading)."""
+        if self.track_ids is None or self.track_id_label is None:
+            self.get_track_ids_labels(csv_header_lines=self.csv_header_lines)
         
     def find_video(self):
         """
@@ -235,8 +240,7 @@ class YOLO_results:
             A list of track IDs associated with the given label.
             
         """
-        if self.track_id_label is None:
-            raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
+        self._ensure_track_ids_loaded()
         
         track_ids = self._find_keys_for_value(self.track_id_label, label)
         if not track_ids:
@@ -260,8 +264,7 @@ class YOLO_results:
             The label for the given track ID.
             
         """
-        if self.track_id_label is None:
-            raise ValueError("No track IDs found. Please run get_track_ids_labels() first.")
+        self._ensure_track_ids_loaded()
         
         label = self.track_id_label.get(track_id, None)
         if label is None:
@@ -628,8 +631,7 @@ class YOLO_results:
         """
         if self.zarr_root is None:
             raise ValueError("No zarr root found, cannot extract mask data.")
-        assert self.track_ids is not None, "No track IDs found. Please run get_track_ids_labels() first."
-        assert self.track_id_label is not None, "No track ID labels found. Please run get_track_ids_labels() first."
+        self._ensure_track_ids_loaded()
         
         mask_data = {}
         for track_id in self.track_ids:
