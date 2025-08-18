@@ -48,17 +48,17 @@ class YOLO_results:
         self.width, self.height, self.num_frames = None, None, None 
         self.csvs = None
         self.zarr, self.zarr_root = None, None
-        self.track_ids = None
         self.labels = None
-        self.track_id_label = None
         self.frame_indices = {} 
         results_dir = Path(results_dir)
         assert results_dir.exists(), f"Path {results_dir.as_posix()} does not exist"
         self.results_dir = results_dir
+        
+        # Find video, csv and zarr files associated with prediction output
         self.find_video()
         self.find_csv()
         self.find_zarr_root()
-        # Track IDs and labels will be loaded when first needed
+
         
     def _ensure_track_ids_loaded(self):
         """Ensure track IDs and labels are loaded (lazy loading)."""
@@ -67,7 +67,7 @@ class YOLO_results:
         
     def find_video(self):
         """
-        Check if video is present in the second parent directory
+        Check if video is present in the second parent directory, then probe it for properties.
         OCTRON saves results of analyzed mp4 files into a subdirectory /predictions/VIDEONAME/
         """
         from octron.sam2_octron.helpers.video_loader import probe_video
@@ -102,7 +102,6 @@ class YOLO_results:
     def find_zarr_root(self):
         """
         First find the zarr archive and then try to open the root group.
-        
         """
         def _find_zarr():
             results_dir = self.results_dir
@@ -241,7 +240,6 @@ class YOLO_results:
             
         """
         self._ensure_track_ids_loaded()
-        
         track_ids = self._find_keys_for_value(self.track_id_label, label)
         if not track_ids:
             raise ValueError(f"Label '{label}' not found in track IDs.")
@@ -265,7 +263,6 @@ class YOLO_results:
             
         """
         self._ensure_track_ids_loaded()
-        
         label = self.track_id_label.get(track_id, None)
         if label is None:
             raise ValueError(f"Track ID '{track_id}' not found in labels.")
@@ -632,7 +629,6 @@ class YOLO_results:
         if self.zarr_root is None:
             raise ValueError("No zarr root found, cannot extract mask data.")
         self._ensure_track_ids_loaded()
-        
         mask_data = {}
         for track_id in self.track_ids:
             label = self.get_label_for_track_id(track_id)
