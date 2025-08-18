@@ -26,7 +26,7 @@ classifiers = [
 
 requires-python = ">=3.11,<3.12"
 dependencies = [
-    "napari==0.6.3",
+    "napari==0.6.4",
     "numpy<=2.1.1",
     "PyQt5>=5.15.11",
     "qtpy>=2.4.3",
@@ -36,7 +36,7 @@ dependencies = [
     "scipy>=1.15.1",
     "pandas>=2.2.3",
     "scikit-image>=0.25.0",
-    "zarr>=3.0.9",
+    "zarr>=3.1.1",
     "kornia>=0.8.0",
     "cmasher>=1.9.2",
     "imantics",
