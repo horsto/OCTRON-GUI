@@ -48,7 +48,7 @@ class YOLO_results:
         self.width, self.height, self.num_frames = None, None, None 
         self.csvs = None
         self.zarr, self.zarr_root = None, None
-        self.labels = None
+        self.track_ids, self.labels, self.track_id_label = None, None, None        
         self.frame_indices = {} 
         results_dir = Path(results_dir)
         assert results_dir.exists(), f"Path {results_dir.as_posix()} does not exist"
