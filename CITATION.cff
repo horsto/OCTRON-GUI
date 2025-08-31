@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use OCTRON, please cite it as below."
 authors:
 - family-names: "Obenhaus"
-  given-names: "Horst-Andreas"
+  given-names: "Horst Andreas"
   orcid: "https://orcid.org/0000-0002-7670-4827"
 
 title: "OCTRON"
