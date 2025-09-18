@@ -48,7 +48,6 @@ class YOLO_results:
         self.width, self.height, self.num_frames = None, None, None 
         self.csvs = None
         self.zarr, self.zarr_root = None, None
-        self.track_ids, self.labels, self.track_id_label = None, None, None        
         self.frame_indices = {} 
         results_dir = Path(results_dir)
         assert results_dir.exists(), f"Path {results_dir.as_posix()} does not exist"
@@ -58,13 +57,11 @@ class YOLO_results:
         self.find_video()
         self.find_csv()
         self.find_zarr_root()
+        # Ensure track IDs and labels are loaded
+        # This creates: self.track_ids, self.labels, self.track_id_label 
+        self.get_track_ids_labels(csv_header_lines=self.csv_header_lines)
+        
 
-        
-    def _ensure_track_ids_loaded(self):
-        """Ensure track IDs and labels are loaded (lazy loading)."""
-        if self.track_ids is None or self.track_id_label is None:
-            self.get_track_ids_labels(csv_header_lines=self.csv_header_lines)
-        
     def find_video(self):
         """
         Check if video is present in the second parent directory, then probe it for properties.
@@ -144,13 +141,13 @@ class YOLO_results:
         and the zarr root as ".array_keys()".
         Corresponding label names are stored in the csvs (column "label").
         
-        Returns
+        Creates
         -------
-        track_ids : list
+        self.track_ids : list
             Set of list of track IDs that are present in both the csvs and the zarr archive.
-        labels : list
+        self.labels : list
             Set of list of labels that are present in the csvs.
-        track_id_label : dict
+        self.track_id_label : dict
             Dictionary of track IDs and their corresponding labels.
             The keys are the track IDs and the values are the labels.
                 
@@ -221,7 +218,6 @@ class YOLO_results:
         if self.verbose:
             print(f"Found {len(self.track_id_label)} unique track IDs in zarr and CSVs: {self.track_id_label}")
 
-        return self.track_ids, self.labels, self.track_id_label
     
     
     def get_track_id_for_label(self, label):
@@ -239,7 +235,6 @@ class YOLO_results:
             A list of track IDs associated with the given label.
             
         """
-        self._ensure_track_ids_loaded()
         track_ids = self._find_keys_for_value(self.track_id_label, label)
         if not track_ids:
             raise ValueError(f"Label '{label}' not found in track IDs.")
@@ -262,7 +257,6 @@ class YOLO_results:
             The label for the given track ID.
             
         """
-        self._ensure_track_ids_loaded()
         label = self.track_id_label.get(track_id, None)
         if label is None:
             raise ValueError(f"Track ID '{track_id}' not found in labels.")
@@ -628,7 +622,6 @@ class YOLO_results:
         """
         if self.zarr_root is None:
             raise ValueError("No zarr root found, cannot extract mask data.")
-        self._ensure_track_ids_loaded()
         mask_data = {}
         for track_id in self.track_ids:
             label = self.get_label_for_track_id(track_id)

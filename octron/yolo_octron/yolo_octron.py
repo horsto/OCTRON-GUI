@@ -1883,7 +1883,6 @@ class YOLO_octron:
             
         """
         yolo_results = YOLO_results(save_dir)
-        yolo_results._ensure_track_ids_loaded()
         track_id_label = yolo_results.track_id_label
         assert track_id_label is not None, "No track ID - label mapping found in the results"
         tracking_data = yolo_results.get_tracking_data(interpolate=True,
