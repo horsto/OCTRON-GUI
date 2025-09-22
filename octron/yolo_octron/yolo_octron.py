@@ -1208,20 +1208,21 @@ class YOLO_octron:
         # Define the tracker configuration
         tracker_config = {
             'tracker_type': 'botsort',    # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.6,     # threshold for the first association
-            'track_low_thresh': 0.2,      # threshold for the second association
-            'new_track_thresh': 0.8,      # threshold for init new track if the detection does not match any tracks
-            'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
-            'match_thresh': 0.95,         # threshold for matching tracks
-            'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
-            # 'min_box_area': 10,         # threshold for min box areas(for tracker evaluation, not used for now)
+            'track_high_thresh': 0.5,    # threshold for the first association
+            'track_low_thresh': 0.3,     # threshold for the second association
+            'new_track_thresh': 0.5,     # threshold for init new track if the detection does not match any tracks
+            'track_buffer': 240,         # buffer to calculate the time when to remove tracks
+            'match_thresh': .95,          # threshold for matching tracks
+            'fuse_score': True,              # Whether to fuse confidence scores with the iou distances before matching
             # BoT-SORT settings
             'gmc_method' : 'sparseOptFlow',
-            'downscale'  : 3,
+            'downscale'  : 2,
             # ReID model related thresh (not supported yet)
             'proximity_thresh'  : 0.5,
-            'appearance_thresh' : 0.5,
-            'with_reid' : False,
+            'appearance_thresh' : 0.25,
+            'with_reid' : True,
+            'model' : "auto",
+            
         }
 
         # Add a header comment to the YAML file
@@ -1248,14 +1249,15 @@ class YOLO_octron:
         
         # Define the tracker configuration
         tracker_config = {
-            'tracker_type': 'bytetrack',  # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.6,     # threshold for the first association
-            'track_low_thresh': 0.2,      # threshold for the second association
-            'new_track_thresh': 0.8,      # threshold for init new track if the detection does not match any tracks
-            'track_buffer': 100_000,      # buffer to calculate the time when to remove tracks
-            'match_thresh': 0.95,         # threshold for matching tracks
-            'fuse_score': False,          # Whether to fuse confidence scores with the iou distances before matching
-            # 'min_box_area' : 100,       # (Seems like this parameter is not used )
+            'tracker_type': 'bytetrack', # tracker type, ['botsort', 'bytetrack']
+            'track_high_thresh': 0.5,    # threshold for the first association
+            'track_low_thresh': 0.2,     # threshold for the second association
+            'new_track_thresh': 0.5,     # threshold for init new track if the detection does not match any tracks
+            'track_buffer': 200,         # buffer to calculate the time when to remove tracks
+            'match_thresh': .7,           # threshold for matching tracks
+            'fuse_score': True,          # Whether to fuse confidence scores with the iou distances before matching
+            # 'min_box_area' : 100,      # (Seems like this parameter is not used )
+            'preserve_classes': True     # This is the key addition
         }
 
 
@@ -1278,8 +1280,8 @@ class YOLO_octron:
                       tracker_name,
                       skip_frames=0,
                       one_object_per_label=False,
-                      iou_thresh=.9,
-                      conf_thresh=.8,
+                      iou_thresh=.7,
+                      conf_thresh=.5,
                       opening_radius=2,
                       overwrite=True
                       ):
@@ -1512,12 +1514,12 @@ class YOLO_octron:
                     tracker=tracker_yaml_path.as_posix(),
                     project=save_dir.parent.as_posix(),
                     name=save_dir.name,
-                    show=False,
+                    show=True,
                     rect=rect,
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
-                    max_det=2000, # Increasing this for dense scenes
+                    max_det=50,
                     stream_buffer=True,
                     conf=conf_thresh,
                     iou=iou_thresh,
@@ -1526,17 +1528,15 @@ class YOLO_octron:
                     save_txt=False,
                     save_conf=False,
                 )
-
-                # Process results and save to zarr/CSV here
-                confidences = results[0].boxes.conf.cpu().numpy()
-                label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
-                
                 # Then process the results ...    
                 try:
+                    # Process results and save to zarr/CSV here
+                    confidences = results[0].boxes.conf.cpu().numpy()
+                    label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
                     track_ids = results[0].boxes.id.int().cpu().tolist()
                     masks = results[0].masks.data.cpu().numpy()
                 except AttributeError:
-                    # Empty prediction
+                    # Most likely empty prediction
                     continue
                 
                 # Extract tracks 
@@ -1554,7 +1554,8 @@ class YOLO_octron:
                             track_id = track_id_label_dict[label]
                         else:
                             # Assign a new, custom track ID
-                            track_id = max(track_id_label_dict.values(), default=0) + 1
+                            current_ids = list(track_id_label_dict.values())
+                            track_id = (max(current_ids) + 1) if current_ids else 1
                             track_id_label_dict[label] = track_id
                     else: 
                         # ! Use 'track_id' as keys in track_id_label_dict
@@ -1562,11 +1563,14 @@ class YOLO_octron:
                         if track_id in track_id_label_dict:
                             label_ = track_id_label_dict[track_id]
                             if label_ != label: 
-                                # This happens in rare cases 
-                                # if the same track ID is assigned to different labels over time 
+                                raise IndexError(f'Track ID {track_id} - labels do not match: LABEL {label_} =! {label}')
+                                # This happens in cases 
+                                # where the same track ID is assigned to different labels over time 
                                 # Assign a new track ID
-                                track_id = max(track_id_label_dict.keys(), default=0) + 1
-                                track_id_label_dict[track_id] = label
+                                # Get the largest key + 1, or start at 1 if dict is empty
+                                # current_ids = list(track_id_label_dict.keys())
+                                # track_id = (max(current_ids) + 1) if current_ids else 1
+                                # track_id_label_dict[track_id] = label
                         else:
                             track_id_label_dict[track_id] = label   
                         
@@ -1824,7 +1828,7 @@ class YOLO_octron:
         # Initialize the DataFrame with NaN values
         df = pd.DataFrame(
             index=pd.MultiIndex.from_product([
-                range(video_dict['num_frames_analyzed']), 
+                list(range(video_dict['num_frames_analyzed'])), 
                 [], # Empty frame_idx list - will be populated during tracking
                 []  # Empty track_id list - will be populated during tracking
             ], names=['frame_counter', 'frame_idx', 'track_id']),
