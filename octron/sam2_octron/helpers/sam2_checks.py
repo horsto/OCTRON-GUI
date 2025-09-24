@@ -90,6 +90,7 @@ def check_sam2_models(SAM2p1_BASE_URL,
     else:
         SAM2p1_BASE_URLs = [SAM2p1_BASE_URL]
     
+    models_yaml_path = Path(models_yaml_path)
     sam2_path = models_yaml_path.parent
     assert sam2_path.exists(), f"Path {sam2_path} does not exist"
     assert models_yaml_path.exists(), f"Path {models_yaml_path} does not exist"
