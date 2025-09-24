@@ -6,45 +6,45 @@
 
 BaseTracker:
   name: "base tracker"
-  available: False
+  available: false
   config_path: "configs/basetracker.yaml"
 
 #### Standard trackers (no ReID)
 
 ByteTrack:
   name: "ByteTrack"  # Simple and efficient tracker
-  available: True
+  available: true
   config_path: "configs/bytetrack.yaml"
 
 OcSort:
   name: "OcSort"  # Observation-centric tracker with Kalman filtering
-  available: True
+  available: true
   config_path: "configs/ocsort.yaml"
 
 #### Advanced trackers with ReID capabilities
 
 StrongSort: # September 2025: Currently does not work! 
   name: "StrongSort"  # Strong feature-based tracker (no per-class support)
-  available: False
+  available: false
   config_path: "configs/strongsort.yaml"
 
 BotSort:
   name: "BotSort"  # ByteTrack with optical flow enhancement
-  available: True
+  available: true
   config_path: "configs/botsort.yaml"
 
 DeepOcSort:
   name: "D-OcSort"  # OcSort with appearance embedding
-  available: True
+  available: true
   config_path: "configs/deepocsort.yaml"
 
 HybridSort:
   name: "HybridSort"  # Combines multiple tracking strategies
-  available: True
+  available: true
   config_path: "configs/hybridsort.yaml"
 
 BoostTrack: #  September 2025: Currently does not work! 
   name: "BoostTrack"  
-  available: False
+  available: false
   config_path: "configs/boosttrack.yaml"
 
