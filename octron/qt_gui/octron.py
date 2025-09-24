@@ -822,11 +822,12 @@ class Ui_octron_widgetui(object):
 
         self.yolomodel_tracker_list = QComboBox(self.layoutWidget8)
         self.yolomodel_tracker_list.addItem("")
-        self.yolomodel_tracker_list.addItem("")
-        self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.setObjectName(u"yolomodel_tracker_list")
         self.yolomodel_tracker_list.setMinimumSize(QSize(110, 25))
         self.yolomodel_tracker_list.setMaximumSize(QSize(110, 25))
+        self.yolomodel_tracker_list.setMaxCount(20)
+        self.yolomodel_tracker_list.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.yolomodel_tracker_list.setMinimumContentsLength(20)
 
         self.gridLayout_2.addWidget(self.yolomodel_tracker_list, 0, 1, 2, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
@@ -854,7 +855,8 @@ class Ui_octron_widgetui(object):
         self.videos_for_prediction_list.setMinimumSize(QSize(270, 25))
         self.videos_for_prediction_list.setMaximumSize(QSize(270, 25))
         self.videos_for_prediction_list.setEditable(False)
-        self.videos_for_prediction_list.setMaxCount(15)
+        self.videos_for_prediction_list.setMaxVisibleItems(15)
+        self.videos_for_prediction_list.setMaxCount(1000)
         self.videos_for_prediction_list.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.videos_for_prediction_list.setIconSize(QSize(14, 14))
         self.videos_for_prediction_list.setFrame(False)
@@ -893,7 +895,7 @@ class Ui_octron_widgetui(object):
         self.predict_mask_opening_spinbox.setDecimals(1)
         self.predict_mask_opening_spinbox.setMaximum(5.000000000000000)
         self.predict_mask_opening_spinbox.setSingleStep(0.250000000000000)
-        self.predict_mask_opening_spinbox.setValue(2.000000000000000)
+        self.predict_mask_opening_spinbox.setValue(0.000000000000000)
 
         self.gridLayout_3.addWidget(self.predict_mask_opening_spinbox, 0, 1, 1, 1)
 
@@ -913,7 +915,7 @@ class Ui_octron_widgetui(object):
         self.predict_iou_thresh_spinbox.setMaximumSize(QSize(70, 25))
         self.predict_iou_thresh_spinbox.setMaximum(1.000000000000000)
         self.predict_iou_thresh_spinbox.setSingleStep(0.100000000000000)
-        self.predict_iou_thresh_spinbox.setValue(0.400000000000000)
+        self.predict_iou_thresh_spinbox.setValue(0.300000000000000)
 
         self.gridLayout_3.addWidget(self.predict_iou_thresh_spinbox, 0, 3, 1, 1)
 
@@ -932,7 +934,7 @@ class Ui_octron_widgetui(object):
         self.predict_conf_thresh_spinbox.setMaximumSize(QSize(70, 25))
         self.predict_conf_thresh_spinbox.setMaximum(1.000000000000000)
         self.predict_conf_thresh_spinbox.setSingleStep(0.050000000000000)
-        self.predict_conf_thresh_spinbox.setValue(0.600000000000000)
+        self.predict_conf_thresh_spinbox.setValue(0.500000000000000)
 
         self.gridLayout_3.addWidget(self.predict_conf_thresh_spinbox, 1, 1, 1, 1)
 
@@ -1160,8 +1162,6 @@ class Ui_octron_widgetui(object):
         self.yolomodel_trained_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"OCTRON user trained models that are found in the project path", None))
 #endif // QT_CONFIG(tooltip)
         self.yolomodel_tracker_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Tracker ...", None))
-        self.yolomodel_tracker_list.setItemText(1, QCoreApplication.translate("octron_widgetui", u"BoTSORT", None))
-        self.yolomodel_tracker_list.setItemText(2, QCoreApplication.translate("octron_widgetui", u"ByteTrack", None))
 
 #if QT_CONFIG(tooltip)
         self.yolomodel_tracker_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"OCTRON user trained models that are found in the project path", None))

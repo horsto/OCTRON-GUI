@@ -2371,19 +2371,18 @@ Recommended are at least ~50.</string>
                <property name="toolTip">
                 <string>OCTRON user trained models that are found in the project path</string>
                </property>
+               <property name="maxCount">
+                <number>20</number>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+               </property>
+               <property name="minimumContentsLength">
+                <number>20</number>
+               </property>
                <item>
                 <property name="text">
                  <string>Tracker ...</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>BoTSORT</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>ByteTrack</string>
                 </property>
                </item>
               </widget>
@@ -2464,8 +2463,11 @@ Recommended are at least ~50.</string>
                <property name="currentText">
                 <string>Videos</string>
                </property>
-               <property name="maxCount">
+               <property name="maxVisibleItems">
                 <number>15</number>
+               </property>
+               <property name="maxCount">
+                <number>1000</number>
                </property>
                <property name="sizeAdjustPolicy">
                 <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
@@ -2587,7 +2589,7 @@ This gets rid of some noise. 2 is a good value to start with.</string>
                 <double>0.250000000000000</double>
                </property>
                <property name="value">
-                <double>2.000000000000000</double>
+                <double>0.000000000000000</double>
                </property>
               </widget>
              </item>
@@ -2646,7 +2648,7 @@ of one label will be fused into one mask.</string>
                 <double>0.100000000000000</double>
                </property>
                <property name="value">
-                <double>0.400000000000000</double>
+                <double>0.300000000000000</double>
                </property>
               </widget>
              </item>
@@ -2699,7 +2701,7 @@ of one label will be fused into one mask.</string>
                 <double>0.050000000000000</double>
                </property>
                <property name="value">
-                <double>0.600000000000000</double>
+                <double>0.500000000000000</double>
                </property>
               </widget>
              </item>
