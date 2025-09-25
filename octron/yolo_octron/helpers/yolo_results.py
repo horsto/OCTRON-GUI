@@ -65,7 +65,7 @@ class YOLO_results:
     def find_video(self):
         """
         Check if video is present in the second parent directory, then probe it for properties.
-        OCTRON saves results of analyzed mp4 files into a subdirectory /predictions/VIDEONAME/
+        OCTRON saves results of analyzed mp4 files into a subdirectory /octron_predictions/VIDEONAME/
         """
         from octron.sam2_octron.helpers.video_loader import probe_video
         results_dir = self.results_dir

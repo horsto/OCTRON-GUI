@@ -501,6 +501,7 @@ class YoloHandler(QObject):
 
     def on_tune_tracker_clicked(self):
         """
+        This is the "Tune" button displayed next to the tracker selection list.
         Open configuration dialog for the selected tracker
         """
         index = self.w.yolomodel_tracker_list.currentIndex()

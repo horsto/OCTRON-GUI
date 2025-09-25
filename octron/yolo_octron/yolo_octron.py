@@ -25,6 +25,7 @@ from skimage import measure, color
 
 import napari
 from octron import __version__ as octron_version
+from octron.main import base_path as octron_base_path
 from octron.yolo_octron.helpers.yolo_checks import check_yolo_models
 from octron.yolo_octron.helpers.polygons import (find_objects_in_mask, 
                                                  watershed_mask,
@@ -36,6 +37,9 @@ from octron.yolo_octron.helpers.polygons import (find_objects_in_mask,
 
 from octron.yolo_octron.helpers.yolo_zarr import (create_prediction_store, 
                                                   create_prediction_zarr
+)
+from octron.tracking.helpers.tracker_checks import (load_boxmot_trackers, 
+                                                    load_boxmot_tracker_config
 )
 from octron.yolo_octron.helpers.training import (
     pick_random_frames,
@@ -1193,83 +1197,6 @@ class YOLO_octron:
                         found_models_project.append(current_dir_path / fname)
                         
         return natsorted(found_models_project)
-    
-    def write_bot_sort_yaml(self, output_path):
-        """
-        Write a BotSort tracker configuration to a YAML file
-        
-        """
-        
-        assert output_path.suffix == '.yaml', "Tracker yaml path must have a .yaml extension" 
-        output_path = Path(output_path)
-        assert output_path.parent.exists(), "Tracker output path parent directory does not exist"
-        
-        # Define the tracker configuration
-        tracker_config = {
-            'tracker_type': 'botsort',    # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.5,    # threshold for the first association
-            'track_low_thresh': 0.3,     # threshold for the second association
-            'new_track_thresh': 0.5,     # threshold for init new track if the detection does not match any tracks
-            'track_buffer': 240,         # buffer to calculate the time when to remove tracks
-            'match_thresh': .95,          # threshold for matching tracks
-            'fuse_score': True,              # Whether to fuse confidence scores with the iou distances before matching
-            # BoT-SORT settings
-            'gmc_method' : 'sparseOptFlow',
-            'downscale'  : 2,
-            # ReID model related thresh (not supported yet)
-            'proximity_thresh'  : 0.5,
-            'appearance_thresh' : 0.25,
-            'with_reid' : True,
-            'model' : "auto",
-            
-        }
-
-        # Add a header comment to the YAML file
-        header = """# Tracker configuration for BoT-SORT\n# For BoT-SORT source code see https://github.com/NirAharon/BoT-SORT\n"""
-
-        # Write the configuration to a YAML file with header
-        with open(output_path, 'w') as f:
-            f.write(header)
-            yaml.dump(tracker_config, f, default_flow_style=False, sort_keys=False)
-
-        print(f"BoT-SORT configuration written to {output_path.absolute()}")
-      
-      
-    
-    def write_byte_tracker_yaml(self, output_path):
-        """
-        Write a ByteTrack tracker configuration to a YAML file
-        
-        """
-        
-        assert output_path.suffix == '.yaml', "Tracker yaml path must have a .yaml extension" 
-        output_path = Path(output_path)
-        assert output_path.parent.exists(), "Tracker output path parent directory does not exist"
-        
-        # Define the tracker configuration
-        tracker_config = {
-            'tracker_type': 'bytetrack', # tracker type, ['botsort', 'bytetrack']
-            'track_high_thresh': 0.5,    # threshold for the first association
-            'track_low_thresh': 0.2,     # threshold for the second association
-            'new_track_thresh': 0.5,     # threshold for init new track if the detection does not match any tracks
-            'track_buffer': 200,         # buffer to calculate the time when to remove tracks
-            'match_thresh': .7,           # threshold for matching tracks
-            'fuse_score': True,          # Whether to fuse confidence scores with the iou distances before matching
-            # 'min_box_area' : 100,      # (Seems like this parameter is not used )
-            'preserve_classes': True     # This is the key addition
-        }
-
-
-        # Add a header comment to the YAML file
-        header = """# Tracker configuration for ByteTrack\n# For ByteTrack source code see https://github.com/ifzhang/ByteTrack\n"""
-
-        # Write the configuration to a YAML file with header
-        with open(output_path, 'w') as f:
-            f.write(header)
-            yaml.dump(tracker_config, f, default_flow_style=False, sort_keys=False)
-
-        print(f"ByteTrack configuration written to {output_path.absolute()}")
-      
       
     
     def predict_batch(self, 
@@ -1277,6 +1204,7 @@ class YOLO_octron:
                       model_path,
                       device,
                       tracker_name,
+                      tracker_cfg_path=None,
                       skip_frames=0,
                       one_object_per_label=False,
                       iou_thresh=.7,
@@ -1297,6 +1225,9 @@ class YOLO_octron:
             Device to run prediction on ('cpu', 'cuda', etc.)
         tracker_name : str
             Name of the tracker to use ('bytetrack' or 'botsort')
+        tracker_cfg_path : str or Path
+            Path to the boxmot tracker config yaml file. Those are normally saved under 
+            octron/tracking/configs/
         skip_frames : int
             Number of frames to skip between predictions.
         one_object_per_label : bool
@@ -1373,10 +1304,23 @@ class YOLO_octron:
             
             return lab_dict
         
-        available_trackers = ['bytetrack','botsort']
-        tracker_name = tracker_name.strip().lower()
-        assert tracker_name in available_trackers, f'Tracker with name {tracker_name} not available.'
-        
+        # Check Boxmot tracker configuration
+        # A tracker can either be directly linked via the config file (tracker_cfg_path)
+        # or selected via name. If the latter it is then looked up via the boxmot_trackers.yaml 
+        if tracker_cfg_path is not None: 
+            tracker_cfg_path = Path(tracker_cfg_path)
+            assert tracker_cfg_path.exists, f'Tracker .yaml not found under {tracker_cfg_path}'
+        else:
+            # Load all available trackers from scratch
+            trackers_yaml_path = octron_base_path / 'tracking/boxmot_trackers.yaml'
+            trackers_dict = load_boxmot_trackers(trackers_yaml_path)
+            tracker_id = tracker_name.strip()
+            assert tracker_name in trackers_dict, f'Tracker with name {tracker_id} not available.'
+            tracker_config_path = octron_base_path / trackers_dict[tracker_id]['config_path']
+            tracker_config = load_boxmot_tracker_config(tracker_config_path
+            assert tracker_config, f'Tracker config could not be loaded for tracker {tracker_id}'                                                 
+
+        # Check YOLO configuration
         model_path = Path(model_path)
         assert model_path.exists(), f"Model path {model_path} does not exist."
         # Try to find model args 
@@ -1432,7 +1376,7 @@ class YOLO_octron:
             retina_masks = True # Always set to True for now 
             
             # Set up prediction directory structure
-            save_dir = video_path.parent / 'predictions' / f"{video_path.stem}_{tracker_name}"
+            save_dir = video_path.parent / 'octron_predictions' / f"{video_path.stem}_{tracker_name}"
             if save_dir.exists() and overwrite:
                 shutil.rmtree(save_dir)
             elif save_dir.exists() and not overwrite:
@@ -1448,12 +1392,7 @@ class YOLO_octron:
             save_dir.mkdir(parents=True, exist_ok=True)
             
             # Set up tracker 
-            tracker_yaml_path = save_dir / f'{tracker_name}.yaml'
-            if not tracker_yaml_path.exists():
-                if tracker_name == 'bytetrack':
-                    self.write_byte_tracker_yaml(tracker_yaml_path)
-                elif tracker_name == 'botsort':
-                    self.write_bot_sort_yaml(tracker_yaml_path)
+
                     
             # Prepare prediction stores
             prediction_store_dir = save_dir / 'predictions.zarr'
