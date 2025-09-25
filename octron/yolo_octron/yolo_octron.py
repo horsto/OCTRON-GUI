@@ -37,7 +37,6 @@ from octron.yolo_octron.helpers.polygons import (find_objects_in_mask,
 from octron.yolo_octron.helpers.yolo_zarr import (create_prediction_store, 
                                                   create_prediction_zarr
 )
-from octron.yolo_octron.helpers.boxmot import BoxMOTWrapper
 from octron.yolo_octron.helpers.training import (
     pick_random_frames,
     collect_labels,

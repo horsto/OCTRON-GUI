@@ -1,0 +1,91 @@
+BaseTracker:
+  name: "base tracker"
+  parameters:
+    det_thresh: 
+      current_value: 0.3
+      default_value: 0.3 
+      disabled: false
+      docstring: Detection threshold for considering detections
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+
+    max_age: 
+      current_value: 300
+      default_value: 300
+      disabled: false
+      docstring: Maximum age (in frames) of a track before it is considered lost
+      gui_element: spin_box
+      range:
+      - 1
+      - 10000
+
+    max_obs: 
+      current_value: 305
+      default_value: 305
+      disabled: false
+      docstring: Maximum number of historical observations (bounding boxes) stored for each track.
+        Always greater than max_age by minimum 5.
+      gui_element: spin_box
+      range:
+      - 5
+      - 10000
+    
+    min_hits: 
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Minimum number of detection hits before a track is considered confirmed.
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    
+    iou_threshold: 
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: IOU threshold for determining match between detection and tracks.
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 0.9
+    
+    per_class: 
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Enables class-separated tracking. When true, tracks different object classes separately.
+      gui_element: checkbox
+    
+    nr_classes: 
+      current_value: 5
+      default_value: 5
+      disabled: true
+      docstring: Total number of object classes that the tracker will handle (for per_class=True).
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    
+    asso_func: 
+      current_value: "iou"
+      default_value: "iou"
+      disabled: false
+      docstring: Algorithm used for data association between detections and tracks.
+      gui_element: combo_box
+      options:
+      - iou
+      - hmiou
+      - giou
+      - ciou
+      - diou
+      - centroid
+    
+    is_obb: 
+      current_value: false
+      default_value: false
+      disabled: true
+      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned bounding boxes.
+      gui_element: checkbox

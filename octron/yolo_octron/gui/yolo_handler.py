@@ -11,6 +11,9 @@ from napari_pyav._reader import FastVideoReader
 from qtpy.QtWidgets import QDialog                            
 from octron.gui_dialog_elements import remove_video_dialog     
 
+# Tracker handling
+from octron.tracking.helpers.tracker_checks import load_boxmot_tracker_config
+from octron.tracking.tracker_config_ui import open_boxmot_tracker_config_dialog
 
 import torch 
 
@@ -480,7 +483,7 @@ class YoloHandler(QObject):
     # YOLO PREDICTION PIPELINE
     #######################################################################################################
     
-    # Tracker selection / tuning handling
+    # Boxmot tracker selection / tuning handling
     def on_tracker_selection_change(self, index):
         """
         Handle tracker selection change in the dropdown list
@@ -504,7 +507,7 @@ class YoloHandler(QObject):
         if index <= 0:
             return  # Should not happen as button should be disabled
         
-        tracker_name = self.w.yolomodel_tracker_list.currentText()
+        tracker_name = self.w.yolomodel_tracker_list.currentText().strip()
         
         # Find tracker ID from name
         tracker_id = None
@@ -513,24 +516,25 @@ class YoloHandler(QObject):
                 tracker_id = tid
                 break
                 
-        if tracker_id:
-            print(f"Opening tuning dialog for {tracker_name} ({tracker_id})")
-            # TODO: Implement tracker configuration dialog
-            # self.open_tracker_config_dialog(tracker_id)
+        if not tracker_id:
+            return
+        
+        config_path = self.w.base_path / self.w.trackers_dict[tracker_id]['config_path']
+        tracker_config = load_boxmot_tracker_config(config_path)
+        
+        if tracker_config:
+            # Open the configuration dialog
+            updated_config = open_boxmot_tracker_config_dialog(
+                self.w,  # That's the parent GUI widget
+                tracker_id, 
+                tracker_config, 
+                config_path
+            )
+            if updated_config:
+                print(f"Configuration for {tracker_name} updated and saved")
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
+        
     # YOLO Prediction handling
-    
-    
-    
     
     def on_iou_thresh_change(self, value):
         """

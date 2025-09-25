@@ -1,11 +1,11 @@
 from pathlib import Path
 import yaml
 
-def check_boxmot_trackers(trackers_yaml_path):
+def load_boxmot_trackers(trackers_yaml_path):
     """
-    Check the availability of boxmot trackers loaded from 
-    the trackers_yaml_path .yaml file. 
-    
+    Load boxmot tracker overview .yaml.
+    This yaml contains info about the tracker names, and where 
+    their configuration files are saved. 
     
     Parameters
     ----------
@@ -34,3 +34,32 @@ def check_boxmot_trackers(trackers_yaml_path):
     with open(trackers_yaml_path, 'r') as file:
         trackers_dict = yaml.safe_load(file)
     return trackers_dict
+
+
+def load_boxmot_tracker_config(config_yaml_path):
+    
+    """
+    Load OCTRON boxmot tracker configuration file.
+    
+    Parameters
+    ----------
+    config_yaml_path : str or Path
+        Path to the tracker config yaml file. 
+        For example "configs/bytetrack.yaml"
+        (This is in octron/tracking/)
+
+    Returns
+    -------
+    config_dict : dict
+        Config dictionary
+
+    """
+    config_yaml_path = Path(config_yaml_path)
+    assert config_yaml_path.exists(), f"Path {config_yaml_path} does not exist"
+    
+    # Load the model YAML file and convert it to a dictionary
+    with open(config_yaml_path, 'r') as file:
+        config_dict = yaml.safe_load(file)
+    return config_dict
+
+    

@@ -65,7 +65,7 @@ from octron.yolo_octron.helpers.training import collect_labels, load_object_orga
 from octron.yolo_octron.yolo_octron import YOLO_octron
 
 # Tracker specific 
-from octron.tracking.helpers.tracker_checks import check_boxmot_trackers
+from octron.tracking.helpers.tracker_checks import load_boxmot_trackers
 from octron.tracking.helpers.tracker_vis import create_color_icon
 
 # Annotation layer creation tools
@@ -148,7 +148,7 @@ class octron_widget(QWidget):
         
         # Model yaml for Trackers
         trackers_yaml_path = self.base_path / 'tracking/boxmot_trackers.yaml'
-        self.trackers_dict = check_boxmot_trackers(trackers_yaml_path)
+        self.trackers_dict = load_boxmot_trackers(trackers_yaml_path)
         
         # Initialize all UI components
         octron_gui_elements(self, base_path=base_path_parent)
