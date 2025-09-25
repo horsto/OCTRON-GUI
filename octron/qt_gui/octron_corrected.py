@@ -890,15 +890,15 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_3.addWidget(self.octron.skip_frames_analysis_spinBox, 1, 3, 1, 1)
 
-        self.octron.widget = QWidget(self.octron.predict_video_predict_groupbox)
-        self.octron.widget.setObjectName(u"widget")
-        self.octron.widget.setGeometry(QRect(10, 31, 381, 101))
-        self.octron.gridLayout_2 = QGridLayout(self.octron.widget)
+        self.octron.layoutWidget9 = QWidget(self.octron.predict_video_predict_groupbox)
+        self.octron.layoutWidget9.setObjectName(u"layoutWidget9")
+        self.octron.layoutWidget9.setGeometry(QRect(10, 31, 381, 101))
+        self.octron.gridLayout_2 = QGridLayout(self.octron.layoutWidget9)
         self.octron.gridLayout_2.setObjectName(u"gridLayout_2")
         self.octron.gridLayout_2.setHorizontalSpacing(5)
         self.octron.gridLayout_2.setVerticalSpacing(0)
         self.octron.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.octron.overwrite_prediction_checkBox = QCheckBox(self.octron.widget)
+        self.octron.overwrite_prediction_checkBox = QCheckBox(self.octron.layoutWidget9)
         self.octron.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
         self.octron.overwrite_prediction_checkBox.setEnabled(True)
         self.octron.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
@@ -907,7 +907,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_2.addWidget(self.octron.overwrite_prediction_checkBox, 2, 3, 1, 1)
 
-        self.octron.yolomodel_tracker_list = QComboBox(self.octron.widget)
+        self.octron.yolomodel_tracker_list = QComboBox(self.octron.layoutWidget9)
         self.octron.yolomodel_tracker_list.addItem("")
         self.octron.yolomodel_tracker_list.setObjectName(u"yolomodel_tracker_list")
         self.octron.yolomodel_tracker_list.setMinimumSize(QSize(110, 25))
@@ -918,7 +918,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_2.addWidget(self.octron.yolomodel_tracker_list, 0, 1, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
-        self.octron.open_when_finish_checkBox = QCheckBox(self.octron.widget)
+        self.octron.open_when_finish_checkBox = QCheckBox(self.octron.layoutWidget9)
         self.octron.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.octron.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.octron.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
@@ -926,7 +926,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_2.addWidget(self.octron.open_when_finish_checkBox, 0, 3, 1, 1)
 
-        self.octron.videos_for_prediction_list = QComboBox(self.octron.widget)
+        self.octron.videos_for_prediction_list = QComboBox(self.octron.layoutWidget9)
         self.octron.videos_for_prediction_list.addItem("")
         self.octron.videos_for_prediction_list.addItem("")
         self.octron.videos_for_prediction_list.setObjectName(u"videos_for_prediction_list")
@@ -941,7 +941,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_2.addWidget(self.octron.videos_for_prediction_list, 2, 0, 1, 3, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.octron.single_subject_checkBox = QCheckBox(self.octron.widget)
+        self.octron.single_subject_checkBox = QCheckBox(self.octron.layoutWidget9)
         self.octron.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
         self.octron.single_subject_checkBox.setEnabled(True)
         self.octron.single_subject_checkBox.setMinimumSize(QSize(90, 25))
@@ -950,7 +950,7 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_2.addWidget(self.octron.single_subject_checkBox, 1, 3, 1, 1)
 
-        self.octron.yolomodel_trained_list = QComboBox(self.octron.widget)
+        self.octron.yolomodel_trained_list = QComboBox(self.octron.layoutWidget9)
         self.octron.yolomodel_trained_list.addItem("")
         self.octron.yolomodel_trained_list.setObjectName(u"yolomodel_trained_list")
         self.octron.yolomodel_trained_list.setEnabled(True)
@@ -959,14 +959,14 @@ class Ui_octron_widgetui(object):
 
         self.octron.gridLayout_2.addWidget(self.octron.yolomodel_trained_list, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.octron.tune_tracker_btn = QPushButton(self.octron.widget)
+        self.octron.tune_tracker_btn = QPushButton(self.octron.layoutWidget9)
         self.octron.tune_tracker_btn.setObjectName(u"tune_tracker_btn")
         self.octron.tune_tracker_btn.setEnabled(False)
         sizePolicy3.setHeightForWidth(self.octron.tune_tracker_btn.sizePolicy().hasHeightForWidth())
         self.octron.tune_tracker_btn.setSizePolicy(sizePolicy3)
-        self.octron.tune_tracker_btn.setMinimumSize(QSize(55, 25))
-        self.octron.tune_tracker_btn.setMaximumSize(QSize(55, 25))
-        self.octron.tune_tracker_btn.setBaseSize(QSize(55, 25))
+        self.octron.tune_tracker_btn.setMinimumSize(QSize(50, 25))
+        self.octron.tune_tracker_btn.setMaximumSize(QSize(50, 25))
+        self.octron.tune_tracker_btn.setBaseSize(QSize(50, 25))
 
         self.octron.gridLayout_2.addWidget(self.octron.tune_tracker_btn, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 

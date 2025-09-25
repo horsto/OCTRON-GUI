@@ -2551,7 +2551,7 @@ of one label will be fused into one mask.</string>
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
               <x>10</x>
@@ -2777,19 +2777,19 @@ of one label will be fused into one mask.</string>
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>55</width>
+                 <width>50</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>55</width>
+                 <width>50</width>
                  <height>25</height>
                 </size>
                </property>
                <property name="baseSize">
                 <size>
-                 <width>55</width>
+                 <width>50</width>
                  <height>25</height>
                 </size>
                </property>

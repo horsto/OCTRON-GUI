@@ -890,15 +890,15 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_3.addWidget(self.skip_frames_analysis_spinBox, 1, 3, 1, 1)
 
-        self.widget = QWidget(self.predict_video_predict_groupbox)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(10, 31, 381, 101))
-        self.gridLayout_2 = QGridLayout(self.widget)
+        self.layoutWidget9 = QWidget(self.predict_video_predict_groupbox)
+        self.layoutWidget9.setObjectName(u"layoutWidget9")
+        self.layoutWidget9.setGeometry(QRect(10, 31, 381, 101))
+        self.gridLayout_2 = QGridLayout(self.layoutWidget9)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(5)
         self.gridLayout_2.setVerticalSpacing(0)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.overwrite_prediction_checkBox = QCheckBox(self.widget)
+        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget9)
         self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
         self.overwrite_prediction_checkBox.setEnabled(True)
         self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
@@ -907,7 +907,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.overwrite_prediction_checkBox, 2, 3, 1, 1)
 
-        self.yolomodel_tracker_list = QComboBox(self.widget)
+        self.yolomodel_tracker_list = QComboBox(self.layoutWidget9)
         self.yolomodel_tracker_list.addItem("")
         self.yolomodel_tracker_list.setObjectName(u"yolomodel_tracker_list")
         self.yolomodel_tracker_list.setMinimumSize(QSize(110, 25))
@@ -918,7 +918,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_tracker_list, 0, 1, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
-        self.open_when_finish_checkBox = QCheckBox(self.widget)
+        self.open_when_finish_checkBox = QCheckBox(self.layoutWidget9)
         self.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
@@ -926,7 +926,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.open_when_finish_checkBox, 0, 3, 1, 1)
 
-        self.videos_for_prediction_list = QComboBox(self.widget)
+        self.videos_for_prediction_list = QComboBox(self.layoutWidget9)
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.addItem("")
         self.videos_for_prediction_list.setObjectName(u"videos_for_prediction_list")
@@ -941,7 +941,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.videos_for_prediction_list, 2, 0, 1, 3, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
-        self.single_subject_checkBox = QCheckBox(self.widget)
+        self.single_subject_checkBox = QCheckBox(self.layoutWidget9)
         self.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
         self.single_subject_checkBox.setEnabled(True)
         self.single_subject_checkBox.setMinimumSize(QSize(90, 25))
@@ -950,7 +950,7 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.single_subject_checkBox, 1, 3, 1, 1)
 
-        self.yolomodel_trained_list = QComboBox(self.widget)
+        self.yolomodel_trained_list = QComboBox(self.layoutWidget9)
         self.yolomodel_trained_list.addItem("")
         self.yolomodel_trained_list.setObjectName(u"yolomodel_trained_list")
         self.yolomodel_trained_list.setEnabled(True)
@@ -959,14 +959,14 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_trained_list, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.tune_tracker_btn = QPushButton(self.widget)
+        self.tune_tracker_btn = QPushButton(self.layoutWidget9)
         self.tune_tracker_btn.setObjectName(u"tune_tracker_btn")
         self.tune_tracker_btn.setEnabled(False)
         sizePolicy3.setHeightForWidth(self.tune_tracker_btn.sizePolicy().hasHeightForWidth())
         self.tune_tracker_btn.setSizePolicy(sizePolicy3)
-        self.tune_tracker_btn.setMinimumSize(QSize(55, 25))
-        self.tune_tracker_btn.setMaximumSize(QSize(55, 25))
-        self.tune_tracker_btn.setBaseSize(QSize(55, 25))
+        self.tune_tracker_btn.setMinimumSize(QSize(50, 25))
+        self.tune_tracker_btn.setMaximumSize(QSize(50, 25))
+        self.tune_tracker_btn.setBaseSize(QSize(50, 25))
 
         self.gridLayout_2.addWidget(self.tune_tracker_btn, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 

@@ -39,7 +39,7 @@ class YoloHandler(QObject):
         self.training_finished = False # YOLO training
         self.trained_models = {}
         self.videos_to_predict = {}
-
+        
     def connect_signals(self):
         # Wire buttons/spinboxes to handler entrypoints 
         # These are all in the parent widget in main.py
@@ -49,6 +49,8 @@ class YoloHandler(QObject):
         self.w.predict_iou_thresh_spinbox.valueChanged.connect(self.on_iou_thresh_change)
         self.w.predict_video_drop_widget.callback = self.on_mp4_predict_dropped_area
         self.w.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
+        self.w.yolomodel_tracker_list.currentIndexChanged.connect(self.on_tracker_selection_change)
+        self.w.tune_tracker_btn.clicked.connect(self.on_tune_tracker_clicked)
         
     def refresh_trained_model_list(self):
         """
@@ -56,7 +58,7 @@ class YoloHandler(QObject):
         """
         # Clear the old list, and re-instantiate
         self.w.yolomodel_trained_list.clear()
-        self.w.yolomodel_trained_list.addItem('Choose model ...')
+        self.w.yolomodel_trained_list.addItem('Model ...')
         trained_models = self.yolo.find_trained_models(search_path=self.w.project_path)
         if not trained_models:
             self.w.toolBox.widget(3).setEnabled(False)
@@ -75,8 +77,10 @@ class YoloHandler(QObject):
         self.w.predict_video_drop_groupbox.setEnabled(True)
         self.w.predict_video_predict_groupbox.setEnabled(True)
         self.w.predict_start_btn.setEnabled(True)
-        self.w.predict_start_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.w.predict_start_btn.setStyleSheet('')
         self.w.predict_start_btn.setText(f'▷ Predict')
+
+
 
     #######################################################################################################
     # TRAINING‐DATA GENERATION PIPELINE 
@@ -189,7 +193,7 @@ class YoloHandler(QObject):
             self.polygon_interrupt = False
         elif hasattr(self, 'polygon_worker') and self.polygon_worker.is_running:
             self.polygon_worker.quit()
-            self.w.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.w.generate_training_data_btn.setStyleSheet('')
             self.w.generate_training_data_btn.setText(f'▷ Generate')
             self.polygon_interrupt = True
 
@@ -234,7 +238,7 @@ class YoloHandler(QObject):
         if self.polygon_interrupt:
             show_warning("Polygon generation interrupted.")  
             self.polygons_generated = False
-            self.w.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.w.generate_training_data_btn.setStyleSheet('')
             self.w.generate_training_data_btn.setText(f'▷ Generate')
         else:
             self.polygons_generated = True
@@ -273,7 +277,7 @@ class YoloHandler(QObject):
 
         else:
             self.training_data_worker.quit()
-            self.w.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.w.generate_training_data_btn.setStyleSheet('')
             self.w.generate_training_data_btn.setText('▷ Generate')
             self.training_data_interrupt = True
             self.polygons_generated = False
@@ -309,7 +313,7 @@ class YoloHandler(QObject):
         training_data_worker()
         Callback for when training data generation worker has finished executing. 
         """
-        self.w.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.w.generate_training_data_btn.setStyleSheet('')
         self.w.generate_training_data_btn.setText(f'▷ Generate')
         self.w.train_export_overall_progressbar.setValue(0)
         self.w.train_export_frames_progressbar.setValue(0)
@@ -334,7 +338,7 @@ class YoloHandler(QObject):
             # Enable next part (YOLO training) of the pipeline 
             self.w.train_train_groupbox.setEnabled(True)
             self.w.launch_tensorboard_checkBox.setEnabled(False)
-            self.w.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.w.start_stop_training_btn.setStyleSheet('')
             self.w.start_stop_training_btn.setText(f'▷ Train')
 
     #######################################################################################################
@@ -462,7 +466,7 @@ class YoloHandler(QObject):
 
         if current_epoch == total_epochs: 
             self.training_finished = True
-            self.w.start_stop_training_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.w.start_stop_training_btn.setStyleSheet('')
             self.w.start_stop_training_btn.setText(f'✓ Done.')
             self.w.train_epochs_progressbar.setEnabled(False)  
             self.w.train_finishtime_label.setEnabled(False)
@@ -475,6 +479,58 @@ class YoloHandler(QObject):
     #######################################################################################################
     # YOLO PREDICTION PIPELINE
     #######################################################################################################
+    
+    # Tracker selection / tuning handling
+    def on_tracker_selection_change(self, index):
+        """
+        Handle tracker selection change in the dropdown list
+        Enable/disable tune button based on selection
+        """
+        if index > 0:  # Any tracker selected (not the header item)
+            self.w.tune_tracker_btn.setEnabled(True)
+            self.w.tune_tracker_btn.setText("Tune")
+            self.w.tune_tracker_btn.setStyleSheet("")
+        else:
+            # First item selected (header/placeholder)
+            self.w.tune_tracker_btn.setEnabled(False)
+            self.w.tune_tracker_btn.setText("")
+            self.w.tune_tracker_btn.setStyleSheet("")
+
+    def on_tune_tracker_clicked(self):
+        """
+        Open configuration dialog for the selected tracker
+        """
+        index = self.w.yolomodel_tracker_list.currentIndex()
+        if index <= 0:
+            return  # Should not happen as button should be disabled
+        
+        tracker_name = self.w.yolomodel_tracker_list.currentText()
+        
+        # Find tracker ID from name
+        tracker_id = None
+        for tid, tracker_info in self.w.trackers_dict.items():
+            if tracker_info['name'] == tracker_name and tracker_info['available']:
+                tracker_id = tid
+                break
+                
+        if tracker_id:
+            print(f"Opening tuning dialog for {tracker_name} ({tracker_id})")
+            # TODO: Implement tracker configuration dialog
+            # self.open_tracker_config_dialog(tracker_id)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    # YOLO Prediction handling
+    
+    
+    
     
     def on_iou_thresh_change(self, value):
         """
@@ -703,7 +759,7 @@ class YoloHandler(QObject):
             self.w.predict_finish_time_label.setEnabled(False)
             
             # Re-enable UI elements
-            self.w.predict_start_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+            self.w.predict_start_btn.setStyleSheet('')
             self.w.predict_start_btn.setText('▷ Predict')
             self.w.predict_start_btn.setEnabled(True)
             self.w.toolBox.widget(1).setEnabled(True)  # Re-enable Annotation tab

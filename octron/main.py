@@ -455,7 +455,7 @@ class octron_widget(QWidget):
         # Enable the groupbox for existing data and the training generation box
         self.project_existing_data_groupbox.setEnabled(True)
         self.train_generate_groupbox.setEnabled(True)
-        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.generate_training_data_btn.setStyleSheet('')
         self.generate_training_data_btn.setText(f'▷ Generate')
         
         # Enable training tab if data is available
