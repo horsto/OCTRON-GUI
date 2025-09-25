@@ -17,8 +17,8 @@ StrongSort:
       - 1.0
       
     max_age:
-      current_value: 30
-      default_value: 30
+      current_value: 300
+      default_value: 300
       disabled: false
       docstring: Maximum age (in frames) of a track before it is considered lost
       gui_element: spin_box
@@ -27,8 +27,8 @@ StrongSort:
       - 10000
       
     max_obs:
-      current_value: 50
-      default_value: 50
+      current_value: 305
+      default_value: 305
       disabled: false
       docstring: Maximum number of historical observations stored for each track
       gui_element: spin_box

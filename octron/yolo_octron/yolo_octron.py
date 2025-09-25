@@ -6,6 +6,7 @@ import subprocess # Used to launch tensorboard
 import threading # For training to run in a separate thread
 import queue # For training progress updates
 import signal
+import gc
 import webbrowser # Used to launch tensorboard
 import time
 import random
@@ -22,7 +23,7 @@ import numpy as np
 from natsort import natsorted
 import zarr 
 from skimage import measure, color
-
+from boxmot import create_tracker
 import napari
 from octron import __version__ as octron_version
 from octron.main import base_path as octron_base_path
@@ -1315,10 +1316,12 @@ class YOLO_octron:
             trackers_yaml_path = octron_base_path / 'tracking/boxmot_trackers.yaml'
             trackers_dict = load_boxmot_trackers(trackers_yaml_path)
             tracker_id = tracker_name.strip()
-            assert tracker_name in trackers_dict, f'Tracker with name {tracker_id} not available.'
-            tracker_config_path = octron_base_path / trackers_dict[tracker_id]['config_path']
-            tracker_config = load_boxmot_tracker_config(tracker_config_path
-            assert tracker_config, f'Tracker config could not be loaded for tracker {tracker_id}'                                                 
+            assert tracker_id in trackers_dict, f'Tracker with name {tracker_id} not available.'
+            tracker_cfg_path = octron_base_path / trackers_dict[tracker_id]['config_path']
+    
+        tracker_config = load_boxmot_tracker_config(tracker_cfg_path)
+        assert tracker_config, f'Tracker config could not be loaded for tracker {tracker_id}'                                                 
+
 
         # Check YOLO configuration
         model_path = Path(model_path)
@@ -1391,9 +1394,37 @@ class YOLO_octron:
                 continue
             save_dir.mkdir(parents=True, exist_ok=True)
             
-            # Set up tracker 
-
-                    
+            # Set up boxmot tracker 
+            is_reid = tracker_config[tracker_id]['is_reid']
+            tracker_parameters = tracker_config[tracker_id]['parameters']
+            custom_tracker_params = {} # Transcribe tracker_parameters - only take "current_value"
+            for param_name, param_config in tracker_parameters.items():
+                assert 'current_value' in param_config
+                custom_tracker_params[param_name] = param_config['current_value']
+            custom_tracker_params['nr_classes'] = len(model.names)
+            
+            gc.collect()  # Encourage garbage collection of any old tracker objects
+            # Initialize tracker with the custom parameters
+            tracker = create_tracker(
+                tracker_type=tracker_config[tracker_id]['tracker_type'],
+                reid_weights=Path(tracker_config[tracker_id]['reid_model']) if is_reid else None,
+                device=device,
+                per_class=custom_tracker_params.get('per_class', False),
+                evolve_param_dict=custom_tracker_params
+            )
+            # Reset any internal state the tracker might have
+            # September 2025: This is currently not handled consistently across BoxMot trackers
+            # TODO: Follow up on this 
+            if hasattr(tracker, 'reset'):
+                tracker.reset()  # Call reset if available
+            elif hasattr(tracker, 'tracker'):
+                # Some boxmot trackers have a nested tracker object
+                if hasattr(tracker.tracker, 'reset'):
+                    tracker.tracker.reset()   
+            # Clear any track history that might be stored
+            if hasattr(tracker, 'tracks'):
+                tracker.tracks = []
+ 
             # Prepare prediction stores
             prediction_store_dir = save_dir / 'predictions.zarr'
             prediction_store = create_prediction_store(prediction_store_dir)
@@ -1403,24 +1434,15 @@ class YOLO_octron:
             video = video_dict['video']
             tracking_df_dict = {}
             track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
+            video_prediction_start = time.time()
             frame_start = time.time()
             for frame_no, frame_idx in enumerate(video_dict['frame_iterator'], start=0):
                 try:
                     frame = video[frame_idx]
-                    # Process frame in CIE Lab colorspace
-                    # We want some stats from the masked origina frame - it's a good place 
-                    # to do that because we are extracting the frame anyway! 
-                    if len(frame.shape) == 2:
-                        # Convert grayscale images to rgb - which effectively just 
-                        # triples the same image across all three channels 
-                        frame = color.gray2rgb(frame)
-                    frame_lab = color.rgb2lab(frame, 
-                                            illuminant='D65', 
-                                            observer='2'
-                                            )
-                    l = frame_lab[:,:,0].astype(np.uint8)
-                    a = frame_lab[:,:,1].astype(np.int8)
-                    b = frame_lab[:,:,2].astype(np.int8)
+                    # if len(frame.shape) == 2:
+                    #     # Convert grayscale images to rgb - which effectively just 
+                    #     # triples the same image across all three channels 
+                    #     frame = color.gray2rgb(frame)
 
                 except StopIteration:
                     print(f"Could not read frame {frame_idx} from video {video_name}")
@@ -1445,20 +1467,17 @@ class YOLO_octron:
                 }
                 frame_start = time.time()
                 # Run tracking on this frame
-                results = model.track(
+                results = model.predict(
                     source=frame, 
-                    persist=True,
                     task='segment',
-                    tracker=tracker_yaml_path.as_posix(),
                     project=save_dir.parent.as_posix(),
                     name=save_dir.name,
-                    show=True,
+                    show=False,
                     rect=rect,
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
-                    max_det=50,
-                    stream_buffer=True,
+                    max_det=500,
                     conf=conf_thresh,
                     iou=iou_thresh,
                     device=device, 
@@ -1468,21 +1487,62 @@ class YOLO_octron:
                 )
                 # Then process the results ...    
                 try:
-                    # Process results and save to zarr/CSV here
                     confidences = results[0].boxes.conf.cpu().numpy()
+                    classes = results[0].boxes.cls.cpu().numpy()
                     label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
-                    track_ids = results[0].boxes.id.int().cpu().tolist()
                     masks = results[0].masks.data.cpu().numpy()
-                except AttributeError:
-                    # Most likely empty prediction
+                    boxes = results[0].boxes.xyxy.cpu().numpy() # Needed for tracker but not saved
+                except AttributeError as e:
+                    print(e)
                     continue
+
+                # Pass things to the boxmot tracker 
+                # INPUT:  M X (x, y, x, y, conf, cls)
+                tracker_input = np.hstack([boxes,
+                                        confidences[:,np.newaxis],
+                                        classes[:,np.newaxis],
+                                        ])
+                res = tracker.update(tracker_input, frame)
+                
+                # Map tracking results back to original boxes and masks
+                tracked_ids = []
+                tracked_box_indices = []  # Indices of tracked boxes in the original boxes array
+
+                # Go through tracker results instead of boxes
+                for tracked_obj in res:
+                    track_id = int(tracked_obj[4])
+                    tracked_box = tracked_obj[:4]  # The box coordinates from tracker
+                    
+                    # Find this tracked box in the original boxes array
+                    # The tracker returns the exact same box coordinates in its output 
+                    # as were fed in. This makes the re-identification easy.
+                    found = False
+                    for i, original_box in enumerate(boxes):
+                        if np.allclose(tracked_box, original_box, rtol=1e-5, atol=1e-5):
+                            # Found the matching original box
+                            tracked_ids.append(track_id-1)
+                            tracked_box_indices.append(i)
+                            found = True
+                            break
+                    assert found # This should never be False
+                    
+                # Filter all result arrays using tracked_box_indices
+                if tracked_box_indices:
+                    tracked_masks = masks[tracked_box_indices]
+                    tracked_confidences = confidences[tracked_box_indices]
+                    tracked_label_names = [label_names[i] for i in tracked_box_indices]
+                    #tracked_classes = classes[tracked_box_indices]
+                    #tracked_boxes = boxes[tracked_box_indices]
+                else: 
+                    #print('No results found after tracker update')
+                    pass
                 
                 # Extract tracks 
-                for label, track_id, conf, mask in zip(label_names, 
-                                                        track_ids,
-                                                        confidences,
-                                                        masks, 
-                                                        ):
+                for track_id, label, conf, mask in zip(tracked_ids,
+                                                       tracked_label_names, 
+                                                       tracked_confidences,
+                                                       tracked_masks, 
+                                                       ):
                     
                     if one_object_per_label or iou_thresh < 0.01:
                         # ! Use 'label' as keys in track_id_label_dict
@@ -1564,8 +1624,6 @@ class YOLO_octron:
                         mask = np.logical_or(previous_mask, mask)
                         mask = mask.astype('int8')
                     
-                    # Use the mask together with original video frame to get l,a,b means 
-                    lab_dict = _get_masked_lab_means(mask, l, a, b)
                     # Store mask 
                     mask_store[frame_idx,:,:] = mask
                     # Get region properties and save them to the dataframe
@@ -1599,13 +1657,6 @@ class YOLO_octron:
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence'] = conf
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'solidity'] = solidity_sum / num_regions
-                    # Add CIE Lab means to the DataFrame
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'mask_l_mean'] = lab_dict['mask_l_mean']
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'mask_a_mean'] = lab_dict['mask_a_mean']
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'mask_b_mean'] = lab_dict['mask_b_mean']
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'frame_l_mean'] = lab_dict['frame_l_mean']
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'frame_a_mean'] = lab_dict['frame_a_mean']
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'frame_b_mean'] = lab_dict['frame_b_mean']
 
                 # A FRAME IS COMPLETE
                 
@@ -1648,14 +1699,7 @@ class YOLO_octron:
                     meta_model_path_str = Path(os.path.relpath(model_path, self.project_path)).as_posix()
                 except ValueError: # Happens if model_path is not under project_path
                     pass 
-            
-            meta_tracker_yaml_path_str = tracker_yaml_path.as_posix()
-            if self.project_path:
-                try:
-                    meta_tracker_yaml_path_str = Path(os.path.relpath(tracker_yaml_path, self.project_path)).as_posix()
-                except ValueError:
-                    pass
-                    
+
             # Before saving metadata, get rid of some unnecessary fields
             if model_args is not None:
                 for key in [
@@ -1679,11 +1723,14 @@ class YOLO_octron:
                     'cache',
                     'save_dir',
                 ]:
-                    model_args.pop(key, None)                
-            
+                    model_args.pop(key, None)  
+                    
+            _ = custom_tracker_params.pop('reid_weights') # This info exists twice
+             
             metadata_to_save = {
-                "prediction_timestamp": datetime.now().isoformat(),
                 "octron_version": octron_version,
+                "prediction_start_timestamp": datetime.fromtimestamp(video_prediction_start).isoformat(), 
+                "prediction_end_timestamp": datetime.now().isoformat(),
                 "video_info": {
                     "original_video_name": video_name,
                     "original_video_path": video_dict['video_file_path'],
@@ -1699,13 +1746,18 @@ class YOLO_octron:
                     "model_retina_masks": retina_masks,
                     "device": device,
                     "tracker_name": tracker_name,
-                    "tracker_config_path": meta_tracker_yaml_path_str,
                     "skip_frames": skip_frames,
                     "one_object_per_label": one_object_per_label,
                     "iou_thresh": iou_thresh,
                     "conf_thresh": conf_thresh,
                     "opening_radius": opening_radius,
                     "overwrite_existing_predictions": overwrite,
+                },
+                "tracker_configuration": {
+                    "tracker_type": tracker_config[tracker_id]['tracker_type'],
+                    "is_reid": is_reid,
+                    "reid_model": tracker_config[tracker_id]['reid_model'] if is_reid else None,
+                    "parameters": custom_tracker_params,  # All parameters from evolve_param_dict
                 },
                 "original_model_training_args": model_args if model_args is not None else "Model args not found",
             }
@@ -1755,12 +1807,6 @@ class YOLO_octron:
                    'eccentricity', 
                    'orientation',
                    'solidity',
-                   'mask_l_mean',
-                   'mask_a_mean',
-                   'mask_b_mean',
-                   'frame_l_mean',
-                   'frame_a_mean',
-                   'frame_b_mean',
                    ]
         
         # Initialize the DataFrame with NaN values

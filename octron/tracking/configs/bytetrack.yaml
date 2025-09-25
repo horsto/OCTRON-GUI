@@ -61,8 +61,8 @@ ByteTrack:
       - 0.0
       - 1.0
     max_age:
-      current_value: 30
-      default_value: 30
+      current_value: 300
+      default_value: 300
       disabled: false
       docstring: Maximum age (in frames) of a track before it is considered lost
       gui_element: spin_box
@@ -70,8 +70,8 @@ ByteTrack:
       - 1
       - 10000
     max_obs:
-      current_value: 50
-      default_value: 50
+      current_value: 305
+      default_value: 305
       disabled: false
       docstring: Maximum number of historical observations (bounding boxes) stored
         for each track
@@ -116,8 +116,8 @@ ByteTrack:
         classes separately
       gui_element: checkbox
     track_buffer:
-      current_value: 25
-      default_value: 25
+      current_value: 150
+      default_value: 150
       disabled: false
       docstring: Number of frames to keep a track alive after it was last detected
       gui_element: spin_box

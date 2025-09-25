@@ -46,7 +46,7 @@ BotSort:
     frame_rate:
       current_value: 30
       default_value: 30
-      disabled: false
+      disabled: true
       docstring: Video frame rate, used to scale the track buffer
       gui_element: spin_box
       range:
@@ -90,8 +90,8 @@ BotSort:
       - 0.1
       - 1.0
     max_age:
-      current_value: 30
-      default_value: 30
+      current_value: 300
+      default_value: 300
       disabled: false
       docstring: Maximum age (in frames) of a track before it is considered lost
       gui_element: spin_box
@@ -99,8 +99,8 @@ BotSort:
       - 1
       - 10000
     max_obs:
-      current_value: 50
-      default_value: 50
+      current_value: 305
+      default_value: 305
       disabled: false
       docstring: Maximum number of historical observations stored for each track
       gui_element: spin_box
@@ -152,8 +152,8 @@ BotSort:
       - 0.1
       - 1.0
     track_buffer:
-      current_value: 30
-      default_value: 30
+      current_value: 300
+      default_value: 300
       disabled: false
       docstring: Frames to keep a track alive after last detection
       gui_element: spin_box
