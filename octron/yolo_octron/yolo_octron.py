@@ -1210,7 +1210,7 @@ class YOLO_octron:
                       one_object_per_label=False,
                       iou_thresh=.7,
                       conf_thresh=.5,
-                      opening_radius=2,
+                      opening_radius=0,
                       overwrite=True
                       ):
         """
@@ -1260,50 +1260,6 @@ class YOLO_octron:
             - eta_finish_time: Estimated finish time timestamp
             - overall_progress: Overall progress as percentage (0-100)
         """
-
-        def _get_masked_lab_means(mask, l, a, b): 
-            """
-            Get the mean values of the L, A, B channels for a given mask.
-            
-            Parameters
-            ----------
-            mask : np.ndarray
-                Binary mask where the object is present.
-            l, a, b : np.ndarray
-                CIE Lab channels of the image.
-                
-            Returns
-            -------
-            lab_dict : dict
-                Dictionary containing the mean values of the L, A, B channels
-                for the entire frame and for the masked region.
-            """
-            l, a, b = l.flatten(), a.flatten(), b.flatten()
-            lab_dict = {
-                'frame_l_mean' : np.mean(l),
-                'frame_a_mean' : np.mean(a),
-                'frame_b_mean' : np.mean(b),
-                'mask_l_mean'  : np.nan,
-                'mask_a_mean'  : np.nan,
-                'mask_b_mean'  : np.nan,
-            }
-            
-            mask = mask.astype(bool)
-            if not mask.any():
-                return lab_dict
-            
-            masked_l = l[mask.flatten()]
-            masked_a = a[mask.flatten()]
-            masked_b = b[mask.flatten()]
-            
-            if masked_l.size == 0:
-                return lab_dict
-            
-            lab_dict['mask_l_mean'] = np.mean(masked_l)
-            lab_dict['mask_a_mean'] = np.mean(masked_a)
-            lab_dict['mask_b_mean'] = np.mean(masked_b)
-            
-            return lab_dict
         
         # Check Boxmot tracker configuration
         # A tracker can either be directly linked via the config file (tracker_cfg_path)
@@ -1499,9 +1455,9 @@ class YOLO_octron:
                 # Pass things to the boxmot tracker 
                 # INPUT:  M X (x, y, x, y, conf, cls)
                 tracker_input = np.hstack([boxes,
-                                        confidences[:,np.newaxis],
-                                        classes[:,np.newaxis],
-                                        ])
+                                           confidences[:,np.newaxis],
+                                           classes[:,np.newaxis],
+                                          ])
                 res = tracker.update(tracker_input, frame)
                 
                 # Map tracking results back to original boxes and masks
@@ -1579,7 +1535,7 @@ class YOLO_octron:
                         mask_store = create_prediction_zarr(prediction_store, 
                                         f'{track_id}_masks',
                                         shape=video_shape,
-                                        chunk_size=50,     
+                                        chunk_size=200,     
                                         fill_value=-1,
                                         dtype='int8',                           
                                         video_hash=''
@@ -1626,8 +1582,10 @@ class YOLO_octron:
                     
                     # Store mask 
                     mask_store[frame_idx,:,:] = mask
+                
                     # Get region properties and save them to the dataframe
                     _, regions_props = find_objects_in_mask(mask, min_area=0)
+                
                     # Instead of asserting single region, handle multiple regions
                     if not regions_props:
                         # Skip if no regions were found
@@ -1638,16 +1596,14 @@ class YOLO_octron:
                     area_sum = 0
                     eccentricity_sum = 0
                     orientation_sum = 0
-                    solidity_sum = 0
                     # Loop over all regions and accumulate properties
                     for region_prop in regions_props:
-                        centroid = region_prop.centroid
+                        centroid = region_prop['centroid']
                         pos_x_sum += centroid[1]  # x coordinate
                         pos_y_sum += centroid[0]  # y coordinate
-                        area_sum += region_prop.area
-                        eccentricity_sum += region_prop.eccentricity
-                        orientation_sum += region_prop.orientation
-                        solidity_sum += region_prop.solidity
+                        area_sum += region_prop['area']
+                        eccentricity_sum += region_prop['eccentricity']
+                        orientation_sum += region_prop['orientation']
                     
                     # Store averages in DataFrame with flat column names
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = pos_x_sum / num_regions
@@ -1656,7 +1612,6 @@ class YOLO_octron:
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'eccentricity'] = eccentricity_sum / num_regions
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence'] = conf
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'solidity'] = solidity_sum / num_regions
 
                 # A FRAME IS COMPLETE
                 
@@ -1806,7 +1761,6 @@ class YOLO_octron:
                    'area', 
                    'eccentricity', 
                    'orientation',
-                   'solidity',
                    ]
         
         # Initialize the DataFrame with NaN values

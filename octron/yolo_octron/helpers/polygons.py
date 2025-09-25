@@ -1,6 +1,7 @@
 # Polygon helpers for training data extraction
 # Also contains helpers for mask manipulation / polygon generation
 import numpy as np  
+from skimage import measure
 from skimage.morphology import binary_opening, disk
 
 def find_objects_in_mask(mask, min_area=10):
@@ -27,38 +28,46 @@ def find_objects_in_mask(mask, min_area=10):
     regions : list
         List of region properties for each object
     """
-    try:
-        from skimage import measure
-    except ImportError:
-        raise ImportError('find_objects_in_mask() requires scikit-image')
-    
-    # Ensure the mask is binary
+
     binary_mask = mask > 0
-    
-    # Label connected components
     labels = measure.label(binary_mask, background=0, connectivity=2)
     
-    # Get region properties
-    regions = measure.regionprops(labels)
+    # Use regionprops_table for efficiency
+    props = measure.regionprops_table(
+        labels, 
+        properties=('label', 'area', 'centroid', 'eccentricity', 'orientation')
+    )
     
-    # Filter regions by size if needed
+    # Filter small regions
     if min_area > 0:
-        for region in regions[:]:
-            if region.area < min_area:
-                # Remove small objects
-                labels[labels == region.label] = 0
-                regions.remove(region)
+        valid_indices = props['area'] >= min_area
+        valid_labels = props['label'][valid_indices]
+        
+        # Create a mapping from old labels to new labels or 0 (for removed regions)
+        label_mapping = np.zeros(labels.max() + 1, dtype=np.int32)
+        label_mapping[valid_labels] = np.arange(1, len(valid_labels) + 1)
+        
+        # Apply the mapping to relabel the image in one step
+        labels = label_mapping[labels]
+        
+        # Filter the properties table
+        for prop in props:
+            props[prop] = props[prop][valid_indices]
     
-    # Relabel the image to ensure consecutive labels
-    if any(region.label != i+1 for i, region in enumerate(regions)):
-        new_labels = np.zeros_like(labels)
-        for i, region in enumerate(regions):
-            new_labels[labels == region.label] = i + 1
-        labels = new_labels
-        regions = measure.regionprops(labels)
+    num_regions = len(props['label'])
+    regions_list = []
     
-    return labels, regions
-
+    for i in range(num_regions):
+        region_dict = {
+            'label': props['label'][i],
+            'area': props['area'][i],
+            'centroid': (props['centroid-0'][i], props['centroid-1'][i]),
+            'eccentricity': props['eccentricity'][i],
+            'orientation': props['orientation'][i]
+        }
+        regions_list.append(region_dict)
+    
+    return labels, regions_list
 
 
 def watershed_mask(mask,
