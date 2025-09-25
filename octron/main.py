@@ -171,7 +171,7 @@ class octron_widget(QWidget):
             print(f"Adding YOLO model {model_id}")
             self.yolomodel_list.addItem(model['name'])
    
-        # Populate tracker list with available boxmot trackers
+        # Populate Tracker dropdown list with available boxmot trackers
         for tracker in self.trackers_dict:
             if self.trackers_dict[tracker]['available']:
                 print(f'Adding tracker {self.trackers_dict[tracker]["name"]}')

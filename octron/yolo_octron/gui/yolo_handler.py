@@ -533,9 +533,7 @@ class YoloHandler(QObject):
             if updated_config:
                 print(f"Configuration for {tracker_name} updated and saved")
     
-        
-    # YOLO Prediction handling
-    
+    # YOLO Prediction handling 
     def on_iou_thresh_change(self, value):
         """
         Callback for self.w.predict_iou_thresh_spinbox.
