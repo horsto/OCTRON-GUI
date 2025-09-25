@@ -1,7 +1,27 @@
-ByteTrack:
-  is_reid: false
-  name: ByteTrack
+OcSort:
+  win_height: 540
+  name: OcSort
+  is_reid: false # Is this a model that uses ReID in some form or another? 
+  reid_model: none
   parameters:
+    Q_s_scaling:
+      current_value: 0.0
+      default_value: 0.0001
+      disabled: false
+      docstring: Scaling factor for process noise in scale coordinates
+      gui_element: double_spin_box
+      range:
+      - 1.0e-05
+      - 0.01
+    Q_xy_scaling:
+      current_value: 0.01
+      default_value: 0.01
+      disabled: false
+      docstring: Scaling factor for process noise in position coordinates
+      gui_element: double_spin_box
+      range:
+      - 0.0001
+      - 0.1
     asso_func:
       current_value: iou
       default_value: iou
@@ -15,6 +35,15 @@ ByteTrack:
       - ciou
       - diou
       - centroid
+    delta_t:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Time window size for velocity estimation in Kalman Filter
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
     det_thresh:
       current_value: 0.3
       default_value: 0.3
@@ -34,6 +63,15 @@ ByteTrack:
       range:
       - 1
       - 240
+    inertia:
+      current_value: 0.2
+      default_value: 0.2
+      disabled: false
+      docstring: Motion model weight for velocity direction in matching cost
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
     iou_threshold:
       current_value: 0.3
       default_value: 0.3
@@ -50,16 +88,6 @@ ByteTrack:
       docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned
         bounding boxes
       gui_element: checkbox
-    match_thresh:
-      current_value: 0.8
-      default_value: 0.8
-      disabled: false
-      docstring: Threshold for the matching step in data association. Controls the
-        maximum distance allowed between tracklets and detections for a match
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
     max_age:
       current_value: 30
       default_value: 30
@@ -115,24 +143,9 @@ ByteTrack:
       docstring: Enables class-separated tracking. When true, tracks different object
         classes separately
       gui_element: checkbox
-    track_buffer:
-      current_value: 25
-      default_value: 25
+    use_byte:
+      current_value: false
+      default_value: false
       disabled: false
-      docstring: Number of frames to keep a track alive after it was last detected
-      gui_element: spin_box
-      range:
-      - 1
-      - 1000
-    track_thresh:
-      current_value: 0.45
-      default_value: 0.45
-      disabled: false
-      docstring: Threshold for detection confidence. Detections above this threshold
-        are considered for tracking in the first association round
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-  reid_model: none
-  win_height: 490
+      docstring: Whether to use BYTE association in the second association step
+      gui_element: checkbox

@@ -8,6 +8,9 @@ from qtpy.QtCore import Qt
 import yaml
 import copy
 
+from boxmot.appearance.reid import config
+trained_reid_models = config.TRAINED_URLS
+
 # Define the set of base tracker params (those are passed from all boxmot trackers during init)
 BASEPARAMS = ['det_thresh', 'max_age', 'max_obs', 'min_hits', 
               'iou_threshold', 'per_class', 'nr_classes', 'asso_func', 'is_obb']
@@ -48,11 +51,12 @@ class BoxmotTrackerConfigDialog(QDialog):
         tracker_name = self.tracker_config[self.tracker_id]['name']
         self.setWindowTitle(f"Configure {tracker_name}")
         
-        self.setFixedWidth(350)
+        self.setFixedWidth(450)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         
         # Set minimum height but allow resizing in that direction
-        self.setMinimumHeight(580)
+        window_height = self.tracker_config[self.tracker_id]['win_height']
+        self.setMinimumHeight(window_height)
         
         # Main layout
         main_layout = QVBoxLayout(self)
@@ -71,6 +75,7 @@ class BoxmotTrackerConfigDialog(QDialog):
         
         # Get parameters
         parameters = self.tracker_config[self.tracker_id]['parameters']
+        is_reid = self.tracker_config[self.tracker_id]['is_reid']
         
         # Create parameter groups
         base_params_group = QGroupBox("Base Parameters")
@@ -102,6 +107,29 @@ class BoxmotTrackerConfigDialog(QDialog):
                 base_params_layout.addRow(QLabel(param_name), widget)
             else:
                 specific_params_layout.addRow(QLabel(param_name), widget)
+        
+        if is_reid:
+            # Create a group box for ReID model selection
+            reid_group = QGroupBox("ReID model selection")
+            reid_layout = QFormLayout(reid_group)
+            reid_model_combo = QComboBox()
+            
+            # Add available ReID models to the combo box
+            for model_name in trained_reid_models:
+                reid_model_combo.addItem(model_name)
+            
+            reid_model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+            
+            # Set current model from config
+            current_reid_model = self.tracker_config[self.tracker_id]['reid_model']
+            if current_reid_model in trained_reid_models:
+                reid_model_combo.setCurrentText(current_reid_model)
+            
+            # Add to layout
+            reid_layout.addRow(QLabel("ReID Model:"), reid_model_combo)
+            # Store widget with special key for later access in save_config
+            self.parameter_widgets['__reid_model'] = reid_model_combo
+            scroll_layout.addWidget(reid_group)
         
         # Add groups to scroll layout
         scroll_layout.addWidget(base_params_group)
@@ -192,6 +220,15 @@ class BoxmotTrackerConfigDialog(QDialog):
         parameters = self.tracker_config[self.tracker_id]['parameters']
         
         for param_name, widget in self.parameter_widgets.items():
+            # Handle special case for ReID model
+            if param_name == '__reid_model':
+                # Get original ReID model from the original config
+                original_reid_model = self.original_config[self.tracker_id]['reid_model']
+                if original_reid_model in trained_reid_models:
+                    widget.setCurrentText(original_reid_model)
+                continue
+                
+            # Regular parameters
             param_config = parameters[param_name]
             default_value = param_config.get('default_value')
             
@@ -211,6 +248,10 @@ class BoxmotTrackerConfigDialog(QDialog):
         
         # Update config with widget values
         for param_name, widget in self.parameter_widgets.items():
+            # Handle special case for ReID model
+            if param_name == '__reid_model':
+                self.tracker_config[self.tracker_id]['reid_model'] = widget.currentText()
+                continue
             if isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
                 parameters[param_name]['current_value'] = widget.value()
             elif isinstance(widget, QCheckBox):

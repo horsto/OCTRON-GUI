@@ -1,0 +1,188 @@
+BotSort:
+  is_reid: true
+  name: BotSort
+  parameters:
+    appearance_thresh:
+      current_value: 0.25
+      default_value: 0.25
+      disabled: false
+      docstring: Appearance embedding distance threshold for ReID
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 1.0
+    asso_func:
+      current_value: iou
+      default_value: iou
+      disabled: false
+      docstring: Algorithm used for data association between detections and tracks
+      gui_element: combo_box
+      options:
+      - iou
+      - hmiou
+      - giou
+      - ciou
+      - diou
+      - centroid
+    cmc_method:
+      current_value: ecc
+      default_value: ecc
+      disabled: false
+      docstring: Method for correcting camera motion
+      gui_element: combo_box
+      options:
+      - ecc
+      - sof
+      - none
+    det_thresh:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: Detection threshold for considering detections
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    frame_rate:
+      current_value: 30
+      default_value: 30
+      disabled: false
+      docstring: Video frame rate, used to scale the track buffer
+      gui_element: spin_box
+      range:
+      - 1
+      - 120
+    fuse_first_associate:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Fuse appearance and motion in the first association step
+      gui_element: checkbox
+    half:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Whether to use half-precision (fp16) for faster inference
+      gui_element: checkbox
+    iou_threshold:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: IOU threshold for determining match between detection and tracks
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 0.9
+    is_obb:
+      current_value: false
+      default_value: false
+      disabled: true
+      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned
+        bounding boxes
+      gui_element: checkbox
+    match_thresh:
+      current_value: 0.8
+      default_value: 0.8
+      disabled: false
+      docstring: Matching threshold for data association
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 1.0
+    max_age:
+      current_value: 30
+      default_value: 30
+      disabled: false
+      docstring: Maximum age (in frames) of a track before it is considered lost
+      gui_element: spin_box
+      range:
+      - 1
+      - 10000
+    max_obs:
+      current_value: 50
+      default_value: 50
+      disabled: false
+      docstring: Maximum number of historical observations stored for each track
+      gui_element: spin_box
+      range:
+      - 5
+      - 10000
+    min_hits:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Minimum number of detection hits before a track is considered confirmed
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    new_track_thresh:
+      current_value: 0.6
+      default_value: 0.6
+      disabled: false
+      docstring: Threshold for creating a new track
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 1.0
+    nr_classes:
+      current_value: 80
+      default_value: 80
+      disabled: true
+      docstring: Total number of object classes that the tracker will handle (for
+        per_class=True)
+      gui_element: spin_box
+      range:
+      - 1
+      - 100
+    per_class:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Enables class-separated tracking. When true, tracks different object
+        classes separately
+      gui_element: checkbox
+    proximity_thresh:
+      current_value: 0.5
+      default_value: 0.5
+      disabled: false
+      docstring: IoU threshold for first-round association
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 1.0
+    track_buffer:
+      current_value: 30
+      default_value: 30
+      disabled: false
+      docstring: Frames to keep a track alive after last detection
+      gui_element: spin_box
+      range:
+      - 1
+      - 1000
+    track_high_thresh:
+      current_value: 0.5
+      default_value: 0.5
+      disabled: false
+      docstring: Detection confidence threshold for first association
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 1.0
+    track_low_thresh:
+      current_value: 0.1
+      default_value: 0.1
+      disabled: false
+      docstring: Detection confidence threshold for ignoring detections
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 0.5
+    with_reid:
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Use ReID features for association
+      gui_element: checkbox
+  reid_model: osnet_x1_0_market1501.pt
+  win_height: 790
