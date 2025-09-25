@@ -66,6 +66,7 @@ from octron.yolo_octron.yolo_octron import YOLO_octron
 
 # Tracker specific 
 from octron.tracking.helpers.tracker_checks import check_boxmot_trackers
+from octron.tracking.helpers.tracker_vis import create_color_icon
 
 # Annotation layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
@@ -169,13 +170,15 @@ class octron_widget(QWidget):
         for model_id, model in self.yolomodels_dict.items():
             print(f"Adding YOLO model {model_id}")
             self.yolomodel_list.addItem(model['name'])
-           
+   
         # Populate tracker list with available boxmot trackers
         for tracker in self.trackers_dict:
             if self.trackers_dict[tracker]['available']:
                 print(f'Adding tracker {self.trackers_dict[tracker]["name"]}')
-                self.yolomodel_tracker_list.addItem(self.trackers_dict[tracker]['name']+ " ")
-            
+                color = self.trackers_dict[tracker]['color']
+                square_icon = create_color_icon(color) # Creates color icon to show computational demands
+                self.yolomodel_tracker_list.addItem(square_icon, self.trackers_dict[tracker]['name']+ " ")
+
         # Connect (global) GUI callbacks 
         self.gui_callback_functions()
         # Connect layer specific callbacks
