@@ -1,8 +1,6 @@
 OcSort:
-  win_height: 540
+  is_reid: false
   name: OcSort
-  is_reid: false # Is this a model that uses ReID in some form or another? 
-  reid_model: none
   parameters:
     Q_s_scaling:
       current_value: 0.0
@@ -149,3 +147,6 @@ OcSort:
       disabled: false
       docstring: Whether to use BYTE association in the second association step
       gui_element: checkbox
+  reid_model: none
+  tracker_type: ocsort
+  win_height: 540

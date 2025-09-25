@@ -25,8 +25,8 @@ BotSort:
       - diou
       - centroid
     cmc_method:
-      current_value: ecc
-      default_value: ecc
+      current_value: none
+      default_value: none
       disabled: false
       docstring: Method for correcting camera motion
       gui_element: combo_box
@@ -136,8 +136,8 @@ BotSort:
       - 1
       - 100
     per_class:
-      current_value: false
-      default_value: false
+      current_value: true
+      default_value: true
       disabled: false
       docstring: Enables class-separated tracking. When true, tracks different object
         classes separately
@@ -185,4 +185,5 @@ BotSort:
       docstring: Use ReID features for association
       gui_element: checkbox
   reid_model: osnet_x1_0_market1501.pt
+  tracker_type: botsort
   win_height: 790

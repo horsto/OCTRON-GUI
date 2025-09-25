@@ -1,8 +1,9 @@
 StrongSort:
-  win_height: 560
   name: StrongSort
+  tracker_type: "strongsort"
   is_reid: true # Is this a model that uses ReID in some form or another? 
   reid_model: 'osnet_x1_0_market1501.pt'
+  win_height: 560
   parameters:
     # BaseTracker parameters
     det_thresh:

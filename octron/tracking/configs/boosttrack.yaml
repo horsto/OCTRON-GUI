@@ -1,78 +1,17 @@
 BoostTrack:
-  win_height: 900
-  name: "BoostTrack"
-  is_reid: true # Is this a model that uses ReID in some form or another? 
-  reid_model: 'osnet_x1_0_market1501.pt'
+  is_reid: true
+  name: BoostTrack
   parameters:
-    # BaseTracker parameters
-    det_thresh: 
-      current_value: 0.6
-      default_value: 0.6
+    aspect_ratio_thresh:
+      current_value: 1.6
+      default_value: 1.6
       disabled: false
-      docstring: Detection threshold for considering detections
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-      
-    max_age: 
-      current_value: 60
-      default_value: 60
-      disabled: false
-      docstring: Maximum age (in frames) of a track before it is considered lost
-      gui_element: spin_box
-      range:
-      - 1
-      - 10000
-      
-    max_obs: 
-      current_value: 50
-      default_value: 50
-      disabled: false
-      docstring: Maximum number of historical observations stored for each track
-      gui_element: spin_box
-      range:
-      - 5
-      - 10000
-      
-    min_hits: 
-      current_value: 3
-      default_value: 3
-      disabled: false
-      docstring: Minimum number of detection hits before a track is considered confirmed
-      gui_element: spin_box
-      range:
-      - 1
-      - 20
-      
-    iou_threshold: 
-      current_value: 0.3
-      default_value: 0.3
-      disabled: false
-      docstring: IOU threshold for determining match between detection and tracks
+      docstring: Aspect ratio threshold for detections
       gui_element: double_spin_box
       range:
       - 0.1
-      - 0.9
-      
-    per_class: 
-      current_value: false
-      default_value: false
-      disabled: false
-      docstring: Enables class-separated tracking. When true, tracks different object classes separately
-      gui_element: checkbox
-      
-    nr_classes: 
-      current_value: 80
-      default_value: 80
-      disabled: true
-      docstring: Total number of object classes that the tracker will handle (for per_class=True)
-      gui_element: spin_box
-      range:
-      - 1
-      - 100
-      
-    asso_func: 
+      - 10.0
+    asso_func:
       current_value: iou
       default_value: iou
       disabled: false
@@ -85,49 +24,6 @@ BoostTrack:
       - ciou
       - diou
       - centroid
-      
-    is_obb: 
-      current_value: false
-      default_value: false
-      disabled: true
-      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned bounding boxes
-      gui_element: checkbox
-      
-    # BoostTrack-specific parameters
-    half: 
-      current_value: false
-      default_value: false
-      disabled: false
-      docstring: Whether to use half-precision (fp16) for faster inference
-      gui_element: checkbox
-      
-    use_ecc:
-      current_value: false
-      default_value: false
-      disabled: false
-      docstring: Whether to use ECC for camera motion compensation
-      gui_element: checkbox
-      
-    min_box_area:
-      current_value: 10
-      default_value: 10
-      disabled: false
-      docstring: Minimum box area for detections
-      gui_element: spin_box
-      range:
-      - 1
-      - 1000
-      
-    aspect_ratio_thresh:
-      current_value: 1.6
-      default_value: 1.6
-      disabled: false
-      docstring: Aspect ratio threshold for detections
-      gui_element: double_spin_box
-      range:
-      - 0.1
-      - 10.0
-      
     cmc_method:
       current_value: none
       default_value: none
@@ -138,51 +34,15 @@ BoostTrack:
       - ecc
       - sof
       - none
-      
-    lambda_iou:
-      current_value: 0.5
-      default_value: 0.5
+    det_thresh:
+      current_value: 0.6
+      default_value: 0.6
       disabled: false
-      docstring: Weight for IoU-based association
+      docstring: Detection threshold for considering detections
       gui_element: double_spin_box
       range:
       - 0.0
       - 1.0
-      
-    lambda_mhd:
-      current_value: 0.25
-      default_value: 0.25
-      disabled: false
-      docstring: Weight for Mahalanobis distance-based association
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-      
-    lambda_shape:
-      current_value: 0.25
-      default_value: 0.25
-      disabled: false
-      docstring: Weight for shape-based association
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-      
-    use_dlo_boost:
-      current_value: true
-      default_value: true
-      disabled: false
-      docstring: Whether to use DLO boost for confidence adjustment
-      gui_element: checkbox
-      
-    use_duo_boost:
-      current_value: true
-      default_value: true
-      disabled: false
-      docstring: Whether to use DUO boost for confidence adjustment
-      gui_element: checkbox
-      
     dlo_boost_coef:
       current_value: 0.65
       default_value: 0.65
@@ -192,38 +52,156 @@ BoostTrack:
       range:
       - 0.0
       - 1.0
-      
+    half:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Whether to use half-precision (fp16) for faster inference
+      gui_element: checkbox
+    iou_threshold:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: IOU threshold for determining match between detection and tracks
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 0.9
+    is_obb:
+      current_value: false
+      default_value: false
+      disabled: true
+      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned
+        bounding boxes
+      gui_element: checkbox
+    lambda_iou:
+      current_value: 0.5
+      default_value: 0.5
+      disabled: false
+      docstring: Weight for IoU-based association
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    lambda_mhd:
+      current_value: 0.25
+      default_value: 0.25
+      disabled: false
+      docstring: Weight for Mahalanobis distance-based association
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    lambda_shape:
+      current_value: 0.25
+      default_value: 0.25
+      disabled: false
+      docstring: Weight for shape-based association
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    max_age:
+      current_value: 60
+      default_value: 60
+      disabled: false
+      docstring: Maximum age (in frames) of a track before it is considered lost
+      gui_element: spin_box
+      range:
+      - 1
+      - 10000
+    max_obs:
+      current_value: 50
+      default_value: 50
+      disabled: false
+      docstring: Maximum number of historical observations stored for each track
+      gui_element: spin_box
+      range:
+      - 5
+      - 10000
+    min_box_area:
+      current_value: 10
+      default_value: 10
+      disabled: false
+      docstring: Minimum box area for detections
+      gui_element: spin_box
+      range:
+      - 1
+      - 1000
+    min_hits:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Minimum number of detection hits before a track is considered confirmed
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    nr_classes:
+      current_value: 80
+      default_value: 80
+      disabled: true
+      docstring: Total number of object classes that the tracker will handle (for
+        per_class=True)
+      gui_element: spin_box
+      range:
+      - 1
+      - 100
+    per_class:
+      current_value: true
+      default_value: true
+      disabled: true
+      docstring: Enables class-separated tracking. When true, tracks different object
+        classes separately
+      gui_element: checkbox
     s_sim_corr:
       current_value: false
       default_value: false
       disabled: false
       docstring: Whether to use shape similarity correction
       gui_element: checkbox
-      
+    use_dlo_boost:
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Whether to use DLO boost for confidence adjustment
+      gui_element: checkbox
+    use_duo_boost:
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Whether to use DUO boost for confidence adjustment
+      gui_element: checkbox
+    use_ecc:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Whether to use ECC for camera motion compensation
+      gui_element: checkbox
     use_rich_s:
       current_value: false
       default_value: false
       disabled: false
       docstring: Whether to use rich shape features
       gui_element: checkbox
-      
     use_sb:
       current_value: false
       default_value: false
       disabled: false
       docstring: Whether to use soft-BIoU
       gui_element: checkbox
-      
     use_vt:
       current_value: false
       default_value: false
       disabled: false
       docstring: Whether to use visual tracking
       gui_element: checkbox
-      
     with_reid:
       current_value: true
       default_value: true
       disabled: false
       docstring: Whether to use re-identification
       gui_element: checkbox
+  reid_model: osnet_x1_0_market1501.pt
+  tracker_type: boosttrack
+  win_height: 870

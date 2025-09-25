@@ -1,8 +1,9 @@
 BaseTracker:
-  win_height: 400
+  tracker_type: "none"
   name: "base tracker"
   is_reid: false # Is this a model that uses ReID in some form or another? 
   reid_model: none
+  win_height: 400
   parameters:
     det_thresh: 
       current_value: 0.3

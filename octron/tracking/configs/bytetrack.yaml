@@ -135,4 +135,5 @@ ByteTrack:
       - 0.0
       - 1.0
   reid_model: none
+  tracker_type: bytetrack
   win_height: 490

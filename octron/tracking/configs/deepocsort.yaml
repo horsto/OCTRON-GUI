@@ -1,78 +1,35 @@
 DeepOcSort:
-  win_height: 750
-  name: "D-OcSort"
-  is_reid: true # Is this a model that uses ReID in some form or another? 
-  reid_model: 'osnet_x1_0_market1501.pt'
+  is_reid: true
+  name: D-OcSort
   parameters:
-    # BaseTracker parameters
-    det_thresh: 
-      current_value: 0.3
-      default_value: 0.3
+    Q_s_scaling:
+      current_value: 0.0
+      default_value: 0.0001
       disabled: false
-      docstring: Detection threshold for considering detections
+      docstring: Scaling factor for process noise in scale coordinates
+      gui_element: double_spin_box
+      range:
+      - 1.0e-05
+      - 0.01
+    Q_xy_scaling:
+      current_value: 0.01
+      default_value: 0.01
+      disabled: false
+      docstring: Scaling factor for process noise in position coordinates
+      gui_element: double_spin_box
+      range:
+      - 0.0001
+      - 0.1
+    alpha_fixed_emb:
+      current_value: 0.95
+      default_value: 0.95
+      disabled: false
+      docstring: Fixed update rate for embeddings
       gui_element: double_spin_box
       range:
       - 0.0
       - 1.0
-      
-    max_age: 
-      current_value: 30
-      default_value: 30
-      disabled: false
-      docstring: Maximum age (in frames) of a track before it is considered lost
-      gui_element: spin_box
-      range:
-      - 1
-      - 10000
-      
-    max_obs: 
-      current_value: 50
-      default_value: 50
-      disabled: false
-      docstring: Maximum number of historical observations stored for each track
-      gui_element: spin_box
-      range:
-      - 5
-      - 10000
-      
-    min_hits: 
-      current_value: 3
-      default_value: 3
-      disabled: false
-      docstring: Minimum number of detection hits before a track is considered confirmed
-      gui_element: spin_box
-      range:
-      - 1
-      - 20
-      
-    iou_threshold: 
-      current_value: 0.3
-      default_value: 0.3
-      disabled: false
-      docstring: IOU threshold for determining match between detection and tracks
-      gui_element: double_spin_box
-      range:
-      - 0.1
-      - 0.9
-      
-    per_class: 
-      current_value: false
-      default_value: false
-      disabled: false
-      docstring: Enables class-separated tracking. When true, tracks different object classes separately
-      gui_element: checkbox
-      
-    nr_classes: 
-      current_value: 80
-      default_value: 80
-      disabled: true
-      docstring: Total number of object classes that the tracker will handle (for per_class=True)
-      gui_element: spin_box
-      range:
-      - 1
-      - 100
-      
-    asso_func: 
+    asso_func:
       current_value: iou
       default_value: iou
       disabled: false
@@ -85,62 +42,12 @@ DeepOcSort:
       - ciou
       - diou
       - centroid
-      
-    is_obb: 
-      current_value: false
-      default_value: false
-      disabled: true
-      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned bounding boxes
-      gui_element: checkbox
-      
-    # DeepOcSort-specific parameters
-    half: 
+    aw_off:
       current_value: false
       default_value: false
       disabled: false
-      docstring: Whether to use half-precision (fp16) for faster inference
+      docstring: Whether to disable adaptive weights for appearance/motion balance
       gui_element: checkbox
-      
-    delta_t:
-      current_value: 3
-      default_value: 3
-      disabled: false
-      docstring: Time window size for motion estimation
-      gui_element: spin_box
-      range:
-      - 1
-      - 10
-      
-    inertia:
-      current_value: 0.2
-      default_value: 0.2
-      disabled: false
-      docstring: Motion model weight, higher values favor motion consistency
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-      
-    w_association_emb:
-      current_value: 0.5
-      default_value: 0.5
-      disabled: false
-      docstring: Weight for embedding association in the matching cost
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-      
-    alpha_fixed_emb:
-      current_value: 0.95
-      default_value: 0.95
-      disabled: false
-      docstring: Fixed update rate for embeddings
-      gui_element: double_spin_box
-      range:
-      - 0.0
-      - 1.0
-      
     aw_param:
       current_value: 0.5
       default_value: 0.5
@@ -150,44 +57,120 @@ DeepOcSort:
       range:
       - 0.0
       - 1.0
-      
-    embedding_off:
-      current_value: false
-      default_value: false
-      disabled: false
-      docstring: Whether to disable appearance embedding for tracking
-      gui_element: checkbox
-      
     cmc_off:
       current_value: true
       default_value: true
       disabled: false
       docstring: Whether to disable camera motion compensation
       gui_element: checkbox
-      
-    aw_off:
+    delta_t:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Time window size for motion estimation
+      gui_element: spin_box
+      range:
+      - 1
+      - 10
+    det_thresh:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: Detection threshold for considering detections
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    embedding_off:
       current_value: false
       default_value: false
       disabled: false
-      docstring: Whether to disable adaptive weights for appearance/motion balance
+      docstring: Whether to disable appearance embedding for tracking
       gui_element: checkbox
-      
-    Q_xy_scaling:
-      current_value: 0.01
-      default_value: 0.01
+    half:
+      current_value: false
+      default_value: false
       disabled: false
-      docstring: Scaling factor for process noise in position coordinates
+      docstring: Whether to use half-precision (fp16) for faster inference
+      gui_element: checkbox
+    inertia:
+      current_value: 0.2
+      default_value: 0.2
+      disabled: false
+      docstring: Motion model weight, higher values favor motion consistency
       gui_element: double_spin_box
       range:
-      - 0.0001
+      - 0.0
+      - 1.0
+    iou_threshold:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: IOU threshold for determining match between detection and tracks
+      gui_element: double_spin_box
+      range:
       - 0.1
-      
-    Q_s_scaling:
-      current_value: 0.0001
-      default_value: 0.0001
+      - 0.9
+    is_obb:
+      current_value: false
+      default_value: false
+      disabled: true
+      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned
+        bounding boxes
+      gui_element: checkbox
+    max_age:
+      current_value: 30
+      default_value: 30
       disabled: false
-      docstring: Scaling factor for process noise in scale coordinates
+      docstring: Maximum age (in frames) of a track before it is considered lost
+      gui_element: spin_box
+      range:
+      - 1
+      - 10000
+    max_obs:
+      current_value: 50
+      default_value: 50
+      disabled: false
+      docstring: Maximum number of historical observations stored for each track
+      gui_element: spin_box
+      range:
+      - 5
+      - 10000
+    min_hits:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Minimum number of detection hits before a track is considered confirmed
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    nr_classes:
+      current_value: 80
+      default_value: 80
+      disabled: true
+      docstring: Total number of object classes that the tracker will handle (for
+        per_class=True)
+      gui_element: spin_box
+      range:
+      - 1
+      - 100
+    per_class:
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Enables class-separated tracking. When true, tracks different object
+        classes separately
+      gui_element: checkbox
+    w_association_emb:
+      current_value: 0.5
+      default_value: 0.5
+      disabled: false
+      docstring: Weight for embedding association in the matching cost
       gui_element: double_spin_box
       range:
-      - 0.00001
-      - 0.01
+      - 0.0
+      - 1.0
+  reid_model: osnet_x1_0_market1501.pt
+  tracker_type: deepocsort
+  win_height: 750

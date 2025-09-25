@@ -127,8 +127,8 @@ HybridSort:
       - 1
       - 100
     per_class:
-      current_value: false
-      default_value: false
+      current_value: true
+      default_value: true
       disabled: false
       docstring: Enables class-separated tracking. When true, tracks different object
         classes separately
@@ -140,4 +140,5 @@ HybridSort:
       docstring: Whether to use BYTE association in second association step
       gui_element: checkbox
   reid_model: osnet_x1_0_market1501.pt
+  tracker_type: hybridsort
   win_height: 640
