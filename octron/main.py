@@ -59,11 +59,14 @@ from octron.sam2_octron.helpers.sam2_zarr import (
     create_image_zarr,
     load_image_zarr,
 )
-
 # YOLO specific 
 from octron.yolo_octron.gui.yolo_handler import YoloHandler
 from octron.yolo_octron.helpers.training import collect_labels, load_object_organizer
 from octron.yolo_octron.yolo_octron import YOLO_octron
+
+# Tracker specific 
+from octron.tracking.helpers.tracker_checks import load_boxmot_trackers
+from octron.tracking.helpers.tracker_vis import create_color_icon
 
 # Annotation layer creation tools
 from octron.sam2_octron.helpers.sam2_layer import (
@@ -135,13 +138,17 @@ class octron_widget(QWidget):
         # Model yaml for SAM2
         sam2models_yaml_path = self.base_path / 'sam2_octron/sam2_models.yaml'
         self.sam2models_dict = check_sam2_models(SAM2p1_BASE_URL='',
-                                             models_yaml_path=sam2models_yaml_path,
-                                             force_download=False,
-                                             )
+                                                 models_yaml_path=sam2models_yaml_path,
+                                                 force_download=False,
+                                                 )
         # Model yaml for YOLO
         yolo_models_yaml_path = self.base_path / 'yolo_octron/yolo_models.yaml'
         self.yolo_octron = YOLO_octron(models_yaml_path=yolo_models_yaml_path) # Feeding in yaml to initiate models dict
         self.yolomodels_dict = self.yolo_octron.models_dict 
+        
+        # Model yaml for Trackers
+        trackers_yaml_path = self.base_path / 'tracking/boxmot_trackers.yaml'
+        self.trackers_dict = load_boxmot_trackers(trackers_yaml_path)
         
         # Initialize all UI components
         octron_gui_elements(self, base_path=base_path_parent)
@@ -163,7 +170,15 @@ class octron_widget(QWidget):
         for model_id, model in self.yolomodels_dict.items():
             print(f"Adding YOLO model {model_id}")
             self.yolomodel_list.addItem(model['name'])
-            
+   
+        # Populate Tracker dropdown list with available boxmot trackers
+        for tracker in self.trackers_dict:
+            if self.trackers_dict[tracker]['available']:
+                print(f'Adding tracker {self.trackers_dict[tracker]["name"]}')
+                color = self.trackers_dict[tracker]['color']
+                square_icon = create_color_icon(color) # Creates color icon to show computational demands
+                self.yolomodel_tracker_list.addItem(square_icon, self.trackers_dict[tracker]['name']+ " ")
+
         # Connect (global) GUI callbacks 
         self.gui_callback_functions()
         # Connect layer specific callbacks
@@ -440,7 +455,7 @@ class octron_widget(QWidget):
         # Enable the groupbox for existing data and the training generation box
         self.project_existing_data_groupbox.setEnabled(True)
         self.train_generate_groupbox.setEnabled(True)
-        self.generate_training_data_btn.setStyleSheet('QPushButton { color: #8ed634;}')
+        self.generate_training_data_btn.setStyleSheet('')
         self.generate_training_data_btn.setText(f'▷ Generate')
         
         # Enable training tab if data is available

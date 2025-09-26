@@ -1,0 +1,144 @@
+HybridSort:
+  is_reid: true
+  name: HybridSort
+  parameters:
+    ECC:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Whether to use Enhanced Correlation Coefficient for camera motion
+        compensation
+      gui_element: checkbox
+    TCM_first_step_weight:
+      current_value: 0.0
+      default_value: 0.0
+      disabled: false
+      docstring: Weight for Temporal Consistency Model in first association step
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    asso_func:
+      current_value: iou
+      default_value: iou
+      disabled: false
+      docstring: Algorithm used for data association between detections and tracks
+      gui_element: combo_box
+      options:
+      - iou
+      - hmiou
+      - giou
+      - ciou
+      - diou
+      - centroid
+    delta_t:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Time window size for motion estimation in frames
+      gui_element: spin_box
+      range:
+      - 1
+      - 10
+    det_thresh:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: Detection threshold for considering detections
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    half:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Whether to use half-precision (fp16) for faster inference
+      gui_element: checkbox
+    inertia:
+      current_value: 0.2
+      default_value: 0.2
+      disabled: false
+      docstring: Motion model weight for data association
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    iou_threshold:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: IOU threshold for determining match between detection and tracks
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 0.9
+    is_obb:
+      current_value: false
+      default_value: false
+      disabled: true
+      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned
+        bounding boxes
+      gui_element: checkbox
+    longterm_reid_weight:
+      current_value: 0.0
+      default_value: 0.0
+      disabled: false
+      docstring: Weight for long-term ReID features in association
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    max_age:
+      current_value: 300
+      default_value: 300
+      disabled: false
+      docstring: Maximum age (in frames) of a track before it is considered lost
+      gui_element: spin_box
+      range:
+      - 1
+      - 10000
+    max_obs:
+      current_value: 305
+      default_value: 305
+      disabled: false
+      docstring: Maximum number of historical observations stored for each track
+      gui_element: spin_box
+      range:
+      - 5
+      - 10000
+    min_hits:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Minimum number of detection hits before a track is considered confirmed
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    nr_classes:
+      current_value: 80
+      default_value: 80
+      disabled: true
+      docstring: Total number of object classes that the tracker will handle (for
+        per_class=True)
+      gui_element: spin_box
+      range:
+      - 1
+      - 100
+    per_class:
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Enables class-separated tracking. When true, tracks different object
+        classes separately
+      gui_element: checkbox
+    use_byte:
+      current_value: false
+      default_value: false
+      disabled: false
+      docstring: Whether to use BYTE association in second association step
+      gui_element: checkbox
+  reid_model: osnet_x1_0_market1501.pt
+  tracker_type: hybridsort
+  win_height: 640

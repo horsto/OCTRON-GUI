@@ -1,0 +1,139 @@
+ByteTrack:
+  is_reid: false
+  name: ByteTrack
+  parameters:
+    asso_func:
+      current_value: iou
+      default_value: iou
+      disabled: false
+      docstring: Algorithm used for data association between detections and tracks
+      gui_element: combo_box
+      options:
+      - iou
+      - hmiou
+      - giou
+      - ciou
+      - diou
+      - centroid
+    det_thresh:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: Detection threshold for considering detections
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    frame_rate:
+      current_value: 30
+      default_value: 30
+      disabled: true
+      docstring: Frame rate of the video being processed. Used to scale the track
+        buffer size
+      gui_element: spin_box
+      range:
+      - 1
+      - 240
+    iou_threshold:
+      current_value: 0.3
+      default_value: 0.3
+      disabled: false
+      docstring: IOU threshold for determining match between detection and tracks
+      gui_element: double_spin_box
+      range:
+      - 0.1
+      - 0.9
+    is_obb:
+      current_value: false
+      default_value: false
+      disabled: true
+      docstring: Work with Oriented Bounding Boxes instead of standard axis-aligned
+        bounding boxes
+      gui_element: checkbox
+    match_thresh:
+      current_value: 0.8
+      default_value: 0.8
+      disabled: false
+      docstring: Threshold for the matching step in data association. Controls the
+        maximum distance allowed between tracklets and detections for a match
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    max_age:
+      current_value: 300
+      default_value: 300
+      disabled: false
+      docstring: Maximum age (in frames) of a track before it is considered lost
+      gui_element: spin_box
+      range:
+      - 1
+      - 10000
+    max_obs:
+      current_value: 305
+      default_value: 305
+      disabled: false
+      docstring: Maximum number of historical observations (bounding boxes) stored
+        for each track
+      gui_element: spin_box
+      range:
+      - 5
+      - 10000
+    min_conf:
+      current_value: 0.1
+      default_value: 0.1
+      disabled: false
+      docstring: Threshold for detection confidence. Detections below this threshold
+        are discarded
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+    min_hits:
+      current_value: 3
+      default_value: 3
+      disabled: false
+      docstring: Minimum number of detection hits before a track is considered confirmed
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    nr_classes:
+      current_value: 5
+      default_value: 5
+      disabled: true
+      docstring: Total number of object classes that the tracker will handle (for
+        per_class=True)
+      gui_element: spin_box
+      range:
+      - 1
+      - 20
+    per_class:
+      current_value: true
+      default_value: true
+      disabled: false
+      docstring: Enables class-separated tracking. When true, tracks different object
+        classes separately
+      gui_element: checkbox
+    track_buffer:
+      current_value: 150
+      default_value: 150
+      disabled: false
+      docstring: Number of frames to keep a track alive after it was last detected
+      gui_element: spin_box
+      range:
+      - 1
+      - 1000
+    track_thresh:
+      current_value: 0.45
+      default_value: 0.45
+      disabled: false
+      docstring: Threshold for detection confidence. Detections above this threshold
+        are considered for tracking in the first association round
+      gui_element: double_spin_box
+      range:
+      - 0.0
+      - 1.0
+  reid_model: none
+  tracker_type: bytetrack
+  win_height: 490

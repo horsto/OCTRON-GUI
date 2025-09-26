@@ -1,0 +1,57 @@
+# BOXMOT Trackers available in OCTRON
+# The flag "available" determines whether the tracker is selectable by the user
+
+#### Base tracker 
+
+BaseTracker:
+  name: "base tracker"
+  available: false
+  color : '#ffffff'
+  config_path: "tracking/configs/basetracker.yaml"
+
+#### Standard trackers (no ReID)
+
+ByteTrack:
+  name: "ByteTrack"  # Simple and efficient tracker
+  available: true
+  color : '#ecd882'
+  config_path: "tracking/configs/bytetrack.yaml"
+
+OcSort:
+  name: "OcSort"  # Observation-centric tracker with Kalman filtering
+  available: true
+  color : '#ecd882'
+  config_path: "tracking/configs/ocsort.yaml"
+
+#### Advanced trackers with ReID capabilities
+
+StrongSort: # September 2025: Currently does not work! 
+  name: "StrongSort"  # Strong feature-based tracker (no per-class support)
+  available: false
+  color : '#e1ac40'
+  config_path: "tracking/configs/strongsort.yaml"
+
+BotSort:
+  name: "BotSort"  # ByteTrack with optical flow enhancement
+  available: true
+  color : '#e1ac40'
+  config_path: "tracking/configs/botsort.yaml"
+
+DeepOcSort:
+  name: "D-OcSort"  # OcSort with appearance embedding
+  available: true
+  color : '#e1ac40'
+  config_path: "tracking/configs/deepocsort.yaml"
+
+HybridSort:
+  name: "HybridSort"  # Combines multiple tracking strategies
+  available: true
+  color : '#e1ac40'
+  config_path: "tracking/configs/hybridsort.yaml"
+
+BoostTrack: #  September 2025: Currently does not support per class tracking!
+  name: "BoostTrack"  
+  available: true
+  color : '#e1ac40'
+  config_path: "tracking/configs/boosttrack.yaml"
+
