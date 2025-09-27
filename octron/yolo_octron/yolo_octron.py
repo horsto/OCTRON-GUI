@@ -1446,7 +1446,7 @@ class YOLO_octron:
                     masks = results[0].masks.data.cpu().numpy()
                     boxes = results[0].boxes.xyxy.cpu().numpy() # Needed for tracker but not saved
                 except AttributeError as e:
-                    print(e)
+                    print(f'No segmentation result for frame_idx {frame_idx}: {e}')
                     continue
 
                 # Pass things to the boxmot tracker 
