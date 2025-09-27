@@ -1278,7 +1278,6 @@ class YOLO_octron:
         tracker_config = load_boxmot_tracker_config(tracker_cfg_path)
         assert tracker_config, f'Tracker config could not be loaded for tracker {tracker_id}'                                                 
 
-
         # Check YOLO configuration
         model_path = Path(model_path)
         assert model_path.exists(), f"Model path {model_path} does not exist."
@@ -1351,6 +1350,7 @@ class YOLO_octron:
             save_dir.mkdir(parents=True, exist_ok=True)
             
             # Set up boxmot tracker 
+            gc.collect()  # Encourage garbage collection of any old tracker objects
             is_reid = tracker_config[tracker_id]['is_reid']
             tracker_parameters = tracker_config[tracker_id]['parameters']
             custom_tracker_params = {} # Transcribe tracker_parameters - only take "current_value"
@@ -1359,7 +1359,6 @@ class YOLO_octron:
                 custom_tracker_params[param_name] = param_config['current_value']
             custom_tracker_params['nr_classes'] = len(model.names)
             
-            gc.collect()  # Encourage garbage collection of any old tracker objects
             # Initialize tracker with the custom parameters
             tracker = create_tracker(
                 tracker_type=tracker_config[tracker_id]['tracker_type'],
@@ -1374,10 +1373,8 @@ class YOLO_octron:
             if hasattr(tracker, 'reset'):
                 tracker.reset()  # Call reset if available
             elif hasattr(tracker, 'tracker'):
-                # Some boxmot trackers have a nested tracker object
                 if hasattr(tracker.tracker, 'reset'):
                     tracker.tracker.reset()   
-            # Clear any track history that might be stored
             if hasattr(tracker, 'tracks'):
                 tracker.tracks = []
  
@@ -1433,7 +1430,7 @@ class YOLO_octron:
                     save=False,
                     verbose=False,
                     imgsz=imgsz,
-                    max_det=500,
+                    max_det=100,
                     conf=conf_thresh,
                     iou=iou_thresh,
                     device=device, 

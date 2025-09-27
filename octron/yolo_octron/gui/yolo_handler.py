@@ -641,7 +641,7 @@ class YoloHandler(QObject):
             show_warning("Please select a video to predict.")
             return
         
-        self.yolo_tracker_name = self.w.yolomodel_tracker_list.currentText()                              
+        self.yolo_tracker_name = self.w.yolomodel_tracker_list.currentText().strip()                            
         # Check status of "view results" checkbox
         self.view_prediction_results = self.w.open_when_finish_checkBox.isChecked()   
         self.mask_opening = int(round(self.w.predict_mask_opening_spinbox.value()))
