@@ -1462,16 +1462,16 @@ class YOLO_octron:
                 tracked_box_indices = []  # Indices of tracked boxes in the original boxes array
 
                 # Go through tracker results instead of boxes
+                abs_tol = max(video_dict['height'], video_dict['width']) * 0.001 # Set box coord tolerance to 0.1%
                 for tracked_obj in res:
                     track_id = int(tracked_obj[4])
                     tracked_box = tracked_obj[:4]  # The box coordinates from tracker
-                    
                     # Find this tracked box in the original boxes array
                     # The tracker returns the exact same box coordinates in its output 
                     # as were fed in. This makes the re-identification easy.
                     found = False
                     for i, original_box in enumerate(boxes):
-                        if np.allclose(tracked_box, original_box, rtol=1e-5, atol=1e-5):
+                        if np.allclose(tracked_box, original_box, rtol=0, atol=abs_tol):
                             # Found the matching original box
                             tracked_ids.append(track_id-1)
                             tracked_box_indices.append(i)
