@@ -1462,7 +1462,7 @@ class YOLO_octron:
                 tracked_box_indices = []  # Indices of tracked boxes in the original boxes array
 
                 # Go through tracker results instead of boxes
-                abs_tol = max(video_dict['height'], video_dict['width']) * 0.005
+                abs_tol = max(video_dict['height'], video_dict['width']) * 0.01
                 for tracked_obj in res:
                     track_id = int(tracked_obj[4])
                     tracked_box = tracked_obj[:4]  # The box coordinates from tracker
