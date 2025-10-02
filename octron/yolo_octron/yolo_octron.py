@@ -1462,22 +1462,26 @@ class YOLO_octron:
                 tracked_box_indices = []  # Indices of tracked boxes in the original boxes array
 
                 # Go through tracker results instead of boxes
-                abs_tol = max(video_dict['height'], video_dict['width']) * 0.001 # Set box coord tolerance to 0.1%
+                abs_tol = max(video_dict['height'], video_dict['width']) * 0.005
                 for tracked_obj in res:
                     track_id = int(tracked_obj[4])
                     tracked_box = tracked_obj[:4]  # The box coordinates from tracker
-                    # Find this tracked box in the original boxes array
-                    # The tracker returns the exact same box coordinates in its output 
-                    # as were fed in. This makes the re-identification easy.
-                    found = False
-                    for i, original_box in enumerate(boxes):
-                        if np.allclose(tracked_box, original_box, rtol=0, atol=abs_tol):
-                            # Found the matching original box
-                            tracked_ids.append(track_id-1)
-                            tracked_box_indices.append(i)
-                            found = True
-                            break
-                    assert found # This should never be False
+
+                    # Vectorized difference to all original boxes
+                    # boxes.shape == (M,4), tracked_box.shape == (4,)
+                    diffs = np.abs(boxes - tracked_box)         # (M,4)
+                    sum_diffs = diffs.sum(axis=1)               # (M,)
+                    # Find the closest box by minimal total difference
+                    idx = int(np.argmin(sum_diffs))
+                    # Ensure each coordinate difference is within tolerance
+                    if np.all(diffs[idx] <= abs_tol):
+                        tracked_ids.append(track_id-1)
+                        tracked_box_indices.append(idx)
+                    else:
+                        raise ValueError(
+                            f"No matching original box within abs_tol={abs_tol} "
+                            f"for tracked_box {tracked_box}"
+                        )
                     
                 # Filter all result arrays using tracked_box_indices
                 if tracked_box_indices:
