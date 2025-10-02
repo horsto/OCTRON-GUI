@@ -25,15 +25,16 @@ BotSort:
       - diou
       - centroid
     cmc_method:
-      current_value: none
-      default_value: none
+      current_value: ecc
+      default_value: ecc
       disabled: false
       docstring: Method for correcting camera motion
       gui_element: combo_box
       options:
       - ecc
+      - orb
       - sof
-      - none
+      - sift
     det_thresh:
       current_value: 0.3
       default_value: 0.3
