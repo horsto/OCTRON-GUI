@@ -37,8 +37,8 @@ BotSort:
   color : '#e1ac40'
   config_path: "tracking/configs/botsort.yaml"
 
-DeepOcSort:
-  name: "D-OcSort"  # OcSort with appearance embedding
+D-OcSort:
+  name: "D-OcSort"  # DeepOcSort - OcSort with appearance embedding
   available: true
   color : '#e1ac40'
   config_path: "tracking/configs/deepocsort.yaml"

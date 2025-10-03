@@ -1,4 +1,4 @@
-DeepOcSort:
+D-OcSort:
   is_reid: true
   name: D-OcSort
   parameters:
