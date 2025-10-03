@@ -98,9 +98,9 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
         # Create a dialog for transcoding options
         from qtpy.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                    QCheckBox, QSpinBox, QPushButton, QListWidget,
-                                   QDialogButtonBox, QAbstractItemView,
+                                   QDialogButtonBox, QAbstractItemView, QListWidgetItem,
                                    )
-        from qtpy.QtCore import QSize
+        from qtpy.QtCore import QSize, Qt
         
         dialog = QDialog()
         dialog.setWindowTitle("Transcode videos to mp4")
@@ -114,9 +114,12 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
         file_list = QListWidget()
         file_list.setSelectionMode(QAbstractItemView.MultiSelection)  # Allow multiple selection
         for video in video_files:
-            item = file_list.addItem(video.name)
+            item = QListWidgetItem(video.name)
+            # Store the full path object on the item for later retrieval
+            item.setData(Qt.UserRole, video)
+            file_list.addItem(item)
             # Pre-select all videos by default
-            file_list.item(file_list.count() - 1).setSelected(True)
+            item.setSelected(True)
         layout.addWidget(file_list)
         
         # Add selection helpers
@@ -187,9 +190,9 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
             crf_value = crf_spin.value()
             overwrite_existing = overwrite_check.isChecked()
             
-            # Get selected videos
-            selected_indices = [i.row() for i in file_list.selectedIndexes()]
-            selected_videos = [video_files[i] for i in selected_indices]
+            # Get selected videos using selectedItems() for reliability
+            selected_items = file_list.selectedItems()
+            selected_videos = [item.data(Qt.UserRole) for item in selected_items]
             
             if not selected_videos:
                 print("No videos selected for transcoding.")
