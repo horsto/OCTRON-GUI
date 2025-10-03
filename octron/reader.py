@@ -90,7 +90,9 @@ def read_octron_folder(path: "Path") -> List["LayerData"]:
     video_files = []
     for fmt in video_formats:
         video_files.extend(list(path.glob(f"*{fmt}")))
-    
+    if video_files:
+        video_files = sorted(list(set(video_files))) # Get rid of any duplicates due to case-sensitivity! 
+
     # If we found video files, offer to transcode them
     if video_files:
         print(f"🎬 Found {len(video_files)} video files in {path}")
