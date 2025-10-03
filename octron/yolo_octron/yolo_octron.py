@@ -1658,7 +1658,8 @@ class YOLO_octron:
                 ]:
                     model_args.pop(key, None)  
                     
-            _ = custom_tracker_params.pop('reid_weights') # This info exists twice
+            if 'reid_weights' in custom_tracker_params:
+                _ = custom_tracker_params.pop('reid_weights') # This info exists twice
              
             metadata_to_save = {
                 "octron_version": octron_version,
