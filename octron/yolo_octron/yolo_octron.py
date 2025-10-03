@@ -1456,44 +1456,21 @@ class YOLO_octron:
                                            classes[:,np.newaxis],
                                           ])
                 res = tracker.update(tracker_input, frame)
+                if res.shape[0] == 0:
+                    print(f'No tracking result found for frame_idx {frame_idx}')
+                    continue
                 
                 # Map tracking results back to original boxes and masks
-                tracked_ids = []
-                tracked_box_indices = []  # Indices of tracked boxes in the original boxes array
-
-                # Go through tracker results instead of boxes
-                abs_tol = max(video_dict['height'], video_dict['width']) * 0.01
-                for tracked_obj in res:
-                    track_id = int(tracked_obj[4])
-                    tracked_box = tracked_obj[:4]  # The box coordinates from tracker
-
-                    # Vectorized difference to all original boxes
-                    # boxes.shape == (M,4), tracked_box.shape == (4,)
-                    diffs = np.abs(boxes - tracked_box)         # (M,4)
-                    sum_diffs = diffs.sum(axis=1)               # (M,)
-                    # Find the closest box by minimal total difference
-                    idx = int(np.argmin(sum_diffs))
-                    # Ensure each coordinate difference is within tolerance
-                    if np.all(diffs[idx] <= abs_tol):
-                        tracked_ids.append(track_id-1)
-                        tracked_box_indices.append(idx)
-                    else:
-                        raise ValueError(
-                            f"No matching original box within abs_tol={abs_tol} "
-                            f"for tracked_box {tracked_box}"
-                        )
+                tracked_ids = res[:, 4].astype(int) - 1 # 5th column is the track ID 
+                tracked_box_indices = res[:, 7].astype(int) # 8th column is the original detection index 
                     
                 # Filter all result arrays using tracked_box_indices
-                if tracked_box_indices:
-                    tracked_masks = masks[tracked_box_indices]
-                    tracked_confidences = confidences[tracked_box_indices]
-                    tracked_label_names = [label_names[i] for i in tracked_box_indices]
-                    #tracked_classes = classes[tracked_box_indices]
-                    #tracked_boxes = boxes[tracked_box_indices]
-                else: 
-                    #print('No results found after tracker update')
-                    pass
-                
+                tracked_masks = masks[tracked_box_indices]
+                tracked_confidences = confidences[tracked_box_indices]
+                tracked_label_names = [label_names[i] for i in tracked_box_indices]
+                #tracked_classes = classes[tracked_box_indices]
+                #tracked_boxes = boxes[tracked_box_indices]
+
                 # Extract tracks 
                 for track_id, label, conf, mask in zip(tracked_ids,
                                                        tracked_label_names, 
