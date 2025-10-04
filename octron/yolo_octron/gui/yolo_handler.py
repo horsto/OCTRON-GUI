@@ -578,7 +578,7 @@ class YoloHandler(QObject):
             lst = self.w.videos_for_prediction_list
             lst.addItem(p.name)
             n = len(vdict)
-            lst.setItemText(0, f"Videos (n={n})" if n else "Videos")
+            lst.setItemText(0, f"Videos (n={n})" if n else "List of videos to be analyzed ...")
             print(f"Added video {p.name} to prediction list.")
 
     def on_video_prediction_change(self):
@@ -603,7 +603,7 @@ class YoloHandler(QObject):
                 print(f'Removed video "{sel}"')
                 # Refresh header count
                 n = len(self.videos_to_predict)
-                lst.setItemText(0, f"Videos (n={n})" if n else "Videos")
+                lst.setItemText(0, f"Videos (n={n})" if n else "List of videos to be analyzed ...")
             # reset back to first entry
             lst.setCurrentIndex(0)
         else:
@@ -682,6 +682,7 @@ class YoloHandler(QObject):
             show_info(f"Predicting on device: '{self.device_label}'")
         
         one_object_per_label = self.w.single_subject_checkBox.isChecked()
+        region_details = self.w.detailed_extraction_checkBox.isChecked()
         skip_frames = self.w.skip_frames_analysis_spinBox.value()
         # Call the training function which yields progress info
         for progress_info in self.yolo.predict_batch(
@@ -691,6 +692,7 @@ class YoloHandler(QObject):
                                             tracker_name=self.yolo_tracker_name,
                                             skip_frames=skip_frames,
                                             one_object_per_label=one_object_per_label,
+                                            region_details=region_details,
                                             iou_thresh=self.iou_thresh,
                                             conf_thresh=self.conf_thresh,
                                             opening_radius=self.mask_opening,

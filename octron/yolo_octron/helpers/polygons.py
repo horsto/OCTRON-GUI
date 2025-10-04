@@ -35,7 +35,7 @@ def find_objects_in_mask(mask, min_area=10):
     # Use regionprops_table for efficiency
     props = measure.regionprops_table(
         labels, 
-        properties=('label', 'area', 'centroid', 'eccentricity', 'orientation')
+        properties=('label', 'area', 'centroid', 'eccentricity', 'solidity', 'orientation')
     )
     
     # Filter small regions
@@ -63,6 +63,7 @@ def find_objects_in_mask(mask, min_area=10):
             'area': props['area'][i],
             'centroid': (props['centroid-0'][i], props['centroid-1'][i]),
             'eccentricity': props['eccentricity'][i],
+            'solidity': props['solidity'][i],
             'orientation': props['orientation'][i]
         }
         regions_list.append(region_dict)

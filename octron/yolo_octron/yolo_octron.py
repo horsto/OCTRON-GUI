@@ -1208,6 +1208,7 @@ class YOLO_octron:
                       tracker_cfg_path=None,
                       skip_frames=0,
                       one_object_per_label=False,
+                      region_details=False,
                       iou_thresh=.7,
                       conf_thresh=.5,
                       opening_radius=0,
@@ -1236,6 +1237,9 @@ class YOLO_octron:
             If True, only the first detected object of each label will be tracked
             and if more than one object is detected, only the first one with the highest confidence
             will be kept. Defaults to False.
+        region_details : bool 
+            Whether to extract region details like area, solidity etc. (regionprops) from the extracted
+            masks instead of just relying on bounding box info.
         iou_thresh : float
             IOU threshold for detection
         conf_thresh : float
@@ -1468,15 +1472,17 @@ class YOLO_octron:
                 tracked_masks = masks[tracked_box_indices]
                 tracked_confidences = confidences[tracked_box_indices]
                 tracked_label_names = [label_names[i] for i in tracked_box_indices]
+                tracked_boxes = boxes[tracked_box_indices]
                 #tracked_classes = classes[tracked_box_indices]
-                #tracked_boxes = boxes[tracked_box_indices]
+                
 
                 # Extract tracks 
-                for track_id, label, conf, mask in zip(tracked_ids,
-                                                       tracked_label_names, 
-                                                       tracked_confidences,
-                                                       tracked_masks, 
-                                                       ):
+                for track_id, label, conf, bbox, mask in zip(tracked_ids,
+                                                            tracked_label_names, 
+                                                            tracked_confidences,
+                                                            tracked_boxes,
+                                                            tracked_masks, 
+                                                            ):
                     
                     if one_object_per_label or iou_thresh < 0.01:
                         # ! Use 'label' as keys in track_id_label_dict
@@ -1513,7 +1519,7 @@ class YOLO_octron:
                         mask_store = create_prediction_zarr(prediction_store, 
                                         f'{track_id}_masks',
                                         shape=video_shape,
-                                        chunk_size=200,     
+                                        chunk_size=500,     
                                         fill_value=-1,
                                         dtype='int8',                           
                                         video_hash=''
@@ -1525,7 +1531,8 @@ class YOLO_octron:
                         
                     # Initialize tracking dataframe if needed
                     if track_id not in tracking_df_dict:
-                        tracking_df = self.create_tracking_dataframe(video_dict)
+                        tracking_df = self.create_tracking_dataframe(video_dict, 
+                                                                     region_details=region_details)
                         tracking_df.attrs['video_name'] = video_name
                         tracking_df.attrs['label'] = label
                         tracking_df.attrs['track_id'] = track_id
@@ -1560,36 +1567,51 @@ class YOLO_octron:
                     
                     # Store mask 
                     mask_store[frame_idx,:,:] = mask
-                
-                    # Get region properties and save them to the dataframe
-                    _, regions_props = find_objects_in_mask(mask, min_area=0)
-                
-                    # Instead of asserting single region, handle multiple regions
-                    if not regions_props:
-                        # Skip if no regions were found
-                        continue
-                    num_regions = len(regions_props)                    
-                    # Initialize accumulators for region properties
-                    pos_x_sum, pos_y_sum = 0, 0
-                    area_sum = 0
-                    eccentricity_sum = 0
-                    orientation_sum = 0
-                    # Loop over all regions and accumulate properties
-                    for region_prop in regions_props:
-                        centroid = region_prop['centroid']
-                        pos_x_sum += centroid[1]  # x coordinate
-                        pos_y_sum += centroid[0]  # y coordinate
-                        area_sum += region_prop['area']
-                        eccentricity_sum += region_prop['eccentricity']
-                        orientation_sum += region_prop['orientation']
                     
-                    # Store averages in DataFrame with flat column names
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = pos_x_sum / num_regions
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_y'] = pos_y_sum / num_regions
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'area'] = area_sum / num_regions
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'eccentricity'] = eccentricity_sum / num_regions
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
+                    # Store initial coordinates from bounding box (bbox)
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = (bbox[0] + bbox[2])/2  # Center x (average of x_min and x_max)
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_y'] = (bbox[1] + bbox[3])/2  # Center y (average of y_min and y_max)
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_area'] = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])  # Width * Height
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_x_min'] = bbox[0]  # x_min
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_x_max'] = bbox[2]  # x_max
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_y_min'] = bbox[1]  # y_min
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_y_max'] = bbox[3]  # y_max
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence'] = conf
+                                        
+                    # If the "Detailed" checkbox has been checked, supplement info from regionprops extraction 
+                    regions_props = None
+                    if region_details:
+                        _, regions_props = find_objects_in_mask(mask, min_area=0)
+                        if not regions_props:
+                            # Skip if no regions were found
+                            continue
+                        
+                        # Handle multiple regions
+                        num_regions = len(regions_props)                    
+                        # Initialize accumulators for region properties
+                        pos_x_sum, pos_y_sum = 0, 0
+                        area_sum = 0
+                        eccentricity_sum = 0
+                        solidity_sum = 0 
+                        orientation_sum = 0
+                        # Loop over all regions and accumulate properties
+                        for region_prop in regions_props:
+                            centroid = region_prop['centroid']
+                            pos_x_sum += centroid[1]  # x coordinate
+                            pos_y_sum += centroid[0]  # y coordinate
+                            area_sum += region_prop['area']
+                            eccentricity_sum += region_prop['eccentricity']
+                            solidity_sum += region_prop['solidity']
+                            orientation_sum += region_prop['orientation']
+                    
+                        # Store averages in DataFrame with flat column names
+                        # pos_x and pos_y are being overwritten from the previous (cruder) bbox estimates
+                        tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = pos_x_sum / num_regions
+                        tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_y'] = pos_y_sum / num_regions
+                        tracking_df.loc[(frame_no, frame_idx, track_id), 'area'] = area_sum / num_regions
+                        tracking_df.loc[(frame_no, frame_idx, track_id), 'eccentricity'] = eccentricity_sum / num_regions
+                        tracking_df.loc[(frame_no, frame_idx, track_id), 'solidity'] = solidity_sum / num_regions
+                        tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
 
                 # A FRAME IS COMPLETE
                 
@@ -1618,8 +1640,8 @@ class YOLO_octron:
                 
                 # Write the header and then the data
                 with open(csv_path, 'w') as f:
-                    f.write('\n'.join(header))
-                    df_to_save.to_csv(f, na_rep='NaN')
+                    f.write('\n'.join(header) + '\n') 
+                    df_to_save.to_csv(f, na_rep='NaN', lineterminator='\n')
                 print(f"Saved tracking data for '{label}' (track ID: {track_id}) to {filename}")
             
             # Save a json file with all metadata / parameters used for prediction 
@@ -1714,7 +1736,10 @@ class YOLO_octron:
         }
                 
     
-    def create_tracking_dataframe(self, video_dict):
+    def create_tracking_dataframe(self, 
+                                  video_dict, 
+                                  region_details=False
+                                  ):
         """
         Create an empty DataFrame for storing tracking data and associated metadata
         I am using the video_dict to get number of frames that are expected for the 
@@ -1724,7 +1749,8 @@ class YOLO_octron:
         ----------
         video_dict : dict
             Dictionary with video metadata including num_frames
-
+        region_details : bool 
+            If True, add columns for region details like solidity, eccentricity etc. (regionprops)
             
         Returns
         -------
@@ -1734,14 +1760,31 @@ class YOLO_octron:
         import pandas as pd
         assert 'num_frames_analyzed' in video_dict, "Video metadata must include 'num_frames_analyzed'"
         # Create a flat column structure
-        columns = ['confidence', 
-                   'pos_x', 
-                   'pos_y', 
-                   'area', 
-                   'eccentricity', 
-                   'orientation',
-                   ]
-        
+        if region_details: 
+            columns = ['confidence', 
+                    'pos_x', 
+                    'pos_y', 
+                    'bbox_area',
+                    'bbox_x_min',
+                    'bbox_x_max',
+                    'bbox_y_min',
+                    'bbox_y_max',
+                    'area', 
+                    'eccentricity', 
+                    'solidity',
+                    'orientation',
+                    ]
+        else: 
+            columns = ['confidence', 
+                    'pos_x', 
+                    'pos_y', 
+                    'bbox_area',
+                    'bbox_x_min',
+                    'bbox_x_max',
+                    'bbox_y_min',
+                    'bbox_y_max',
+                    ]
+
         # Initialize the DataFrame with NaN values
         df = pd.DataFrame(
             index=pd.MultiIndex.from_product([
