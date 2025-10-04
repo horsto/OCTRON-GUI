@@ -170,7 +170,7 @@ class Ui_octron_widgetui(object):
         self.toolBox.addItem(self.project_tab, icon, u"Manage project")
         self.annotate_tab = QWidget()
         self.annotate_tab.setObjectName(u"annotate_tab")
-        self.annotate_tab.setGeometry(QRect(0, 0, 405, 414))
+        self.annotate_tab.setGeometry(QRect(0, 0, 98, 28))
         sizePolicy1.setHeightForWidth(self.annotate_tab.sizePolicy().hasHeightForWidth())
         self.annotate_tab.setSizePolicy(sizePolicy1)
         self.annotate_tab.setMaximumSize(QSize(405, 700))
@@ -389,7 +389,7 @@ class Ui_octron_widgetui(object):
         self.toolBox.addItem(self.annotate_tab, icon1, u"Generate annotation data")
         self.train_tab = QWidget()
         self.train_tab.setObjectName(u"train_tab")
-        self.train_tab.setGeometry(QRect(0, 0, 410, 414))
+        self.train_tab.setGeometry(QRect(0, 0, 98, 28))
         sizePolicy1.setHeightForWidth(self.train_tab.sizePolicy().hasHeightForWidth())
         self.train_tab.setSizePolicy(sizePolicy1)
         self.verticalLayoutWidget_4 = QWidget(self.train_tab)
@@ -970,14 +970,14 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_trained_list, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.single_subject_checkBox_2 = QCheckBox(self.layoutWidget9)
-        self.single_subject_checkBox_2.setObjectName(u"single_subject_checkBox_2")
-        self.single_subject_checkBox_2.setEnabled(True)
-        self.single_subject_checkBox_2.setMinimumSize(QSize(90, 25))
-        self.single_subject_checkBox_2.setMaximumSize(QSize(100, 25))
-        self.single_subject_checkBox_2.setChecked(False)
+        self.single_subject_checkBox = QCheckBox(self.layoutWidget9)
+        self.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
+        self.single_subject_checkBox.setEnabled(True)
+        self.single_subject_checkBox.setMinimumSize(QSize(90, 25))
+        self.single_subject_checkBox.setMaximumSize(QSize(100, 25))
+        self.single_subject_checkBox.setChecked(False)
 
-        self.gridLayout_2.addWidget(self.single_subject_checkBox_2, 1, 3, 1, 1, Qt.AlignmentFlag.AlignLeft)
+        self.gridLayout_2.addWidget(self.single_subject_checkBox, 1, 3, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
 
         self.predict_verticalLayout.addWidget(self.predict_video_predict_groupbox)
@@ -1237,10 +1237,10 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.yolomodel_trained_list.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Model ...", None))
 #if QT_CONFIG(tooltip)
-        self.single_subject_checkBox_2.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked per label.\n"
+        self.single_subject_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked per label.\n"
 "This prevents artificial splitting of tracks.", None))
 #endif // QT_CONFIG(tooltip)
-        self.single_subject_checkBox_2.setText(QCoreApplication.translate("octron_widgetui", u"1 subject", None))
+        self.single_subject_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"1 subject", None))
         self.toolBox.setItemText(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("octron_widgetui", u"Analyze (new) videos", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("octron_widgetui", u"Use trained models to run predictions on new videos", None))
