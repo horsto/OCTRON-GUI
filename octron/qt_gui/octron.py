@@ -1203,7 +1203,7 @@ class Ui_octron_widgetui(object):
 #if QT_CONFIG(tooltip)
         self.detailed_extraction_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Extract more info per region than just its coordinates?\n"
 "Click this if you want properties like area, eccentricity, solidity etc. to be determined for each region.\n"
-"This slows down analysis a lot, but gives you much more info per tracked region.", None))
+"This slows down analysis, but gives you much more info per tracked region.", None))
 #endif // QT_CONFIG(tooltip)
         self.detailed_extraction_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Detailed", None))
 #if QT_CONFIG(tooltip)

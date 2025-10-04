@@ -2588,7 +2588,7 @@ of one label will be fused into one mask.</string>
                <property name="toolTip">
                 <string>Extract more info per region than just its coordinates?
 Click this if you want properties like area, eccentricity, solidity etc. to be determined for each region.
-This slows down analysis a lot, but gives you much more info per tracked region.</string>
+This slows down analysis, but gives you much more info per tracked region.</string>
                </property>
                <property name="text">
                 <string>Detailed</string>
