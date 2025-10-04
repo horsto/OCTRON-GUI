@@ -1292,19 +1292,20 @@ class YOLO_octron:
     
     
     def predict_batch(self, 
-                      videos_dict,
-                      model_path,
-                      device,
-                      tracker_name,
-                      tracker_cfg_path=None,
-                      skip_frames=0,
-                      one_object_per_label=False,
-                      region_details=False,
-                      iou_thresh=.7,
-                      conf_thresh=.5,
-                      opening_radius=0,
-                      overwrite=True
-                      ):
+                  videos_dict,
+                  model_path,
+                  device,
+                  tracker_name,
+                  tracker_cfg_path=None,
+                  skip_frames=0,
+                  one_object_per_label=False,
+                  region_details=False,
+                  iou_thresh=.7,
+                  conf_thresh=.5,
+                  opening_radius=0,
+                  overwrite=True,
+                  buffer_size=500,
+                  ):
         """
         Predict and track objects in multiple videos.
         
@@ -1339,6 +1340,8 @@ class YOLO_octron:
             Radius for morphological opening operation on masks to remove noise.
         overwrite : bool
             Whether to overwrite existing prediction results
+        buffer_size : int, default=500
+            Number of frames to buffer before writing masks to zarr arrays
             
         Yields
         ------
@@ -1481,17 +1484,40 @@ class YOLO_octron:
             # Process video frames
             video = video_dict['video']
             tracking_df_dict = {}
-            track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
+            track_id_label_dict = {}
             video_prediction_start = time.time()
             frame_start = time.time()
             all_ids = []
+            
+            # Initialize buffer structures for masks
+            mask_buffers = {}  # track_id -> {frame_idx: mask}
+            buffer_counts = {}  # track_id -> count
+            mask_stores = {}   # track_id -> zarr array
+            
+            def _flush_mask_buffer(track_id):
+                """Helper to flush a track's mask buffer to disk"""
+                if track_id not in buffer_counts or buffer_counts[track_id] == 0:
+                    return
+                    
+                # Get the buffer and store
+                mask_buffer = mask_buffers[track_id]
+                mask_store = mask_stores[track_id]
+                
+                # Write all buffered masks at once to the zarr array
+                frame_indices = sorted(mask_buffer.keys())
+                stacked_masks = np.stack([mask_buffer[idx] for idx in frame_indices])
+                mask_store[frame_indices,:,:] = stacked_masks
+                    
+                # Clear buffer
+                mask_buffers[track_id].clear()
+                buffer_counts[track_id] = 0
+                
+                # Debug info
+                print(f"Flushed mask buffer for track {track_id} with {len(frame_indices)} frames")
+            
             for frame_no, frame_idx in enumerate(video_dict['frame_iterator'], start=0):
                 try:
                     frame = video[frame_idx]
-                    # if len(frame.shape) == 2:
-                    #     # Convert grayscale images to rgb - which effectively just 
-                    #     # triples the same image across all three channels 
-                    #     frame = color.gray2rgb(frame)
 
                 except StopIteration:
                     print(f"Could not read frame {frame_idx} from video {video_name}")
@@ -1540,7 +1566,7 @@ class YOLO_octron:
                     classes = results[0].boxes.cls.cpu().numpy()
                     label_names = tuple([results[0].names[int(r)] for r in results[0].boxes.cls.cpu().numpy()])
                     masks = results[0].masks.data.cpu().numpy()
-                    boxes = results[0].boxes.xyxy.cpu().numpy() # Needed for tracker but not saved
+                    boxes = results[0].boxes.xyxy.cpu().numpy()
                 except AttributeError as e:
                     print(f'No segmentation result for frame_idx {frame_idx}: {e}')
                     continue
@@ -1583,9 +1609,8 @@ class YOLO_octron:
                                                              ):
                     
                     # Take care of zarr array and tracking dataframe 
-                    # Find out if the current track_id is new 
                     if not track_id in all_ids:
-                         # Initialize mask store to original length of video, regardless of skipped frames
+                        # Initialize mask store to original length of video
                         video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
                         mask_store = create_prediction_zarr(prediction_store, 
                                         f'{track_id}_masks',
@@ -1598,17 +1623,21 @@ class YOLO_octron:
                         mask_store.attrs['label'] = label
                         mask_store.attrs['classes'] = results[0].names
                         
-                        # Initialize tracking dataframe
-                        tracking_df = self.create_tracking_dataframe(video_dict, 
-                                                                     region_details=region_details)
+                        # Initialize tracking dataframe (keep unchanged)
+                        tracking_df = self.create_tracking_dataframe(video_dict, region_details=region_details)
                         tracking_df.attrs['video_name'] = video_name
                         tracking_df.attrs['label'] = label
                         tracking_df.attrs['track_id'] = track_id
                         tracking_df_dict[track_id] = tracking_df
 
+                        # Initialize buffers for this track
+                        mask_buffers[track_id] = {}
+                        buffer_counts[track_id] = 0
+                        mask_stores[track_id] = mask_store
+
                         all_ids.append(track_id)
                     else:
-                        mask_store = zarr_root[f'{track_id}_masks']
+                        mask_store = mask_stores[track_id]
                         tracking_df = tracking_df_dict[track_id]
                         assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
                         assert tracking_df.attrs['label'] == label, "Label mismatch"    
@@ -1658,26 +1687,35 @@ class YOLO_octron:
                     # Work on mask a bit - perform morphological opening
                     mask = postprocess_mask(mask, opening_radius=opening_radius)
                     if iou_thresh < 0.01:
-                        # Fuse this masks with prior masks already stored in the zarr
-                        # for this frame / label
-                        previous_mask = mask_store[frame_idx,:,:].copy()
-                        previous_mask[previous_mask == -1] = 0
+                        # Fuse this mask with prior mask (if any) from buffer or zarr
+                        if frame_idx in mask_buffers[track_id]:
+                            # Get from buffer first
+                            previous_mask = mask_buffers[track_id][frame_idx].copy()
+                        else:
+                            # Otherwise check zarr store
+                            previous_mask = mask_store[frame_idx,:,:].copy()
+                            previous_mask[previous_mask == -1] = 0
+                        
                         mask = np.logical_or(previous_mask, mask)
                         mask = mask.astype('int8')
+                
+                    # Add to buffer instead of writing directly
+                    mask_buffers[track_id][frame_idx] = mask
+                    buffer_counts[track_id] = buffer_counts.get(track_id, 0) + 1
                     
-                    # Store mask 
-                    mask_store[frame_idx,:,:] = mask
+                    if buffer_counts[track_id] >= buffer_size:
+                        _flush_mask_buffer(track_id)
                     
-                    # Store initial coordinates from bounding box (bbox)
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = (bbox[0] + bbox[2])/2  # Center x (average of x_min and x_max)
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_y'] = (bbox[1] + bbox[3])/2  # Center y (average of y_min and y_max)
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_area'] = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])  # Width * Height
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_x_min'] = bbox[0]  # x_min
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_x_max'] = bbox[2]  # x_max
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_y_min'] = bbox[1]  # y_min
-                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_y_max'] = bbox[3]  # y_max
+                    # Store tracking data directly (no buffering for tracking dataframes)
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_x'] = (bbox[0] + bbox[2])/2
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'pos_y'] = (bbox[1] + bbox[3])/2
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_area'] = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_x_min'] = bbox[0]
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_x_max'] = bbox[2]
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_y_min'] = bbox[1]
+                    tracking_df.loc[(frame_no, frame_idx, track_id), 'bbox_y_max'] = bbox[3]
                     tracking_df.loc[(frame_no, frame_idx, track_id), 'confidence'] = conf
-                                        
+                                            
                     # If the "Detailed" checkbox has been checked, supplement info from regionprops extraction 
                     regions_props = None
                     if region_details:
@@ -1714,8 +1752,11 @@ class YOLO_octron:
                         tracking_df.loc[(frame_no, frame_idx, track_id), 'orientation'] = orientation_sum / num_regions
 
                 # A FRAME IS COMPLETE
-                
+            
             # A VIDEO IS COMPLETE 
+            for track_id in all_ids:
+                _flush_mask_buffer(track_id)
+                
             # Save each tracking DataFrame with a label column added
             for track_id, tr_df in tracking_df_dict.items():
                 label = tr_df.attrs["label"]
@@ -1782,7 +1823,7 @@ class YOLO_octron:
                     
             if 'reid_weights' in custom_tracker_params:
                 _ = custom_tracker_params.pop('reid_weights') # This info exists twice
-             
+            
             metadata_to_save = {
                 "octron_version": octron_version,
                 "prediction_start_timestamp": datetime.fromtimestamp(video_prediction_start).isoformat(), 
