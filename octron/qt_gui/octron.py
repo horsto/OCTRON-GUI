@@ -170,7 +170,7 @@ class Ui_octron_widgetui(object):
         self.toolBox.addItem(self.project_tab, icon, u"Manage project")
         self.annotate_tab = QWidget()
         self.annotate_tab.setObjectName(u"annotate_tab")
-        self.annotate_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.annotate_tab.setGeometry(QRect(0, 0, 405, 414))
         sizePolicy1.setHeightForWidth(self.annotate_tab.sizePolicy().hasHeightForWidth())
         self.annotate_tab.setSizePolicy(sizePolicy1)
         self.annotate_tab.setMaximumSize(QSize(405, 700))
@@ -389,7 +389,7 @@ class Ui_octron_widgetui(object):
         self.toolBox.addItem(self.annotate_tab, icon1, u"Generate annotation data")
         self.train_tab = QWidget()
         self.train_tab.setObjectName(u"train_tab")
-        self.train_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.train_tab.setGeometry(QRect(0, 0, 410, 414))
         sizePolicy1.setHeightForWidth(self.train_tab.sizePolicy().hasHeightForWidth())
         self.train_tab.setSizePolicy(sizePolicy1)
         self.verticalLayoutWidget_4 = QWidget(self.train_tab)
@@ -1227,7 +1227,8 @@ class Ui_octron_widgetui(object):
         self.videos_for_prediction_list.setItemText(1, QCoreApplication.translate("octron_widgetui", u"\u2296 Remove", None))
 
 #if QT_CONFIG(tooltip)
-        self.videos_for_prediction_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"Select, add or remove labels", None))
+        self.videos_for_prediction_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"List of videos that will be analyzed, in order of processing.\n"
+"Click on \"Remove\" in dropdown to remove videos from list.", None))
 #endif // QT_CONFIG(tooltip)
         self.videos_for_prediction_list.setCurrentText(QCoreApplication.translate("octron_widgetui", u"List of videos to be analyzed ...", None))
         self.yolomodel_trained_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Model ...", None))

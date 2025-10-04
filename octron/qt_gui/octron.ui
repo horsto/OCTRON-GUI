@@ -445,8 +445,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>98</width>
-         <height>28</height>
+         <width>405</width>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -1131,8 +1131,8 @@ batch prediction?</string>
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>98</width>
-         <height>28</height>
+         <width>410</width>
+         <height>414</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -2736,7 +2736,8 @@ This slows down analysis a lot, but gives you much more info per tracked region.
                 </size>
                </property>
                <property name="toolTip">
-                <string>Select, add or remove labels</string>
+                <string>List of videos that will be analyzed, in order of processing.
+Click on &quot;Remove&quot; in dropdown to remove videos from list.</string>
                </property>
                <property name="editable">
                 <bool>false</bool>

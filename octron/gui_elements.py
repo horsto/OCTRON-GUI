@@ -263,7 +263,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.project_tab, icon, u"Manage project")
         self.octron.annotate_tab = QWidget()
         self.octron.annotate_tab.setObjectName(u"annotate_tab")
-        self.octron.annotate_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.octron.annotate_tab.setGeometry(QRect(0, 0, 405, 414))
         sizePolicy1.setHeightForWidth(self.octron.annotate_tab.sizePolicy().hasHeightForWidth())
         self.octron.annotate_tab.setSizePolicy(sizePolicy1)
         self.octron.annotate_tab.setMaximumSize(QSize(405, 700))
@@ -482,7 +482,7 @@ class octron_gui_elements(QWidget):
         self.octron.toolBox.addItem(self.octron.annotate_tab, icon1, u"Generate annotation data")
         self.octron.train_tab = QWidget()
         self.octron.train_tab.setObjectName(u"train_tab")
-        self.octron.train_tab.setGeometry(QRect(0, 0, 98, 28))
+        self.octron.train_tab.setGeometry(QRect(0, 0, 410, 414))
         sizePolicy1.setHeightForWidth(self.octron.train_tab.sizePolicy().hasHeightForWidth())
         self.octron.train_tab.setSizePolicy(sizePolicy1)
         self.octron.verticalLayoutWidget_4 = QWidget(self.octron.train_tab)
@@ -1315,7 +1315,8 @@ class octron_gui_elements(QWidget):
         self.octron.videos_for_prediction_list.setItemText(1, QCoreApplication.translate("self", u"\u2296 Remove", None))
 
 #if QT_CONFIG(tooltip)
-        self.octron.videos_for_prediction_list.setToolTip(QCoreApplication.translate("self", u"Select, add or remove labels", None))
+        self.octron.videos_for_prediction_list.setToolTip(QCoreApplication.translate("self", u"List of videos that will be analyzed, in order of processing.\n"
+"Click on \"Remove\" in dropdown to remove videos from list.", None))
 #endif // QT_CONFIG(tooltip)
         self.octron.videos_for_prediction_list.setCurrentText(QCoreApplication.translate("self", u"List of videos to be analyzed ...", None))
         self.octron.yolomodel_trained_list.setItemText(0, QCoreApplication.translate("self", u"Model ...", None))
