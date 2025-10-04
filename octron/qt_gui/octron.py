@@ -807,7 +807,7 @@ class Ui_octron_widgetui(object):
 
         self.layoutWidget8 = QWidget(self.predict_video_predict_groupbox)
         self.layoutWidget8.setObjectName(u"layoutWidget8")
-        self.layoutWidget8.setGeometry(QRect(10, 130, 381, 61))
+        self.layoutWidget8.setGeometry(QRect(10, 140, 381, 61))
         self.gridLayout_3 = QGridLayout(self.layoutWidget8)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setHorizontalSpacing(5)
@@ -898,14 +898,25 @@ class Ui_octron_widgetui(object):
         self.gridLayout_2.setHorizontalSpacing(5)
         self.gridLayout_2.setVerticalSpacing(0)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget9)
-        self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
-        self.overwrite_prediction_checkBox.setEnabled(True)
-        self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
-        self.overwrite_prediction_checkBox.setMaximumSize(QSize(100, 25))
-        self.overwrite_prediction_checkBox.setChecked(False)
+        self.detailed_extraction_checkBox = QCheckBox(self.layoutWidget9)
+        self.detailed_extraction_checkBox.setObjectName(u"detailed_extraction_checkBox")
+        self.detailed_extraction_checkBox.setEnabled(True)
+        self.detailed_extraction_checkBox.setMinimumSize(QSize(90, 25))
+        self.detailed_extraction_checkBox.setMaximumSize(QSize(100, 25))
+        self.detailed_extraction_checkBox.setChecked(False)
 
-        self.gridLayout_2.addWidget(self.overwrite_prediction_checkBox, 2, 3, 1, 1)
+        self.gridLayout_2.addWidget(self.detailed_extraction_checkBox, 2, 3, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
+        self.tune_tracker_btn = QPushButton(self.layoutWidget9)
+        self.tune_tracker_btn.setObjectName(u"tune_tracker_btn")
+        self.tune_tracker_btn.setEnabled(False)
+        sizePolicy3.setHeightForWidth(self.tune_tracker_btn.sizePolicy().hasHeightForWidth())
+        self.tune_tracker_btn.setSizePolicy(sizePolicy3)
+        self.tune_tracker_btn.setMinimumSize(QSize(50, 25))
+        self.tune_tracker_btn.setMaximumSize(QSize(50, 25))
+        self.tune_tracker_btn.setBaseSize(QSize(50, 25))
+
+        self.gridLayout_2.addWidget(self.tune_tracker_btn, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.yolomodel_tracker_list = QComboBox(self.layoutWidget9)
         self.yolomodel_tracker_list.addItem("")
@@ -918,13 +929,22 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_tracker_list, 0, 1, 1, 1, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
 
+        self.overwrite_prediction_checkBox = QCheckBox(self.layoutWidget9)
+        self.overwrite_prediction_checkBox.setObjectName(u"overwrite_prediction_checkBox")
+        self.overwrite_prediction_checkBox.setEnabled(True)
+        self.overwrite_prediction_checkBox.setMinimumSize(QSize(90, 25))
+        self.overwrite_prediction_checkBox.setMaximumSize(QSize(100, 25))
+        self.overwrite_prediction_checkBox.setChecked(False)
+
+        self.gridLayout_2.addWidget(self.overwrite_prediction_checkBox, 3, 3, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
         self.open_when_finish_checkBox = QCheckBox(self.layoutWidget9)
         self.open_when_finish_checkBox.setObjectName(u"open_when_finish_checkBox")
         self.open_when_finish_checkBox.setMinimumSize(QSize(90, 25))
         self.open_when_finish_checkBox.setMaximumSize(QSize(100, 25))
         self.open_when_finish_checkBox.setChecked(True)
 
-        self.gridLayout_2.addWidget(self.open_when_finish_checkBox, 0, 3, 1, 1)
+        self.gridLayout_2.addWidget(self.open_when_finish_checkBox, 0, 3, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
         self.videos_for_prediction_list = QComboBox(self.layoutWidget9)
         self.videos_for_prediction_list.addItem("")
@@ -939,16 +959,7 @@ class Ui_octron_widgetui(object):
         self.videos_for_prediction_list.setIconSize(QSize(14, 14))
         self.videos_for_prediction_list.setFrame(False)
 
-        self.gridLayout_2.addWidget(self.videos_for_prediction_list, 2, 0, 1, 3, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
-
-        self.single_subject_checkBox = QCheckBox(self.layoutWidget9)
-        self.single_subject_checkBox.setObjectName(u"single_subject_checkBox")
-        self.single_subject_checkBox.setEnabled(True)
-        self.single_subject_checkBox.setMinimumSize(QSize(90, 25))
-        self.single_subject_checkBox.setMaximumSize(QSize(100, 25))
-        self.single_subject_checkBox.setChecked(False)
-
-        self.gridLayout_2.addWidget(self.single_subject_checkBox, 1, 3, 1, 1)
+        self.gridLayout_2.addWidget(self.videos_for_prediction_list, 3, 0, 1, 3, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
         self.yolomodel_trained_list = QComboBox(self.layoutWidget9)
         self.yolomodel_trained_list.addItem("")
@@ -959,16 +970,14 @@ class Ui_octron_widgetui(object):
 
         self.gridLayout_2.addWidget(self.yolomodel_trained_list, 0, 0, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
-        self.tune_tracker_btn = QPushButton(self.layoutWidget9)
-        self.tune_tracker_btn.setObjectName(u"tune_tracker_btn")
-        self.tune_tracker_btn.setEnabled(False)
-        sizePolicy3.setHeightForWidth(self.tune_tracker_btn.sizePolicy().hasHeightForWidth())
-        self.tune_tracker_btn.setSizePolicy(sizePolicy3)
-        self.tune_tracker_btn.setMinimumSize(QSize(50, 25))
-        self.tune_tracker_btn.setMaximumSize(QSize(50, 25))
-        self.tune_tracker_btn.setBaseSize(QSize(50, 25))
+        self.single_subject_checkBox_2 = QCheckBox(self.layoutWidget9)
+        self.single_subject_checkBox_2.setObjectName(u"single_subject_checkBox_2")
+        self.single_subject_checkBox_2.setEnabled(True)
+        self.single_subject_checkBox_2.setMinimumSize(QSize(90, 25))
+        self.single_subject_checkBox_2.setMaximumSize(QSize(100, 25))
+        self.single_subject_checkBox_2.setChecked(False)
 
-        self.gridLayout_2.addWidget(self.tune_tracker_btn, 0, 2, 1, 1, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+        self.gridLayout_2.addWidget(self.single_subject_checkBox_2, 1, 3, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
 
         self.predict_verticalLayout.addWidget(self.predict_video_predict_groupbox)
@@ -1171,8 +1180,9 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.predict_start_btn.setText(QCoreApplication.translate("octron_widgetui", u"Let's go!", None))
 #if QT_CONFIG(tooltip)
-        self.prediction_mask_opening_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Morphological opening of predicted masks.\n"
-"This gets rid of some noise. 2 is a good value to start with.", None))
+        self.prediction_mask_opening_label.setToolTip(QCoreApplication.translate("octron_widgetui", u"Perform morphological opening of predicted masks?\n"
+"Opens regions when > 0.0.\n"
+"This gets rid of some noise in the detected regions, but slows down analysis quite a bit.", None))
 #endif // QT_CONFIG(tooltip)
         self.prediction_mask_opening_label.setText(QCoreApplication.translate("octron_widgetui", u"Opening", None))
 #if QT_CONFIG(tooltip)
@@ -1191,29 +1201,35 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.prediction_skip_label.setText(QCoreApplication.translate("octron_widgetui", u"Skip frames", None))
 #if QT_CONFIG(tooltip)
-        self.overwrite_prediction_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Overwrite previous analysis results? ", None))
+        self.detailed_extraction_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Extract more info per region than just its coordinates?\n"
+"Click this if you want properties like area, eccentricity, solidity etc. to be determined for each region.\n"
+"This slows down analysis a lot, but gives you much more info per tracked region.", None))
 #endif // QT_CONFIG(tooltip)
-        self.overwrite_prediction_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Overwrite", None))
+        self.detailed_extraction_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Detailed", None))
+#if QT_CONFIG(tooltip)
+        self.tune_tracker_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Tune parameters of selected tracker", None))
+#endif // QT_CONFIG(tooltip)
+        self.tune_tracker_btn.setText("")
         self.yolomodel_tracker_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Tracker ...", None))
 
 #if QT_CONFIG(tooltip)
         self.yolomodel_tracker_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"OCTRON user trained models that are found in the project path", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
+        self.overwrite_prediction_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Overwrite previous analysis results? ", None))
+#endif // QT_CONFIG(tooltip)
+        self.overwrite_prediction_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Overwrite", None))
+#if QT_CONFIG(tooltip)
         self.open_when_finish_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Open the resuts in new napari window when finished", None))
 #endif // QT_CONFIG(tooltip)
         self.open_when_finish_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"View result", None))
-        self.videos_for_prediction_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Videos", None))
+        self.videos_for_prediction_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"List of videos to be analyzed ...", None))
         self.videos_for_prediction_list.setItemText(1, QCoreApplication.translate("octron_widgetui", u"\u2296 Remove", None))
 
 #if QT_CONFIG(tooltip)
         self.videos_for_prediction_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"Select, add or remove labels", None))
 #endif // QT_CONFIG(tooltip)
-        self.videos_for_prediction_list.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Videos", None))
-#if QT_CONFIG(tooltip)
-        self.single_subject_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked per label", None))
-#endif // QT_CONFIG(tooltip)
-        self.single_subject_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"1 subject", None))
+        self.videos_for_prediction_list.setCurrentText(QCoreApplication.translate("octron_widgetui", u"List of videos to be analyzed ...", None))
         self.yolomodel_trained_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Model ...", None))
 
 #if QT_CONFIG(tooltip)
@@ -1221,9 +1237,10 @@ class Ui_octron_widgetui(object):
 #endif // QT_CONFIG(tooltip)
         self.yolomodel_trained_list.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Model ...", None))
 #if QT_CONFIG(tooltip)
-        self.tune_tracker_btn.setToolTip(QCoreApplication.translate("octron_widgetui", u"Tune parameters of selected tracker", None))
+        self.single_subject_checkBox_2.setToolTip(QCoreApplication.translate("octron_widgetui", u"Click this if you expect only one subject to be tracked per label.\n"
+"This prevents artificial splitting of tracks.", None))
 #endif // QT_CONFIG(tooltip)
-        self.tune_tracker_btn.setText("")
+        self.single_subject_checkBox_2.setText(QCoreApplication.translate("octron_widgetui", u"1 subject", None))
         self.toolBox.setItemText(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("octron_widgetui", u"Analyze (new) videos", None))
 #if QT_CONFIG(tooltip)
         self.toolBox.setItemToolTip(self.toolBox.indexOf(self.predict_tab), QCoreApplication.translate("octron_widgetui", u"Use trained models to run predictions on new videos", None))

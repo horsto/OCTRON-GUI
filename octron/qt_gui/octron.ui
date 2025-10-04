@@ -2318,7 +2318,7 @@ Recommended are at least ~50.</string>
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>130</y>
+              <y>140</y>
               <width>381</width>
               <height>61</height>
              </rect>
@@ -2351,8 +2351,9 @@ Recommended are at least ~50.</string>
                 </size>
                </property>
                <property name="toolTip">
-                <string>Morphological opening of predicted masks.
-This gets rid of some noise. 2 is a good value to start with.</string>
+                <string>Perform morphological opening of predicted masks?
+Opens regions when &gt; 0.0.
+This gets rid of some noise in the detected regions, but slows down analysis quite a bit.</string>
                </property>
                <property name="text">
                 <string>Opening</string>
@@ -2567,8 +2568,8 @@ of one label will be fused into one mask.</string>
              <property name="verticalSpacing">
               <number>0</number>
              </property>
-             <item row="2" column="3">
-              <widget class="QCheckBox" name="overwrite_prediction_checkBox">
+             <item row="2" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
+              <widget class="QCheckBox" name="detailed_extraction_checkBox">
                <property name="enabled">
                 <bool>true</bool>
                </property>
@@ -2585,183 +2586,16 @@ of one label will be fused into one mask.</string>
                 </size>
                </property>
                <property name="toolTip">
-                <string>Overwrite previous analysis results? </string>
+                <string>Extract more info per region than just its coordinates?
+Click this if you want properties like area, eccentricity, solidity etc. to be determined for each region.
+This slows down analysis a lot, but gives you much more info per tracked region.</string>
                </property>
                <property name="text">
-                <string>Overwrite</string>
+                <string>Detailed</string>
                </property>
                <property name="checked">
                 <bool>false</bool>
                </property>
-              </widget>
-             </item>
-             <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QComboBox" name="yolomodel_tracker_list">
-               <property name="minimumSize">
-                <size>
-                 <width>110</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>110</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>OCTRON user trained models that are found in the project path</string>
-               </property>
-               <property name="maxCount">
-                <number>20</number>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-               </property>
-               <property name="minimumContentsLength">
-                <number>20</number>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Tracker ...</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item row="0" column="3">
-              <widget class="QCheckBox" name="open_when_finish_checkBox">
-               <property name="minimumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>100</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Open the resuts in new napari window when finished</string>
-               </property>
-               <property name="text">
-                <string>View result</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0" colspan="3" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
-              <widget class="QComboBox" name="videos_for_prediction_list">
-               <property name="minimumSize">
-                <size>
-                 <width>280</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>280</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Select, add or remove labels</string>
-               </property>
-               <property name="editable">
-                <bool>false</bool>
-               </property>
-               <property name="currentText">
-                <string>Videos</string>
-               </property>
-               <property name="maxVisibleItems">
-                <number>15</number>
-               </property>
-               <property name="maxCount">
-                <number>1000</number>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>14</width>
-                 <height>14</height>
-                </size>
-               </property>
-               <property name="frame">
-                <bool>false</bool>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Videos</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>⊖ Remove</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item row="1" column="3">
-              <widget class="QCheckBox" name="single_subject_checkBox">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>90</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>100</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Click this if you expect only one subject to be tracked per label</string>
-               </property>
-               <property name="text">
-                <string>1 subject</string>
-               </property>
-               <property name="checked">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QComboBox" name="yolomodel_trained_list">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>110</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>110</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>OCTRON user trained models that are found in the project path</string>
-               </property>
-               <property name="currentText">
-                <string>Model ...</string>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Model ...</string>
-                </property>
-               </item>
               </widget>
              </item>
              <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
@@ -2798,6 +2632,204 @@ of one label will be fused into one mask.</string>
                </property>
                <property name="text">
                 <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QComboBox" name="yolomodel_tracker_list">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>OCTRON user trained models that are found in the project path</string>
+               </property>
+               <property name="maxCount">
+                <number>20</number>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+               </property>
+               <property name="minimumContentsLength">
+                <number>20</number>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Tracker ...</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="3" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
+              <widget class="QCheckBox" name="overwrite_prediction_checkBox">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>100</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>Overwrite previous analysis results? </string>
+               </property>
+               <property name="text">
+                <string>Overwrite</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
+              <widget class="QCheckBox" name="open_when_finish_checkBox">
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>100</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>Open the resuts in new napari window when finished</string>
+               </property>
+               <property name="text">
+                <string>View result</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0" colspan="3" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
+              <widget class="QComboBox" name="videos_for_prediction_list">
+               <property name="minimumSize">
+                <size>
+                 <width>280</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>280</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>Select, add or remove labels</string>
+               </property>
+               <property name="editable">
+                <bool>false</bool>
+               </property>
+               <property name="currentText">
+                <string>List of videos to be analyzed ...</string>
+               </property>
+               <property name="maxVisibleItems">
+                <number>15</number>
+               </property>
+               <property name="maxCount">
+                <number>1000</number>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>14</width>
+                 <height>14</height>
+                </size>
+               </property>
+               <property name="frame">
+                <bool>false</bool>
+               </property>
+               <item>
+                <property name="text">
+                 <string>List of videos to be analyzed ...</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>⊖ Remove</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QComboBox" name="yolomodel_trained_list">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>OCTRON user trained models that are found in the project path</string>
+               </property>
+               <property name="currentText">
+                <string>Model ...</string>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Model ...</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
+              <widget class="QCheckBox" name="single_subject_checkBox_2">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>100</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>Click this if you expect only one subject to be tracked per label.
+This prevents artificial splitting of tracks.</string>
+               </property>
+               <property name="text">
+                <string>1 subject</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
                </property>
               </widget>
              </item>
