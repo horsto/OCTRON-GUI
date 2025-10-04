@@ -1199,6 +1199,97 @@ class YOLO_octron:
                         
         return natsorted(found_models_project)
       
+      
+    def map_detection_index(
+        self,
+        tracker_input,
+        tracking_result,
+        per_class=True,
+        verbose=False,
+    ):
+        """
+        This stupidly convoluted function maps detection indices from tracker results 
+        back to their original input indices. This has bitten me too many times, so I wrote it out. 
+        This is particularly important for when per_class tracking is activated in BoxMOT. 
+        
+        Parameters
+        ----------
+        tracker_input : numpy.ndarray
+            Original detection inputs passed to the tracker, shape (N, 6+) where each row is
+            [x1, y1, x2, y2, confidence, class_id, ...]
+        tracking_result : numpy.ndarray
+            Results from tracker.update(), shape (M, 8+) where each row is
+            [x1, y1, x2, y2, track_id, confidence, class_id, detection_index]
+        per_class : bool, default=True
+            Whether the tracker was configured to process each class independently.
+        verbose : bool, default=False
+            Print debugging info?
+            
+        Returns
+        -------
+        tuple
+            (tracked_ids, tracked_idxs) where:
+            - tracked_ids is a list of track IDs from the tracker
+            - tracked_idxs is a list of corresponding indices in the original tracker_input
+            
+        """
+        # Sanity checks
+        assert isinstance(tracker_input, np.ndarray), "tracker_input must be a numpy array"
+        assert isinstance(tracking_result, np.ndarray), "tracking_result must be a numpy array"
+        assert tracker_input.shape[1] >= 6, "tracker_input must have at least 6 columns [x1,y1,x2,y2,conf,cls]"
+        assert tracking_result.shape[1] >= 8, "tracking_result must have at least 8 columns [x1,y1,x2,y2,id,conf,cls,idx]"
+        
+        tracked_ids = [] 
+        tracked_idxs = []
+        
+        if not per_class:
+            # Simple case: detection indices directly map to original input
+            tracked_ids = tracking_result[:, 4].astype(int).tolist()
+            tracked_idxs = tracking_result[:, 7].astype(int).tolist()
+            assert all(0 <= idx < tracker_input.shape[0] for idx in tracked_idxs), \
+                "Detection index out of bounds in non-per-class mode"
+        else:
+            # Complex case: per-class tracking requires mapping class-specific indices back to global indices
+            res_classes = tracking_result[:, 6]
+            # Loop over extracted classes
+            for res_class in np.unique(res_classes).astype(int):
+                # Filter results and inputs by class
+                res_filtered = tracking_result[tracking_result[:, 6] == res_class]
+                input_filtered = tracker_input[tracker_input[:, 5] == res_class]
+                for res_line in res_filtered:
+                    track_id = int(res_line[4])
+                    tracked_ids.append(track_id)
+                    
+                    idx_res = int(res_line[7]) # This is the index of the result in the class filtered tracker input
+                    if idx_res < 0 or idx_res >= len(input_filtered):
+                        raise IndexError(
+                            f"Detection index {idx_res} out of bounds for class {res_class} "
+                            f"(max: {len(input_filtered) - 1})"
+                        )
+                    input_line = input_filtered[idx_res]
+                    
+                    try:
+                        # Find the index of this line in the original input array
+                        # This should not be necessary, but I want to make sure I get the right line ... 
+                        matches = np.all(np.isclose(tracker_input, input_line, rtol=1e-5, atol=1e-8), axis=1)
+                        if not np.any(matches):
+                            raise ValueError(f"Could not find matching detection for track {track_id}")
+                        
+                        tracked_idx = int(np.where(matches)[0][0])
+                        tracked_idxs.append(tracked_idx)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Failed to find original index for track {track_id}, class {res_class}: {e}"
+                        ) from e
+
+                    if verbose: print(f'Matched\n{res_line} with\n{tracker_input[tracked_idx]}')
+                    
+        assert len(set(tracked_ids)) == len(tracked_ids), f'Duplicate track IDs found: {tracked_ids}'
+        assert len(tracked_ids) == len(tracked_idxs), \
+            f"Mismatch between tracked_ids ({len(tracked_ids)}) and tracked_idxs ({len(tracked_idxs)})"
+        
+        return tracked_ids, tracked_idxs
+    
     
     def predict_batch(self, 
                       videos_dict,
@@ -1362,13 +1453,13 @@ class YOLO_octron:
                 assert 'current_value' in param_config
                 custom_tracker_params[param_name] = param_config['current_value']
             custom_tracker_params['nr_classes'] = len(model.names)
-            
+            per_class = custom_tracker_params.get('per_class', False)
             # Initialize tracker with the custom parameters
             tracker = create_tracker(
                 tracker_type=tracker_config[tracker_id]['tracker_type'],
                 reid_weights=Path(tracker_config[tracker_id]['reid_model']) if is_reid else None,
                 device=device,
-                per_class=custom_tracker_params.get('per_class', False),
+                per_class=per_class,
                 evolve_param_dict=custom_tracker_params
             )
             # Reset any internal state the tracker might have
@@ -1393,6 +1484,7 @@ class YOLO_octron:
             track_id_label_dict = {} # Keeps track of label - ID pairs, depending on one_object_per_label
             video_prediction_start = time.time()
             frame_start = time.time()
+            all_ids = []
             for frame_no, frame_idx in enumerate(video_dict['frame_iterator'], start=0):
                 try:
                     frame = video[frame_idx]
@@ -1459,30 +1551,67 @@ class YOLO_octron:
                                            confidences[:,np.newaxis],
                                            classes[:,np.newaxis],
                                           ])
-                res = tracker.update(tracker_input, frame)
-                if res.shape[0] == 0:
+                tracking_result = tracker.update(tracker_input, frame)
+                if tracking_result.shape[0] == 0:
                     print(f'No tracking result found for frame_idx {frame_idx}')
                     continue
                 
-                # Map tracking results back to original boxes and masks
-                tracked_ids = res[:, 4].astype(int) - 1 # 5th column is the track ID 
-                tracked_box_indices = res[:, 7].astype(int) # 8th column is the original detection index 
-                    
+                # Map tracking results to original detections
+                tracked_ids, tracked_idxs = self.map_detection_index(tracker_input,
+                                                                     tracking_result,
+                                                                     per_class=per_class,
+                                                                     verbose=False,
+                                                                     )
+                # Skip if no valid tracks found
+                if not tracked_idxs:
+                    print(f'No valid tracks mapped for frame_idx {frame_idx}')
+                    continue
+                            
                 # Filter all result arrays using tracked_box_indices
-                tracked_masks = masks[tracked_box_indices]
-                tracked_confidences = confidences[tracked_box_indices]
-                tracked_label_names = [label_names[i] for i in tracked_box_indices]
-                tracked_boxes = boxes[tracked_box_indices]
+                tracked_masks = masks[tracked_idxs]
+                tracked_confidences = confidences[tracked_idxs]
+                tracked_label_names = [label_names[i] for i in tracked_idxs]
+                tracked_boxes = boxes[tracked_idxs]
                 #tracked_classes = classes[tracked_box_indices]
-                
 
                 # Extract tracks 
                 for track_id, label, conf, bbox, mask in zip(tracked_ids,
-                                                            tracked_label_names, 
-                                                            tracked_confidences,
-                                                            tracked_boxes,
-                                                            tracked_masks, 
-                                                            ):
+                                                             tracked_label_names, 
+                                                             tracked_confidences,
+                                                             tracked_boxes,
+                                                             tracked_masks, 
+                                                             ):
+                    
+                    # Take care of zarr array and tracking dataframe 
+                    # Find out if the current track_id is new 
+                    if not track_id in all_ids:
+                         # Initialize mask store to original length of video, regardless of skipped frames
+                        video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
+                        mask_store = create_prediction_zarr(prediction_store, 
+                                        f'{track_id}_masks',
+                                        shape=video_shape,
+                                        chunk_size=500,     
+                                        fill_value=-1,
+                                        dtype='int8',                           
+                                        video_hash=''
+                                        )
+                        mask_store.attrs['label'] = label
+                        mask_store.attrs['classes'] = results[0].names
+                        
+                        # Initialize tracking dataframe
+                        tracking_df = self.create_tracking_dataframe(video_dict, 
+                                                                     region_details=region_details)
+                        tracking_df.attrs['video_name'] = video_name
+                        tracking_df.attrs['label'] = label
+                        tracking_df.attrs['track_id'] = track_id
+                        tracking_df_dict[track_id] = tracking_df
+
+                        all_ids.append(track_id)
+                    else:
+                        mask_store = zarr_root[f'{track_id}_masks']
+                        tracking_df = tracking_df_dict[track_id]
+                        assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
+                        assert tracking_df.attrs['label'] == label, "Label mismatch"    
                     
                     if one_object_per_label or iou_thresh < 0.01:
                         # ! Use 'label' as keys in track_id_label_dict
@@ -1512,35 +1641,6 @@ class YOLO_octron:
                         else:
                             track_id_label_dict[track_id] = label   
                         
-                    # Initialize mask zarr array if needed
-                    if f'{track_id}_masks' not in list(zarr_root.array_keys()):
-                        # Initialize mask store to original length of video, regardless of skipped frames
-                        video_shape = (video_dict['num_frames'], video_dict['height'], video_dict['width'])   
-                        mask_store = create_prediction_zarr(prediction_store, 
-                                        f'{track_id}_masks',
-                                        shape=video_shape,
-                                        chunk_size=500,     
-                                        fill_value=-1,
-                                        dtype='int8',                           
-                                        video_hash=''
-                                        )
-                        mask_store.attrs['label'] = label
-                        mask_store.attrs['classes'] = results[0].names
-                    else:
-                        mask_store = zarr_root[f'{track_id}_masks']
-                        
-                    # Initialize tracking dataframe if needed
-                    if track_id not in tracking_df_dict:
-                        tracking_df = self.create_tracking_dataframe(video_dict, 
-                                                                     region_details=region_details)
-                        tracking_df.attrs['video_name'] = video_name
-                        tracking_df.attrs['label'] = label
-                        tracking_df.attrs['track_id'] = track_id
-                        tracking_df_dict[track_id] = tracking_df
-                    else:
-                        tracking_df = tracking_df_dict[track_id]
-                        assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
-                        assert tracking_df.attrs['label'] == label, "Label mismatch"    
 
                     # Check if a row already exists and compare current confidence with existing one
                     # This happens if one_object_per_label is True or iou_thresh < 0.01 
