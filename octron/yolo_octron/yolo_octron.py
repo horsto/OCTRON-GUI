@@ -1606,6 +1606,38 @@ class YOLO_octron:
                                                              tracked_masks, 
                                                              ):
                     
+                    # Figure out if you can use the track_id or whether it needs 
+                    # to be replaced - this is a special case for when "1 subject" (one_object_per_label)
+                    # is active
+                    
+                    if one_object_per_label or iou_thresh < 0.01:
+                        # ! Use 'label' as keys in track_id_label_dict
+                        # There is only one object/track ID per label
+                        if label in track_id_label_dict:
+                            # Overwrite whatever current track ID is assigned to this label
+                            track_id = track_id_label_dict[label]
+                        else:
+                            # Assign a new, custom track ID
+                            current_ids = list(track_id_label_dict.values())
+                            track_id = (max(current_ids) + 1) if current_ids else 1
+                            track_id_label_dict[label] = track_id
+                    else: 
+                        # ! Use 'track_id' as keys in track_id_label_dict
+                        # There can be multiple objects/track IDs per label
+                        if track_id in track_id_label_dict:
+                            label_ = track_id_label_dict[track_id]
+                            if label_ != label: 
+                                raise IndexError(f'Track ID {track_id} - labels do not match: LABEL {label_} =! {label}')
+                                # This happens in cases 
+                                # where the same track ID is assigned to different labels over time 
+                                # Assign a new track ID
+                                # Get the largest key + 1, or start at 1 if dict is empty
+                                # current_ids = list(track_id_label_dict.keys())
+                                # track_id = (max(current_ids) + 1) if current_ids else 1
+                                # track_id_label_dict[track_id] = label
+                        else:
+                            track_id_label_dict[track_id] = label   
+                        
                     # Take care of zarr array and tracking dataframe 
                     if not track_id in all_ids:
                         # Initialize mask store to original length of video
@@ -1639,35 +1671,6 @@ class YOLO_octron:
                         tracking_df = tracking_df_dict[track_id]
                         assert tracking_df.attrs['track_id'] == track_id, "ID mismatch" 
                         assert tracking_df.attrs['label'] == label, "Label mismatch"    
-                    
-                    if one_object_per_label or iou_thresh < 0.01:
-                        # ! Use 'label' as keys in track_id_label_dict
-                        # There is only one object/track ID per label
-                        if label in track_id_label_dict:
-                            # Overwrite whatever current track ID is assigned to this label
-                            track_id = track_id_label_dict[label]
-                        else:
-                            # Assign a new, custom track ID
-                            current_ids = list(track_id_label_dict.values())
-                            track_id = (max(current_ids) + 1) if current_ids else 1
-                            track_id_label_dict[label] = track_id
-                    else: 
-                        # ! Use 'track_id' as keys in track_id_label_dict
-                        # There can be multiple objects/track IDs per label
-                        if track_id in track_id_label_dict:
-                            label_ = track_id_label_dict[track_id]
-                            if label_ != label: 
-                                raise IndexError(f'Track ID {track_id} - labels do not match: LABEL {label_} =! {label}')
-                                # This happens in cases 
-                                # where the same track ID is assigned to different labels over time 
-                                # Assign a new track ID
-                                # Get the largest key + 1, or start at 1 if dict is empty
-                                # current_ids = list(track_id_label_dict.keys())
-                                # track_id = (max(current_ids) + 1) if current_ids else 1
-                                # track_id_label_dict[track_id] = label
-                        else:
-                            track_id_label_dict[track_id] = label   
-                        
 
                     # Check if a row already exists and compare current confidence with existing one
                     # This happens if one_object_per_label is True or iou_thresh < 0.01 
