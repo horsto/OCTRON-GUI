@@ -54,6 +54,7 @@ class YoloHandler(QObject):
         self.w.videos_for_prediction_list.currentIndexChanged.connect(self.on_video_prediction_change)
         self.w.yolomodel_tracker_list.currentIndexChanged.connect(self.on_tracker_selection_change)
         self.w.tune_tracker_btn.clicked.connect(self.on_tune_tracker_clicked)
+        self.w.single_subject_checkBox.clicked.connect(self.on_one_object_per_label_clicked)
         
     def refresh_trained_model_list(self):
         """
@@ -498,7 +499,7 @@ class YoloHandler(QObject):
             self.w.tune_tracker_btn.setEnabled(False)
             self.w.tune_tracker_btn.setText("")
             self.w.tune_tracker_btn.setStyleSheet("")
-
+        
     def on_tune_tracker_clicked(self):
         """
         This is the "Tune" button displayed next to the tracker selection list.
@@ -533,7 +534,29 @@ class YoloHandler(QObject):
             )
             if updated_config:
                 print(f"Configuration for {tracker_name} updated and saved")
-    
+                
+    def on_one_object_per_label_clicked(self):
+        """
+        When the user clicks on one_object_per_label ("1 Subject") in the GUI: 
+        - Select the first tracker in the list of Trackers
+        - disable the tracker selection dropdown 
+        - disable the tune (tracker) button 
+
+        """
+        is_checked = self.w.single_subject_checkBox.isChecked() 
+        
+        if is_checked:
+            # When "1 Subject" is checked
+            # Set to first actual tracker (index 1, not the header at index 0)
+            self.w.yolomodel_tracker_list.setCurrentIndex(1)
+            self.w.yolomodel_tracker_list.setEnabled(False)
+            self.w.tune_tracker_btn.setEnabled(False)
+            self.w.tune_tracker_btn.setText("")
+        else:
+            self.w.yolomodel_tracker_list.setEnabled(True)
+            self.w.yolomodel_tracker_list.setCurrentIndex(0)
+            self.w.tune_tracker_btn.setEnabled(False)
+        
     # YOLO Prediction handling 
     def on_iou_thresh_change(self, value):
         """
@@ -641,13 +664,17 @@ class YoloHandler(QObject):
             show_warning("Please select a video to predict.")
             return
         
+        # Collect selected options         
         self.yolo_tracker_name = self.w.yolomodel_tracker_list.currentText().strip()                            
-        # Check status of "view results" checkbox
         self.view_prediction_results = self.w.open_when_finish_checkBox.isChecked()   
+        self.one_object_per_label = self.w.single_subject_checkBox.isChecked()
+        self.region_details = self.w.detailed_extraction_checkBox.isChecked()
+        self.overwrite_predictions = self.w.overwrite_prediction_checkBox.isChecked()    
+        # ... floating point selectors 
         self.mask_opening = int(round(self.w.predict_mask_opening_spinbox.value()))
         self.conf_thresh = float(self.w.predict_conf_thresh_spinbox.value())
         self.iou_thresh = float(self.w.predict_iou_thresh_spinbox.value())
-        self.overwrite_predictions = self.w.overwrite_prediction_checkBox.isChecked()    
+        self.skip_frames = self.w.skip_frames_analysis_spinBox.value()
         
         # Deactivate the training data generation box 
         self.w.train_generate_groupbox.setEnabled(False)
@@ -681,18 +708,15 @@ class YoloHandler(QObject):
         else:
             show_info(f"Predicting on device: '{self.device_label}'")
         
-        one_object_per_label = self.w.single_subject_checkBox.isChecked()
-        region_details = self.w.detailed_extraction_checkBox.isChecked()
-        skip_frames = self.w.skip_frames_analysis_spinBox.value()
         # Call the training function which yields progress info
         for progress_info in self.yolo.predict_batch(
                                             videos_dict=self.videos_to_predict,
                                             model_path=self.model_predict_path,
                                             device=self.device_label,
                                             tracker_name=self.yolo_tracker_name,
-                                            skip_frames=skip_frames,
-                                            one_object_per_label=one_object_per_label,
-                                            region_details=region_details,
+                                            skip_frames=self.skip_frames,
+                                            one_object_per_label=self.one_object_per_label,
+                                            region_details=self.region_details,
                                             iou_thresh=self.iou_thresh,
                                             conf_thresh=self.conf_thresh,
                                             opening_radius=self.mask_opening,

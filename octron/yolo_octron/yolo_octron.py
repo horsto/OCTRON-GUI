@@ -1325,7 +1325,7 @@ class YOLO_octron:
         skip_frames : int
             Number of frames to skip between predictions.
         one_object_per_label : bool
-            Whether to track only one object per label.
+            Whether to track only one object per label. ("1 subject" in GUI)
             If True, only the first detected object of each label will be tracked
             and if more than one object is detected, only the first one with the highest confidence
             will be kept. Defaults to False.
@@ -1495,15 +1495,15 @@ class YOLO_octron:
             mask_stores = {}   # track_id -> zarr array
             
             def _flush_mask_buffer(track_id):
-                """Helper to flush a track's mask buffer to disk"""
+                """
+                Helper to flush a track's mask buffer to disk
+                """
                 if track_id not in buffer_counts or buffer_counts[track_id] == 0:
                     return
                     
                 # Get the buffer and store
                 mask_buffer = mask_buffers[track_id]
                 mask_store = mask_stores[track_id]
-                
-                # Write all buffered masks at once to the zarr array
                 frame_indices = sorted(mask_buffer.keys())
                 stacked_masks = np.stack([mask_buffer[idx] for idx in frame_indices])
                 mask_store[frame_indices,:,:] = stacked_masks
@@ -1511,9 +1511,7 @@ class YOLO_octron:
                 # Clear buffer
                 mask_buffers[track_id].clear()
                 buffer_counts[track_id] = 0
-                
-                # Debug info
-                print(f"Flushed mask buffer for track {track_id} with {len(frame_indices)} frames")
+                print(f"Saved mask buffer for track {track_id} to zarr ({len(frame_indices)} frames)")
             
             for frame_no, frame_idx in enumerate(video_dict['frame_iterator'], start=0):
                 try:
