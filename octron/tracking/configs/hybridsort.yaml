@@ -263,4 +263,4 @@ HybridSort:
       - 0.7
   reid_model: osnet_x1_0_market1501.pt
   tracker_type: hybridsort
-  win_height: 690
+  win_height: 650
