@@ -1018,6 +1018,9 @@ class Ui_octron_widgetui(object):
         self.horizontalGroupBox.setTitle(QCoreApplication.translate("octron_widgetui", u"Model selection", None))
         self.sam2model_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Choose model ...", None))
 
+#if QT_CONFIG(tooltip)
+        self.sam2model_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"SAM2 models", None))
+#endif // QT_CONFIG(tooltip)
         self.load_sam2model_btn.setText(QCoreApplication.translate("octron_widgetui", u"Load model", None))
         self.annotate_layer_create_groupbox.setTitle(QCoreApplication.translate("octron_widgetui", u"Label manager", None))
 #if QT_CONFIG(tooltip)
@@ -1032,6 +1035,9 @@ class Ui_octron_widgetui(object):
         self.layer_type_combobox.setItemText(2, QCoreApplication.translate("octron_widgetui", u"Points", None))
         self.layer_type_combobox.setItemText(3, QCoreApplication.translate("octron_widgetui", u"Anchors", None))
 
+#if QT_CONFIG(tooltip)
+        self.layer_type_combobox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Layer type to be created", None))
+#endif // QT_CONFIG(tooltip)
         self.layer_type_combobox.setCurrentText(QCoreApplication.translate("octron_widgetui", u"Type ... ", None))
 #if QT_CONFIG(tooltip)
         self.label_suffix_lineedit.setToolTip(QCoreApplication.translate("octron_widgetui", u"The suffix disambiguates label layers from each other\n"
@@ -1140,6 +1146,9 @@ class Ui_octron_widgetui(object):
         self.launch_tensorboard_checkBox.setText(QCoreApplication.translate("octron_widgetui", u"Tensorbrd", None))
         self.yolomodel_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Choose model ...", None))
 
+#if QT_CONFIG(tooltip)
+        self.yolomodel_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"YOLO models", None))
+#endif // QT_CONFIG(tooltip)
         self.yoloimagesize_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Img. size", None))
         self.yoloimagesize_list.setItemText(1, QCoreApplication.translate("octron_widgetui", u"640", None))
         self.yoloimagesize_list.setItemText(2, QCoreApplication.translate("octron_widgetui", u"1024", None))
@@ -1213,7 +1222,7 @@ class Ui_octron_widgetui(object):
         self.yolomodel_tracker_list.setItemText(0, QCoreApplication.translate("octron_widgetui", u"Tracker ...", None))
 
 #if QT_CONFIG(tooltip)
-        self.yolomodel_tracker_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"OCTRON user trained models that are found in the project path", None))
+        self.yolomodel_tracker_list.setToolTip(QCoreApplication.translate("octron_widgetui", u"BoxMOT trackers", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.overwrite_prediction_checkBox.setToolTip(QCoreApplication.translate("octron_widgetui", u"Overwrite previous analysis results? ", None))

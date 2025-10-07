@@ -540,6 +540,9 @@
                 <height>25</height>
                </size>
               </property>
+              <property name="toolTip">
+               <string>SAM2 models</string>
+              </property>
               <item>
                <property name="text">
                 <string>Choose model ...</string>
@@ -652,6 +655,9 @@
                 <width>110</width>
                 <height>25</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>Layer type to be created</string>
               </property>
               <property name="currentText">
                <string>Type ... </string>
@@ -1866,6 +1872,9 @@ Recommended are at least ~50.</string>
                  <height>25</height>
                 </size>
                </property>
+               <property name="toolTip">
+                <string>YOLO models</string>
+               </property>
                <item>
                 <property name="text">
                  <string>Choose model ...</string>
@@ -2650,7 +2659,7 @@ This slows down analysis, but gives you much more info per tracked region.</stri
                 </size>
                </property>
                <property name="toolTip">
-                <string>OCTRON user trained models that are found in the project path</string>
+                <string>BoxMOT trackers</string>
                </property>
                <property name="maxCount">
                 <number>20</number>
