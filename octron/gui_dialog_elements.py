@@ -108,7 +108,7 @@ class remove_video_dialog(QDialog):
         
         """
         super().__init__(parent)
-        self.setWindowTitle("Remove video from list")
+        self.setWindowTitle("Remove video(s) from list")
         self.resize(300, 200)
         
         # Create a list widget and add items if provided
@@ -122,7 +122,7 @@ class remove_video_dialog(QDialog):
         
         # Layout setup
         main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("Select a video file to remove:"))
+        main_layout.addWidget(QLabel("Select one or multiple videos to remove:"))
         main_layout.addWidget(self.list_widget)
         
         button_layout = QHBoxLayout()

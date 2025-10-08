@@ -584,13 +584,13 @@ class YoloHandler(QObject):
             p = Path(v)
             if p.name in vdict:
                 print(f"Video {p.name} already in prediction list.")
-                return
+                continue
             if not p.exists():
                 print(f"File {p} does not exist.")
-                return
+                continue
             if p.suffix.lower() != '.mp4':
                 print(f"File {p} is not an mp4 file.")
-                return
+                continue
 
             # probe video metadata & store reader
             meta = probe_video(p)
@@ -606,28 +606,34 @@ class YoloHandler(QObject):
 
     def on_video_prediction_change(self):
         """
-        Handles removal of a video from the YOLO prediction list.
+        Handles removal of one or more videos from the YOLO prediction list.
         Callback for the currentIndexChanged signal.
         """
         lst = self.w.videos_for_prediction_list
         idx = lst.currentIndex()
         entries = [lst.itemText(i) for i in range(lst.count())]
-
-        # zero = header, one = “remove” action, else do nothing
+        # zero = header, one = "remove" action, else do nothing
         if idx == 0:
             return
         elif idx == 1 and len(entries) > 2:
             dlg = remove_video_dialog(self.w, entries[2:])
+            dlg.list_widget.setSelectionMode(dlg.list_widget.ExtendedSelection)
             dlg.exec_()
             if dlg.result() == QDialog.Accepted:
-                sel = dlg.list_widget.currentItem().text()
-                lst.removeItem(lst.findText(sel))
-                self.videos_to_predict.pop(sel, None)
-                print(f'Removed video "{sel}"')
+                selected_items = dlg.list_widget.selectedItems()
+                if not selected_items:
+                    # No items selected, reset and return
+                    lst.setCurrentIndex(0)
+                    return
+                # Remove all selected videos
+                for item in selected_items:
+                    video_name = item.text()
+                    lst.removeItem(lst.findText(video_name))
+                    self.videos_to_predict.pop(video_name, None)
+                    print(f'Removed video "{video_name}"')
                 # Refresh header count
                 n = len(self.videos_to_predict)
                 lst.setItemText(0, f"Videos (n={n})" if n else "List of videos to be analyzed ...")
-            # reset back to first entry
             lst.setCurrentIndex(0)
         else:
             lst.setCurrentIndex(0)
