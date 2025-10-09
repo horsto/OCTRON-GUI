@@ -149,8 +149,8 @@ BoostTrack:
       - 1
       - 100
     per_class:
-      current_value: true
-      default_value: true
+      current_value: false
+      default_value: false
       disabled: true
       docstring: Enables class-separated tracking. When true, tracks different object
         classes separately
