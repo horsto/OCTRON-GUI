@@ -26,7 +26,7 @@ class YOLO_results:
         **kwargs : dict, optional
             Additional keyword arguments. The default is None.
             - csv_header_lines : int, optional
-                Number of header lines in the CSV files. The default is 6.
+                Number of header lines in the CSV files. The default is 7.
         
         
         """
@@ -40,7 +40,7 @@ class YOLO_results:
         )
         
         # Process kwargs
-        self.csv_header_lines = kwargs.get('csv_header_lines', 6)
+        self.csv_header_lines = kwargs.get('csv_header_lines', 7)
         
         # Initialize some variables 
         self.verbose = verbose
