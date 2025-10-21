@@ -102,6 +102,7 @@ class SAM2_octron(SAM2VideoPredictor):
         # Keep track of centroids 
         inference_state["centroids"] = {} # -> obj_id ->  frame_idx : centroid coordinates
         inference_state["areas"] = {} # -> obj_id ->  frame_idx : area of region
+        
         # Compatibility with SAM2HQ model
         inference_state["tracking_has_started"] = False 
         
@@ -351,8 +352,9 @@ class SAM2_octron(SAM2VideoPredictor):
             v["non_cond_frame_outputs"].clear()
         for v in self.inference_state["frames_tracked_per_obj"].values():
             v.clear()
+        self.inference_state["tracking_has_started"] = False
             
-            
+    
     @torch.inference_mode()
     def remove_object(self, obj_id, strict=False, need_output=True):
         """
