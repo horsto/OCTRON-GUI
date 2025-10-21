@@ -35,7 +35,7 @@ def run_post_install():
     try:
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
-            "--force-reinstall", "git+https://github.com/horsto/sam2.git"
+            "--force-reinstall", "https://github.com/horsto/sam2/releases/download/v0.0.1/sam_2-1.0-py3-none-any.whl"
         ])
         print("Successfully installed sam-2 with overwrite.")
         return 0
