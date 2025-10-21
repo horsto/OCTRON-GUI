@@ -102,6 +102,9 @@ class SAM2_octron(SAM2VideoPredictor):
         # Keep track of centroids 
         inference_state["centroids"] = {} # -> obj_id ->  frame_idx : centroid coordinates
         inference_state["areas"] = {} # -> obj_id ->  frame_idx : area of region
+        # Compatibility with SAM2HQ model
+        inference_state["tracking_has_started"] = False 
+        
         # Warm up the visual backbone and cache the image feature on frame 0
         self._get_image_feature(inference_state, frame_idx=0, batch_size=1)
         print('🚀 Initialized SAM2 model')
